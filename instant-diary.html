@@ -211,6 +211,7 @@
   .who.prompt-who { color:#8a6d00; font-style:italic; }
   .im-entry.prompt-entry .txt { color:#5b4900; font-style:italic; background:#fff8e1; padding:4px 6px; border-radius:4px; display:inline-block; }
   .status-tag { font-size:9px; color:#0850d0; font-weight:bold; display:inline-block; margin-bottom:2px; }
+  .pct-key { font-size:9px; color:#888; padding:3px 6px; background:#f5f5f0; border-top:1px solid #e5e2d5; }
   .im-action-row { display:flex; align-items:center; gap:4px; padding:5px 6px; background:#ece9d8; border-top:1px solid #ccc; }
   .action-btn { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:9px; color:#333;
     border:1px solid #b0aca0; border-radius:4px; background:#fff; padding:3px 7px; cursor:pointer; }
@@ -575,18 +576,66 @@
   });
 
   // ---------------- persistence ----------------
+  // window.storage only exists inside Claude's own preview iframe. On the real
+  // deployed site (GitHub Pages, etc.) there's no such API, so we fall back to
+  // IndexedDB — this is what makes local saving (and full offline use) actually
+  // work once this file is hosted for real.
+  var localStore = null;
+  function makeIndexedDBStore(){
+    var dbPromise = new Promise(function(resolve, reject){
+      try{
+        var req = indexedDB.open('instant-diary-db', 1);
+        req.onupgradeneeded = function(){ req.result.createObjectStore('kv'); };
+        req.onsuccess = function(){ resolve(req.result); };
+        req.onerror = function(){ reject(req.error); };
+      } catch(e){ reject(e); }
+    });
+    function withStore(mode, fn){
+      return dbPromise.then(function(db){
+        return new Promise(function(resolve, reject){
+          var tx = db.transaction('kv', mode);
+          var store = tx.objectStore('kv');
+          var request = fn(store);
+          request.onsuccess = function(){ resolve(request.result); };
+          request.onerror = function(){ reject(request.error); };
+        });
+      });
+    }
+    return {
+      get: function(key){
+        return withStore('readonly', function(store){ return store.get(key); })
+          .then(function(value){ return (value === undefined) ? null : { key: key, value: value }; });
+      },
+      set: function(key, value){
+        return withStore('readwrite', function(store){ return store.put(value, key); })
+          .then(function(){ return { key: key, value: value }; });
+      }
+    };
+  }
+  function getLocalStore(){
+    if(localStore) return localStore;
+    if(typeof window.storage !== 'undefined' && window.storage &&
+       typeof window.storage.get === 'function' && typeof window.storage.set === 'function'){
+      localStore = window.storage;
+      return localStore;
+    }
+    if(typeof indexedDB !== 'undefined'){
+      try{ localStore = makeIndexedDBStore(); return localStore; } catch(e){}
+    }
+    return null;
+  }
   function hasStorage(){
-    return typeof window.storage !== 'undefined' && window.storage &&
-      typeof window.storage.get === 'function' && typeof window.storage.set === 'function';
+    return !!getLocalStore();
   }
 
   function loadState(){
     return loadStateAttempt(4);
   }
   function loadStateAttempt(retriesLeft){
-    if(hasStorage()){
+    var store = getLocalStore();
+    if(store){
       try{
-        return window.storage.get(STORAGE_KEY, false).then(function(res){
+        return store.get(STORAGE_KEY, false).then(function(res){
           if(res && res.value){
             try { state = JSON.parse(res.value); normalizeState(); } catch(e){}
           }
@@ -605,13 +654,14 @@
 
   var saveInFlight = false, savePending = false;
   function saveState(){
-    if(!hasStorage()) return Promise.resolve();
+    var store = getLocalStore();
+    if(!store) return Promise.resolve();
     if(saveInFlight){ savePending = true; return Promise.resolve(); }
     saveInFlight = true;
     var payload = JSON.stringify(state);
     var attempt;
     try{
-      attempt = window.storage.set(STORAGE_KEY, payload, false);
+      attempt = store.set(STORAGE_KEY, payload, false);
     } catch(e){
       attempt = Promise.reject(e);
     }
@@ -619,7 +669,7 @@
       .catch(function(){
         // one quiet retry - transient hiccups shouldn't surface to the user
         try{
-          return window.storage.set(STORAGE_KEY, payload, false).catch(function(){ /* give up quietly */ });
+          return store.set(STORAGE_KEY, payload, false).catch(function(){ /* give up quietly */ });
         } catch(e){ /* give up quietly */ }
       })
       .then(function(){
@@ -1005,6 +1055,13 @@
     refreshMyStatus();
     renderBuddyList();
   }
+
+  (function(){
+    var blWin = document.getElementById('buddylist-win');
+    function bringToFront(){ blWin.style.zIndex = ++zCounter; }
+    blWin.addEventListener('mousedown', bringToFront);
+    blWin.addEventListener('touchstart', bringToFront, { passive: true });
+  })();
 
   function refreshMyStatus(){
     var sub = document.getElementById('bl-me-sub');
@@ -1474,8 +1531,9 @@
         '<div class="m-item">Edit<div class="m-drop"><div class="mi-clear">Clear Draft</div></div></div>' +
         '<div class="m-item">Insert<div class="m-drop">' +
           '<div class="mi-photo">Photo&hellip;</div>' +
-          '<div class="mi-ts">Timestamp</div>' +
-          '<div class="mi-date">Date</div>' +
+          '<div class="mi-name">My Name (%name)</div>' +
+          '<div class="mi-ts">Timestamp (%t)</div>' +
+          '<div class="mi-date">Date (%d)</div>' +
           '<div class="mi-prompt">Writing Prompt</div>' +
         '</div></div>' +
         '<div class="m-item">Buddies<div class="m-drop"><div class="mi-addbuddy">Add Buddy&hellip;</div></div></div>' +
@@ -1493,7 +1551,8 @@
         '<button class="action-btn" title="Insert photo" id="photo-'+buddyId+'">'+iconSVG('photo')+'<span>Photo</span></button>' +
         '<button class="action-btn" title="Add a buddy" id="addb-'+buddyId+'">'+iconSVG('plus')+'<span>Buddy</span></button>' +
         '<button class="send-btn-gold" id="send-'+buddyId+'">'+iconSVG('send')+'<span>Send</span></button>' +
-      '</div>';
+      '</div>' +
+      '<div class="pct-key">%name = my name &nbsp; %t = time &nbsp; %d = date</div>';
 
     createWindow({
       title: buddy.name,
@@ -1527,6 +1586,7 @@
         el.querySelector('.mi-close').addEventListener('click', function(){ closeWindow(id); });
         el.querySelector('.mi-clear').addEventListener('click', function(){ input.innerHTML = ''; input.focus(); });
         el.querySelector('.mi-photo').addEventListener('click', function(){ input._insertPhoto && input._insertPhoto(); });
+        el.querySelector('.mi-name').addEventListener('click', function(){ appendPlainText(input, ((state.account&&state.account.screenName)||'') + ' '); });
         el.querySelector('.mi-ts').addEventListener('click', function(){ appendPlainText(input, (isRichEmpty(input)?'':' ') + fmtTime(Date.now()) + ' '); });
         el.querySelector('.mi-date').addEventListener('click', function(){ appendPlainText(input, (isRichEmpty(input)?'':' ') + fmtDateShort(Date.now()) + ' '); });
         el.querySelector('.mi-prompt').addEventListener('click', function(){ insertPromptMessage(buddyId); });
@@ -1599,22 +1659,27 @@
 
   // ================= NEW MESSAGE WINDOW =================
   function openNewMessageWindow(prefillName){
-    var listId = 'buddy-dl-' + uid();
-    var options = state.buddies.map(function(b){ return '<option value="'+escapeHtml(b.name)+'">'; }).join('');
+    var buddyOptions = state.buddies.map(function(b){ return '<option value="'+escapeHtml(b.id)+'">'+escapeHtml(b.name)+'</option>'; }).join('');
+    var prefillMatch = prefillName ? findBuddyByName(prefillName) : null;
     var menu =
       '<div class="menubar">' +
         '<div class="m-item">File<div class="m-drop"><div class="mi-close">Close</div></div></div>' +
         '<div class="m-item">Insert<div class="m-drop">' +
           '<div class="mi-photo">Photo&hellip;</div>' +
-          '<div class="mi-ts">Timestamp</div>' +
-          '<div class="mi-date">Date</div>' +
+          '<div class="mi-name">My Name (%name)</div>' +
+          '<div class="mi-ts">Timestamp (%t)</div>' +
+          '<div class="mi-date">Date (%d)</div>' +
         '</div></div>' +
       '</div>';
     var body =
       '<div class="win-body nm-body">' +
-        '<div class="nm-row"><label>To:</label><input type="text" id="nm-to" list="'+listId+'" placeholder="Name" value="'+(prefillName?escapeHtml(prefillName):'')+'">' +
-        '<datalist id="'+listId+'">'+options+'</datalist></div>' +
+        '<div class="nm-row"><label>To:</label><select id="nm-to-select">' +
+          '<option value="">Choose a buddy</option>' + buddyOptions +
+          '<option value="__new__">+ New Buddy</option>' +
+        '</select></div>' +
+        '<div class="nm-row" id="nm-newbuddy-row" style="display:none;"><label>New:</label><input type="text" id="nm-to-new" placeholder="Buddy name" value="'+(prefillName && !prefillMatch ? escapeHtml(prefillName) : '')+'"></div>' +
         richComposeHtml('nm-body', '') +
+        '<div class="pct-key">%name = my name &nbsp; %t = time &nbsp; %d = date</div>' +
         '<div class="nm-send-row"><button class="btn" id="nm-send">Send</button></div>' +
       '</div>';
 
@@ -1627,15 +1692,36 @@
       onMount: function(el, id){
         wireRichToolbar(el, 'nm-body');
         var composeEl = el.querySelector('#nm-body');
+        var toSelect = el.querySelector('#nm-to-select');
+        var newRow = el.querySelector('#nm-newbuddy-row');
+        var newInput = el.querySelector('#nm-to-new');
+
+        if(prefillMatch){
+          toSelect.value = prefillMatch.id;
+        } else if(prefillName){
+          toSelect.value = '__new__';
+          newRow.style.display = 'flex';
+        }
+        toSelect.addEventListener('change', function(){
+          newRow.style.display = (toSelect.value === '__new__') ? 'flex' : 'none';
+        });
+
         el.querySelector('.mi-close').addEventListener('click', function(){ closeWindow(id); });
         el.querySelector('.mi-photo').addEventListener('click', function(){ composeEl._insertPhoto && composeEl._insertPhoto(); });
+        el.querySelector('.mi-name').addEventListener('click', function(){ appendPlainText(composeEl, ((state.account&&state.account.screenName)||'') + ' '); });
         el.querySelector('.mi-ts').addEventListener('click', function(){ appendPlainText(composeEl, (isRichEmpty(composeEl)?'':' ') + fmtTime(Date.now()) + ' '); });
         el.querySelector('.mi-date').addEventListener('click', function(){ appendPlainText(composeEl, (isRichEmpty(composeEl)?'':' ') + fmtDateShort(Date.now()) + ' '); });
         el.querySelector('#nm-send').addEventListener('click', function(){
-          var toName = el.querySelector('#nm-to').value;
-          if(!toName.trim()){ el.querySelector('#nm-to').focus(); return; }
+          var buddy = null;
+          if(toSelect.value === '__new__'){
+            var newName = newInput.value.trim();
+            if(!newName){ newInput.focus(); return; }
+            buddy = ensureBuddy(newName);
+          } else if(toSelect.value){
+            buddy = state.buddies.find(function(b){ return b.id === toSelect.value; });
+          }
+          if(!buddy){ toSelect.focus(); return; }
           if(isRichEmpty(composeEl)) { composeEl.focus(); return; }
-          var buddy = ensureBuddy(toName);
           var html = sanitizeHTML(composeEl.innerHTML);
           state.entries[buddy.id] = state.entries[buddy.id] || [];
           state.entries[buddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry' });
@@ -1725,16 +1811,15 @@
   // ================= STATUS WINDOWS =================
   function openSetStatusWindow(){
     var listId = 'status-presets-' + uid();
-    var buddyListId = 'status-buddies-' + uid();
     var composeId = 'status-rich-' + uid();
     var presetOptions = state.statusPresets.map(function(p){ return '<option value="'+escapeHtml(p.label)+'">'; }).join('');
-    var buddyOptions = state.buddies.map(function(b){ return '<option value="'+escapeHtml(b.name)+'">'; }).join('');
+    var buddyOptions = state.buddies.map(function(b){ return '<option value="'+escapeHtml(b.id)+'">'+escapeHtml(b.name)+'</option>'; }).join('');
     var menu =
       '<div class="menubar">' +
         '<div class="m-item">File<div class="m-drop"><div class="mi-close">Close</div></div></div>' +
         '<div class="m-item">Insert<div class="m-drop">' +
           '<div class="mi-photo">Photo&hellip;</div>' +
-          '<div class="mi-name">Buddy Name (%name)</div>' +
+          '<div class="mi-name">My Name (%name)</div>' +
           '<div class="mi-time">Time (%t)</div>' +
           '<div class="mi-date">Date (%d)</div>' +
         '</div></div>' +
@@ -1743,9 +1828,13 @@
       '<div class="win-body nm-body">' +
         '<div class="nm-row"><label>Status:</label><input type="text" id="status-label" list="'+listId+'" placeholder="e.g. Happy">' +
         '<datalist id="'+listId+'">'+presetOptions+'</datalist></div>' +
-        '<div class="nm-row"><label>Buddy:</label><input type="text" id="status-buddy" list="'+buddyListId+'" placeholder="Tag a buddy (optional)">' +
-        '<datalist id="'+buddyListId+'">'+buddyOptions+'</datalist></div>' +
+        '<div class="nm-row"><label>Buddy:</label><select id="status-buddy-select">' +
+          '<option value="">&mdash; None &mdash;</option>' + buddyOptions +
+          '<option value="__new__">+ New Buddy</option>' +
+        '</select></div>' +
+        '<div class="nm-row" id="status-newbuddy-row" style="display:none;"><label>New:</label><input type="text" id="status-buddy-new" placeholder="Buddy name"></div>' +
         richComposeHtml(composeId, "What's going on?") +
+        '<div class="pct-key">%name = my name &nbsp; %t = time &nbsp; %d = date</div>' +
         '<div class="check-row" style="margin-top:8px;"><span class="ck"><input type="checkbox" id="status-save-preset"><label for="status-save-preset">Save for later use</label></span></div>' +
         '<div class="nm-send-row" style="gap:6px;">' +
           '<button class="btn" id="status-clear">Clear Status</button>' +
@@ -1760,13 +1849,19 @@
       type: 'setstatus',
       onMount: function(el, id){
         var labelInput = el.querySelector('#status-label');
-        var buddyInput = el.querySelector('#status-buddy');
+        var buddySelect = el.querySelector('#status-buddy-select');
+        var newRow = el.querySelector('#status-newbuddy-row');
+        var newInput = el.querySelector('#status-buddy-new');
         var composeEl = el.querySelector('#'+composeId);
         wireRichToolbar(el, composeId);
 
         if(state.status && state.status.html) composeEl.innerHTML = state.status.html;
         if(state.status && state.status.label) labelInput.value = state.status.label;
         labelInput.focus();
+
+        buddySelect.addEventListener('change', function(){
+          newRow.style.display = (buddySelect.value === '__new__') ? 'flex' : 'none';
+        });
 
         labelInput.addEventListener('input', function(){
           var match = state.statusPresets.find(function(p){
@@ -1789,13 +1884,18 @@
             if(existing) existing.html = html;
             else state.statusPresets.push({ id: uid(), label: label, html: html });
           }
-          var taggedName = buddyInput.value.trim();
-          if(taggedName && html){
-            var buddy = ensureBuddy(taggedName);
-            state.entries[buddy.id] = state.entries[buddy.id] || [];
-            state.entries[buddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry', statusLabel: label || null });
-            renderLog(buddy.id);
-            renderStats(buddy.id);
+          var taggedBuddy = null;
+          if(buddySelect.value === '__new__'){
+            var newName = newInput.value.trim();
+            if(newName) taggedBuddy = ensureBuddy(newName);
+          } else if(buddySelect.value){
+            taggedBuddy = state.buddies.find(function(b){ return b.id === buddySelect.value; });
+          }
+          if(taggedBuddy && html){
+            state.entries[taggedBuddy.id] = state.entries[taggedBuddy.id] || [];
+            state.entries[taggedBuddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry', statusLabel: label || null });
+            renderLog(taggedBuddy.id);
+            renderStats(taggedBuddy.id);
           }
           saveState();
           refreshMyStatus();
