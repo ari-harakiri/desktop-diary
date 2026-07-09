@@ -77,6 +77,7 @@
     min-width: 150px; z-index: 5; border-radius: 0 4px 4px 4px; overflow:hidden;
   }
   .menubar .m-item:hover .m-drop { display: block; }
+  .menubar .m-item.open .m-drop { display: block; }
   .m-drop div { padding: 6px 12px; color: #000; white-space: nowrap; }
   .m-drop div:hover { background: #316ac5; color:#fff; }
   .win-body { flex: 1; overflow: auto; padding: 6px; background: #fff; -webkit-overflow-scrolling: touch; }
@@ -226,12 +227,12 @@
   .nm-win { width: min(300px, 92vw); height: min(300px, 66vh); }
   .nm-body { padding:10px; }
   .nm-row { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
-  .nm-row label { font-size:11px; width:36px; flex-shrink:0; }
+  .nm-row label { font-size:11px; width:58px; flex-shrink:0; }
   .nm-row input { flex:1; }
   .nm-body textarea { width:100%; height:110px; resize:none; }
   .nm-send-row { display:flex; justify-content:flex-end; margin-top:8px; }
 
-  .addbuddy-win { width: min(250px, 90vw); height: min(140px, 40vh); }
+  .addbuddy-win { width: min(280px, 92vw); height: min(230px, 58vh); }
   .help-win { width: min(280px, 92vw); height: min(300px, 60vh); }
   .setup-win { width: min(280px, 92vw); height: min(260px, 60vh); }
   .status-win { width: min(300px, 92vw); height: min(420px, 80vh); }
@@ -256,6 +257,21 @@
     margin-left:auto; background: linear-gradient(180deg,#1a4fc4,#0d3aa8);
     border: 1px solid #0a2e85; border-radius:3px; color:#fff; padding:5px 9px;
   }
+  #tb-start {
+    display:flex; align-items:center; gap:5px; padding:5px 12px 5px 8px;
+    border-radius:14px; background: linear-gradient(180deg,#7ed957,#3a9d23 55%,#237014);
+    border:1px solid #1f5e10; color:#fff; font-weight:bold; font-size:12px; cursor:pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5); flex-shrink:0;
+  }
+  #tb-start:active { filter:brightness(0.9); }
+  #start-menu {
+    position:fixed; left:4px; bottom:38px; background:#ece9d8; border:1px solid #0054e3;
+    border-radius:6px; box-shadow:0 4px 14px rgba(0,0,0,.4); overflow:hidden;
+    min-width:200px; z-index:99999; display:none;
+  }
+  #start-menu.open { display:block; }
+  #start-menu .sm-item { padding:9px 14px; font-size:12px; cursor:pointer; color:#000; }
+  #start-menu .sm-item:hover { background:#316ac5; color:#fff; }
 
   ::-webkit-scrollbar { width: 12px; }
   ::-webkit-scrollbar-track { background:#ece9d8; }
@@ -404,6 +420,12 @@
   <div id="windows-layer"></div>
 
   <div id="taskbar">
+    <div id="tb-start"><span class="ttl-icon" id="tb-start-icon"></span><span>Start</span></div>
+    <div id="start-menu">
+      <div class="sm-item" id="sm-bgcolor">Change Background Color&hellip;</div>
+      <div class="sm-item" id="sm-bgphoto">Add Background Photo&hellip;</div>
+      <div class="sm-item" id="sm-bgdefault">Restore Default Background</div>
+    </div>
     <div id="tb-items" style="display:flex; gap:4px;"></div>
     <div id="tb-clock"></div>
   </div>
@@ -422,6 +444,7 @@
     status: { label: '', html: '', ts: null },   // current status
     statusLog: [],                    // history: { label, html, ts }
     statusPresets: [],                // saved reusable statuses: { id, label, html }
+    background: { color: '', image: '' },  // custom desktop background (device-local, not synced)
     groups: [ { id: 'default', name: 'Buddies' } ],
     buddies: [],            // { id, name, addedAt, groupId }
     entries: {}             // buddyId -> [ { id, html, ts, kind:'entry'|'prompt' } ]
@@ -436,6 +459,7 @@
     if(!state.status) state.status = { label: '', html: '', ts: null };
     if(!Array.isArray(state.statusLog)) state.statusLog = [];
     if(!Array.isArray(state.statusPresets)) state.statusPresets = [];
+    if(!state.background) state.background = { color: '', image: '' };
     state.entries = state.entries || {};
     Object.keys(state.entries).forEach(function(bid){
       (state.entries[bid] || []).forEach(function(e){ if(!e.kind) e.kind = 'entry'; });
@@ -449,6 +473,106 @@
   function isMobile(){
     return window.matchMedia('(max-width: 700px)').matches;
   }
+
+  // ---------------- desktop background (Start menu options) ----------------
+  function applyBackground(){
+    var desktop = document.getElementById('desktop');
+    var scene = document.getElementById('bg-scene');
+    if(state.background && state.background.image){
+      scene.style.display = 'none';
+      desktop.style.background = 'center / cover no-repeat url("' + state.background.image + '")';
+    } else if(state.background && state.background.color){
+      scene.style.display = 'none';
+      desktop.style.background = state.background.color;
+    } else {
+      scene.style.display = 'block';
+      desktop.style.background = '#bfe3fb';
+    }
+  }
+
+  document.getElementById('tb-start').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('start-menu').classList.toggle('open');
+  });
+  document.addEventListener('click', function(e){
+    var menu = document.getElementById('start-menu');
+    if(menu.classList.contains('open') && !menu.contains(e.target) && !e.target.closest('#tb-start')){
+      menu.classList.remove('open');
+    }
+  });
+
+  document.getElementById('sm-bgcolor').addEventListener('click', function(){
+    document.getElementById('start-menu').classList.remove('open');
+    var picker = document.createElement('input');
+    picker.type = 'color';
+    picker.value = (state.background && state.background.color) || '#3a6ea5';
+    picker.style.position = 'fixed'; picker.style.left = '-9999px';
+    document.body.appendChild(picker);
+    picker.addEventListener('input', function(){
+      state.background = { color: picker.value, image: '' };
+      applyBackground();
+      saveState();
+    });
+    picker.addEventListener('change', function(){ picker.remove(); });
+    picker.click();
+  });
+
+  document.getElementById('sm-bgphoto').addEventListener('click', function(){
+    document.getElementById('start-menu').classList.remove('open');
+    var input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', function(){
+      var file = input.files && input.files[0];
+      if(file){
+        var reader = new FileReader();
+        reader.onload = function(e){
+          var img = new Image();
+          img.onload = function(){
+            var maxDim = 1600;
+            var w = img.width, h = img.height;
+            if(w > maxDim || h > maxDim){
+              if(w >= h){ h = Math.round(h * maxDim / w); w = maxDim; }
+              else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            var canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            state.background = { color: '', image: canvas.toDataURL('image/jpeg', 0.8) };
+            applyBackground();
+            saveState();
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+      input.remove();
+    });
+    input.click();
+  });
+
+  document.getElementById('sm-bgdefault').addEventListener('click', function(){
+    document.getElementById('start-menu').classList.remove('open');
+    state.background = { color: '', image: '' };
+    applyBackground();
+    saveState();
+  });
+
+  // Menu bars rely on :hover for desktop mouse users, but touchscreens don't have
+  // real hover, so we also support tap-to-toggle here for reliability on mobile.
+  document.addEventListener('click', function(e){
+    var item = e.target.closest ? e.target.closest('.m-item') : null;
+    var insideDrop = e.target.closest ? e.target.closest('.m-drop') : null;
+    document.querySelectorAll('.menubar .m-item.open').forEach(function(o){
+      if(o !== item) o.classList.remove('open');
+    });
+    if(insideDrop){
+      var owner = insideDrop.closest('.m-item');
+      if(owner) owner.classList.remove('open');
+    } else if(item){
+      item.classList.toggle('open');
+    }
+  });
 
   // ---------------- persistence ----------------
   function hasStorage(){
@@ -1617,7 +1741,7 @@
       '</div>';
     var body =
       '<div class="win-body nm-body">' +
-        '<div class="nm-row"><label>Status:</label><input type="text" id="status-label" list="'+listId+'" placeholder="e.g. Away">' +
+        '<div class="nm-row"><label>Status:</label><input type="text" id="status-label" list="'+listId+'" placeholder="e.g. Happy">' +
         '<datalist id="'+listId+'">'+presetOptions+'</datalist></div>' +
         '<div class="nm-row"><label>Buddy:</label><input type="text" id="status-buddy" list="'+buddyListId+'" placeholder="Tag a buddy (optional)">' +
         '<datalist id="'+buddyListId+'">'+buddyOptions+'</datalist></div>' +
@@ -1826,6 +1950,7 @@
   // ================= BOOT =================
   loadState().then(function(){
     normalizeState();
+    applyBackground();
     tickClock();
     if(state.account && state.autoLogin){
       enterDesktop();
