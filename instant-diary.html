@@ -177,8 +177,18 @@
   .bl-me-info { display:flex; flex-direction:column; min-width:0; }
   .bl-me b { display:block; font-size:11.5px; }
   .bl-status-edit { font-size:9px; color:#0850d0; text-decoration:underline; cursor:pointer; display:block; margin-top:2px; }
-  .status-log-row { padding:6px 4px; border-bottom:1px solid #eee; font-size:11.5px; }
+  .status-log-row { padding:8px 4px; border-bottom:1px solid #eee; font-size:11.5px; }
+  .slr-ts { color:#999; font-size:10px; margin-bottom:3px; display:flex; align-items:center; justify-content:space-between; }
+  .sl-actions { display:flex; gap:8px; }
+  .sl-edit { cursor:pointer; color:#0850d0; }
+  .sl-del { cursor:pointer; color:#c0392b; }
+  .sl-status-label { font-weight:normal; margin:3px 0 2px; color:#333; }
+  .sl-body { margin-top:3px; color:#333; }
   .mood-section-title { font-size:11px; font-weight:bold; color:#0850d0; margin:12px 0 6px; }
+  .mood-manage-row { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #eee; font-size:12px; }
+  .mm-color { width:28px; height:22px; border:1px solid #aaa; border-radius:3px; padding:0; cursor:pointer; }
+  .mm-name { flex:1; }
+  .mm-del { border:none; background:none; color:#c0392b; font-size:16px; cursor:pointer; padding:0 4px; }
   .mood-section-title:first-child { margin-top:0; }
   .mood-bars { display:flex; flex-direction:column; gap:6px; }
   .mood-bar-row { display:flex; align-items:center; gap:6px; font-size:11px; }
@@ -188,6 +198,8 @@
   .mood-bar-count { width:18px; text-align:right; flex-shrink:0; color:#666; }
   .mood-timeline { display:flex; flex-wrap:wrap; gap:5px; padding:2px 0; }
   .mood-dot { display:inline-block; width:14px; height:14px; border-radius:50%; box-shadow: inset 0 0 2px rgba(0,0,0,.35); vertical-align:middle; }
+  .mood-dot-lg { width:18px; height:18px; cursor:default; }
+  .mood-streak { font-size:11px; padding:6px 8px; background:#fffde7; border-radius:6px; margin:4px 0; }
   .status-log-row .mood-dot { width:10px; height:10px; margin-right:2px; }
   .status-log-row .slr-ts { color:#888; font-size:10px; }
   .status-log-row .slr-text { margin-top:2px; }
@@ -223,6 +235,11 @@
   .entry-actions { float:right; display:flex; gap:8px; }
   .entry-action { cursor:pointer; padding:2px; display:inline-flex; }
   .editing-banner { background:#fff3cd; border-top:1px solid #e0c060; padding:5px 8px; font-size:11px; color:#6b5300; }
+  .lock-toggle { font-size:11px; cursor:pointer; user-select:none; }
+  .lock-toggle input { cursor:pointer; }
+  .lock-icon { font-size:10px; }
+  .locked-content { filter:blur(4px); transition:filter 0.2s; cursor:pointer; user-select:none; }
+  .locked-content:active, .locked-content.revealed { filter:none; }
   .edit-cancel { color:#0850d0; text-decoration:underline; cursor:pointer; }
   .im-compose-row { border-top:1px solid #ccc; background:#fff; padding:5px; }
   .rich-toolbar { display:flex; gap:4px; padding:4px 5px; background:#ece9d8; border-bottom:1px solid #ccc; align-items:center; flex-wrap:wrap; }
@@ -271,13 +288,22 @@
   .status-tag { font-size:9px; color:#0850d0; font-weight:bold; display:inline-block; margin-bottom:2px; }
   .pct-key { font-size:9px; color:#888; padding:3px 6px; background:#f5f5f0; border-top:1px solid #e5e2d5; }
   /* ---- sticky notes ---- */
-  #sticky-layer { position:absolute; inset:0; pointer-events:none; z-index:10; }
+  #sticky-layer { position:absolute; inset:0; pointer-events:none; z-index:50; }
   .sticky {
     position:absolute; pointer-events:all;
     display:flex; flex-direction:column;
     min-width:140px; min-height:100px;
     border-radius:3px; box-shadow:2px 3px 10px rgba(0,0,0,.35);
-    overflow:hidden; resize:both;
+    overflow:hidden;
+  }
+  .sticky-resize-handle {
+    position:absolute; bottom:0; right:0; width:20px; height:20px; cursor:se-resize;
+    display:flex; align-items:flex-end; justify-content:flex-end; padding:3px;
+  }
+  .sticky-resize-handle::after {
+    content:''; display:block; width:10px; height:10px;
+    border-right:2px solid rgba(0,0,0,.3); border-bottom:2px solid rgba(0,0,0,.3);
+    border-radius:0 0 2px 0;
   }
   .sticky-bar {
     display:flex; align-items:center; gap:5px; padding:4px 6px;
@@ -331,7 +357,7 @@
   .vp-custom img { max-width:100%; }
   .vp-empty { color:#888; font-size:12px; text-align:center; padding:20px; }
   .setup-win { width: min(290px, 92vw); height: min(340px, 68vh); }
-  .status-win { width: min(300px, 92vw); height: min(420px, 80vh); }
+  .status-win { width: min(300px, 92vw); height: min(260px, 56vh); }
 
   /* ---------- taskbar (XP style) ---------- */
   #taskbar {
@@ -507,7 +533,7 @@
           <div id="menu-editbuddy">Edit Buddy&hellip;</div>
           <div id="menu-addcategory">Add Category&hellip;</div>
           <div id="menu-renamecategory">Edit Category&hellip;</div>
-          <div id="menu-sendim">Send Instant Message&hellip;</div>
+          <div id="menu-sendim">Send Message&hellip;</div>
         </div>
       </div>
     </div>
@@ -541,7 +567,7 @@
       <div class="sm-item" id="sm-stickynote">New Sticky Note</div>
       <div class="sm-item" id="sm-bgcolor">Change Background Color&hellip;</div>
       <div class="sm-item" id="sm-bgphoto">Add Background Photo&hellip;</div>
-      <div class="sm-item" id="sm-bgdefault">Restore Default Background</div>
+      <div class="sm-item" id="sm-bgdefault">Restore Default</div>
     </div>
     <input type="color" id="bg-color-input" style="position:fixed; width:1px; height:1px; opacity:0; left:4px; bottom:4px; border:none; padding:0;">
     <div id="tb-items" style="display:flex; gap:4px;"></div>
@@ -567,6 +593,8 @@
     background: { color: '', image: '' },  // custom desktop background (device-local, not synced)
     customFonts: [],        // user-uploaded fonts (device-local, not synced): { id, name, dataUrl }
     stickyNotes: [],        // desktop sticky notes (device-local): { id, text, color, x, y, w, h }
+    customMoods: [],        // user-added moods: ['Grateful', 'Hopeful', ...]
+    customMoodColors: {},   // mood name -> hex color override
     groups: [ { id: 'default', name: 'Buddies' } ],
     buddies: [],            // { id, name, addedAt, groupId }
     entries: {}             // buddyId -> [ { id, html, ts, kind:'entry'|'prompt' } ]
@@ -580,6 +608,7 @@
     state.buddies.forEach(function(b){ if(!b.groupId) b.groupId = 'default'; });
     if(!state.status) state.status = { label: '', html: '', ts: null };
     if(!Array.isArray(state.statusLog)) state.statusLog = [];
+    state.statusLog.forEach(function(e){ if(!e.id) e.id = uid(); });
     if(!Array.isArray(state.statusPresets)) state.statusPresets = [];
     if(!Array.isArray(state.moodLog)) state.moodLog = [];
     if(!state.profile) state.profile = { pic: '', html: '', header: '', aboutMe: '' };
@@ -592,6 +621,8 @@
     if(!state.background) state.background = { color: '', image: '' };
     if(!Array.isArray(state.customFonts)) state.customFonts = [];
     if(!Array.isArray(state.stickyNotes)) state.stickyNotes = [];
+    if(!Array.isArray(state.customMoods)) state.customMoods = [];
+    if(!state.customMoodColors || typeof state.customMoodColors !== 'object') state.customMoodColors = {};
     state.entries = state.entries || {};
     Object.keys(state.entries).forEach(function(bid){
       (state.entries[bid] || []).forEach(function(e){ if(!e.kind) e.kind = 'entry'; });
@@ -639,7 +670,7 @@
     el.style.width = (note.w || 180) + 'px';
     el.style.height = (note.h || 160) + 'px';
     el.style.background = note.color || '#fff9a3';
-    el.style.zIndex = ++zCounter;
+    el.style.zIndex = (zCounter += 10); // always spawn above windows
     el.setAttribute('data-sid', note.id);
 
     var bar = document.createElement('div');
@@ -669,9 +700,36 @@
     body.value = note.text || '';
     body.placeholder = 'Type a note\u2026';
 
+    var resizeHandle = document.createElement('div');
+    resizeHandle.className = 'sticky-resize-handle';
+
     el.appendChild(bar);
     el.appendChild(body);
+    el.appendChild(resizeHandle);
     layer.appendChild(el);
+
+    // touch resize via handle
+    resizeHandle.addEventListener('touchstart', function(e){
+      e.stopPropagation();
+      var t = e.touches[0];
+      var startX = t.clientX, startY = t.clientY;
+      var startW = el.offsetWidth, startH = el.offsetHeight;
+      function onMove(ev){
+        var tt = ev.touches[0];
+        var newW = Math.max(140, startW + (tt.clientX - startX));
+        var newH = Math.max(100, startH + (tt.clientY - startY));
+        el.style.width = newW + 'px';
+        el.style.height = newH + 'px';
+      }
+      function onEnd(){
+        note.w = el.offsetWidth; note.h = el.offsetHeight;
+        saveStickyNotes();
+        resizeHandle.removeEventListener('touchmove', onMove);
+        resizeHandle.removeEventListener('touchend', onEnd);
+      }
+      resizeHandle.addEventListener('touchmove', onMove, { passive:false });
+      resizeHandle.addEventListener('touchend', onEnd);
+    }, { passive:true });
 
     // bring to front on any interaction
     el.addEventListener('mousedown', function(){ el.style.zIndex = ++zCounter; });
@@ -1079,8 +1137,25 @@
       db = firebase.firestore();
       cloudAuthReady = new Promise(function(resolve){
         auth.onAuthStateChanged(function(user){
+          var wasSignedIn = !!cloudUser;
           cloudUser = user;
-          resolve(user); // resolves on first auth state — user or null
+          resolve(user);
+          // auto-pull when signing in for the first time in this session
+          if(user && !wasSignedIn){
+            pullFromCloud().then(function(found){
+              if(found){
+                normalizeState();
+                if(document.getElementById('buddylist-win') &&
+                   document.getElementById('buddylist-win').style.display !== 'none'){
+                  renderBuddyList();
+                  refreshMyStatus();
+                  refreshProfilePic();
+                  applyBackground();
+                  renderAllStickyNotes();
+                }
+              }
+            }).catch(function(){}); // silent — don't interrupt the user
+          }
         });
       });
     }
@@ -1635,6 +1710,8 @@
     var sub = document.getElementById('bl-me-sub');
     if(state.status && state.status.html){
       sub.innerHTML = state.status.html;
+    } else if(state.status && state.status.label){
+      sub.textContent = state.status.label;
     } else {
       sub.textContent = 'Online';
     }
@@ -1958,8 +2035,7 @@
         '<button type="button" title="Italic" data-cmd="italic"><i>I</i></button>' +
         '<button type="button" title="Underline" data-cmd="underline"><u>U</u></button>' +
         '<select class="rich-font" title="Font">' +
-          '<option value="Tahoma, Arial, sans-serif" selected>Tahoma</option>' +
-          '<option value="Arial, sans-serif">Arial</option>' +
+          '<option value="Arial, sans-serif" selected>Arial</option>' +
           '<option value="\'Times New Roman\', serif">Times</option>' +
           '<option value="Georgia, serif">Georgia</option>' +
           '<option value="\'Courier New\', monospace">Courier</option>' +
@@ -2306,7 +2382,7 @@
     var body =
       '<div class="im-stats" id="stats-'+buddyId+'"></div>' +
       '<div class="im-log" id="log-'+buddyId+'"></div>' +
-      '<div class="editing-banner" id="editbanner-'+buddyId+'" style="display:none;">Editing entry &mdash; <span class="edit-cancel">Cancel</span></div>' +
+      '<div class="editing-banner" id="editbanner-'+buddyId+'" style="display:none;">Editing &mdash; <span class="edit-cancel">Cancel</span> &nbsp; <label class="lock-toggle"><input type="checkbox" id="edit-lock-'+buddyId+'"> 🔒 Private</label></div>' +
       '<div class="im-compose-row">' +
         richComposeHtml(inputId, 'Type your entry...') +
       '</div>' +
@@ -2338,9 +2414,11 @@
         var sendLabel = el.querySelector('#send-label-'+buddyId);
         var logEl = el.querySelector('#log-'+buddyId);
 
+        var lockCheckbox = el.querySelector('#edit-lock-'+buddyId);
         function startEdit(entry){
           editingEntryId = entry.id;
           input.innerHTML = entry.html !== undefined ? entry.html : escapeHtml(entry.text || '');
+          if(lockCheckbox) lockCheckbox.checked = !!entry.locked;
           input.focus();
           banner.style.display = 'block';
           sendLabel.textContent = 'Save';
@@ -2350,10 +2428,16 @@
           input.innerHTML = '';
           banner.style.display = 'none';
           sendLabel.textContent = 'Send';
+          if(lockCheckbox) lockCheckbox.checked = false;
         }
         banner.querySelector('.edit-cancel').addEventListener('click', cancelEdit);
 
         logEl.addEventListener('click', function(e){
+          // tap-to-reveal locked content
+          if(e.target.classList.contains('locked-content')){
+            e.target.classList.toggle('revealed');
+            return;
+          }
           var actionEl = e.target.closest('.entry-action');
           if(!actionEl) return;
           var entryEl = actionEl.closest('.im-entry');
@@ -2387,6 +2471,7 @@
             if(entry){
               entry.html = html;
               entry.editedAt = Date.now();
+              entry.locked = lockCheckbox ? lockCheckbox.checked : false;
               if(entry.kind === 'prompt') entry.kind = 'entry';
               delete entry.text;
             }
@@ -2458,14 +2543,18 @@
         ? ('<span class="status-tag">Status' + (entry.statusLabel ? ': ' + escapeHtml(entry.statusLabel) : '') + '</span><br>')
         : '';
       var txtStyle = entry.bg ? (' style="background:' + escapeHtml(entry.bg) + '; padding:4px 6px; border-radius:4px;"') : '';
-      html += '<div class="im-entry' + (isPrompt ? ' prompt-entry' : '') + '" data-entry-id="' + entry.id + '">' +
+      var lockedClass = entry.locked ? ' entry-locked' : '';
+      var lockIcon = entry.locked ? '<span class="lock-icon">🔒</span>' : '';
+      html += '<div class="im-entry' + (isPrompt ? ' prompt-entry' : '') + lockedClass + '" data-entry-id="' + entry.id + '">' +
                 '<span class="who' + (isPrompt ? ' prompt-who' : '') + '">' + sender + '</span> ' +
-                '<span class="ts">(' + fmtTime(entry.ts) + '):</span>' +
+                '<span class="ts">(' + fmtTime(entry.ts) + '): ' + lockIcon + '</span>' +
                 '<span class="entry-actions">' +
                   '<span class="entry-action" data-action="edit">' + iconSVG('pencil') + '</span>' +
                   '<span class="entry-action" data-action="delete">' + iconSVG('trash') + '</span>' +
                 '</span>' +
-                '<div class="txt"' + txtStyle + '>' + statusTag + content + '</div>' +
+                (entry.locked
+                  ? '<div class="txt locked-content"' + txtStyle + '>' + statusTag + content + '</div>'
+                  : '<div class="txt"' + txtStyle + '>' + statusTag + content + '</div>') +
               '</div>';
     });
     if(!list.length){
@@ -2527,7 +2616,7 @@
       '</div>';
 
     createWindow({
-      title: 'Send Instant Message',
+      title: 'Send Message',
       extraClass: 'nm-win',
       menuHtml: menu,
       bodyHtml: body,
@@ -2773,118 +2862,124 @@
   }
 
   // ================= STATUS WINDOWS =================
+  // ---- mood colors must be declared before openSetStatusWindow which references them ----
+  var MOOD_COLORS = {
+    Happy: '#f4c542', Sad: '#4a6fa5', Tired: '#8a8a8a', Excited: '#ff7f2a',
+    Anxious: '#a259c4', Angry: '#e0472e', Calm: '#4caf82', Stressed: '#c2185b'
+  };
+  function moodColor(mood){
+    if(state.customMoodColors && state.customMoodColors[mood]) return state.customMoodColors[mood];
+    return MOOD_COLORS[mood] || '#5a8fd6';
+  }
+
   function openSetStatusWindow(){
-    var listId = 'status-presets-' + uid();
-    var composeId = 'status-rich-' + uid();
-    var presetOptions = state.statusPresets.map(function(p){ return '<option value="'+escapeHtml(p.label)+'">'; }).join('');
     var buddyOptions = state.buddies.map(function(b){ return '<option value="'+escapeHtml(b.id)+'">'+escapeHtml(b.name)+'</option>'; }).join('');
-    var menu =
-      '<div class="menubar">' +
-        '<div class="m-item">File<div class="m-drop"><div class="mi-close">Close</div></div></div>' +
-        '<div class="m-item">Insert<div class="m-drop">' +
-          '<div class="mi-photo">Photo&hellip;</div>' +
-          '<div class="mi-voice">Voice Note&hellip;</div>' +
-          '<div class="mi-time">Time (%t)</div>' +
-          '<div class="mi-date">Date (%d)</div>' +
-        '</div></div>' +
-      '</div>';
+
+    function allMoodNames(){
+      return ['Happy','Sad','Tired','Excited','Anxious','Angry','Calm','Stressed'].concat(state.customMoods||[]);
+    }
+    function buildPresetOptions(){
+      return '<option value="">— pick a preset —</option>' +
+        allMoodNames().map(function(m){ return '<option value="'+escapeHtml(m)+'">'+escapeHtml(m)+'</option>'; }).join('') +
+        '<option value="__manage__">⚙ Manage Moods</option>';
+    }
+
     var body =
       '<div class="win-body nm-body">' +
-        '<div class="nm-row"><label>Status:</label><input type="text" id="status-label" list="'+listId+'" placeholder="e.g. Happy">' +
-        '<datalist id="'+listId+'">'+presetOptions+'</datalist></div>' +
-        '<div class="nm-row"><label>Mood:</label><select id="mood-select">' +
-          '<option value="">&mdash; None &mdash;</option>' +
-          ['Happy','Sad','Tired','Excited','Anxious','Angry','Calm','Stressed'].map(function(m){
-            return '<option value="'+m+'">'+m+'</option>';
-          }).join('') +
-          '<option value="__custom__">+ Custom Mood</option>' +
-        '</select></div>' +
-        '<div class="nm-row" id="mood-custom-row" style="display:none;"><label>Custom:</label><input type="text" id="mood-custom" placeholder="Type a mood"></div>' +
-        '<div class="nm-row"><label>Buddy:</label><select id="status-buddy-select">' +
-          '<option value="">&mdash; None &mdash;</option>' + buddyOptions +
-          '<option value="__new__">+ New Buddy</option>' +
-        '</select></div>' +
+        '<div class="nm-row"><label>Status:</label><input type="text" id="status-label" placeholder="e.g. Feeling good" value="'+(state.status&&state.status.label?escapeHtml(state.status.label):'')+'"></div>' +
+        '<div class="nm-row" style="align-items:center;gap:6px;">' +
+          '<label>Mood:</label>' +
+          '<span id="mood-indicator" class="mood-dot" style="background:#ddd;flex-shrink:0;"></span>' +
+          '<input type="text" id="mood-text" placeholder="Type a mood..." style="flex:1;min-width:0;">' +
+          '<input type="color" id="mood-color" value="#5a8fd6" title="Mood color" style="width:32px;height:28px;border:1px solid #aaa;border-radius:4px;padding:0;cursor:pointer;flex-shrink:0;">' +
+        '</div>' +
+        '<div class="nm-row"><label></label><select id="mood-preset" style="flex:1;font-size:11px;">'+buildPresetOptions()+'</select></div>' +
+        '<div class="nm-row"><label>Buddy:</label><select id="status-buddy-select"><option value="">— None —</option>'+buddyOptions+'<option value="__new__">+ New Buddy</option></select></div>' +
         '<div class="nm-row" id="status-newbuddy-row" style="display:none;"><label>New:</label><input type="text" id="status-buddy-new" placeholder="Name"></div>' +
-        richComposeHtml(composeId, "What's going on?") +
-        '<div class="pct-key">%t = time &nbsp; %d = date</div>' +
-        '<div class="check-row" style="margin-top:8px;"><span class="ck"><input type="checkbox" id="status-save-preset"><label for="status-save-preset">Save for later use</label></span></div>' +
-        '<div class="nm-send-row" style="gap:6px;">' +
+        '<div class="nm-send-row" style="gap:6px;margin-top:10px;">' +
           '<button class="btn" id="status-clear">Clear Status</button>' +
           '<button class="btn" id="status-save">Set Status</button>' +
         '</div>' +
       '</div>';
+
     createWindow({
       title: 'Set Status',
       extraClass: 'status-win',
-      menuHtml: menu,
       bodyHtml: body,
       type: 'setstatus',
       onMount: function(el, id){
         var labelInput = el.querySelector('#status-label');
+        var moodText = el.querySelector('#mood-text');
+        var moodColorInput = el.querySelector('#mood-color');
+        var moodIndicator = el.querySelector('#mood-indicator');
+        var moodPreset = el.querySelector('#mood-preset');
         var buddySelect = el.querySelector('#status-buddy-select');
         var newRow = el.querySelector('#status-newbuddy-row');
         var newInput = el.querySelector('#status-buddy-new');
-        var composeEl = el.querySelector('#'+composeId);
-        wireRichToolbar(el, composeId);
 
-        if(state.status && state.status.html) composeEl.innerHTML = state.status.html;
-        if(state.status && state.status.label) labelInput.value = state.status.label;
-        composeEl.focus();
-
-        var moodSelect = el.querySelector('#mood-select');
-        var moodCustomRow = el.querySelector('#mood-custom-row');
-        var moodCustomInput = el.querySelector('#mood-custom');
-
-        function logMood(mood){
-          if(!mood) return;
-          labelInput.value = mood;
-          state.moodLog.push({ mood: mood, ts: Date.now(), author: state.account.screenName });
-          saveState();
-          composeEl.focus();
+        function updateIndicator(mood, color){
+          var c = color || (mood ? moodColor(mood) : '#ddd');
+          moodIndicator.style.background = c;
         }
-        moodSelect.addEventListener('change', function(){
-          if(moodSelect.value === '__custom__'){
-            moodCustomRow.style.display = 'flex';
-            moodCustomInput.focus();
-          } else {
-            moodCustomRow.style.display = 'none';
-            logMood(moodSelect.value);
-          }
+
+        // pre-fill current mood
+        if(state.status && state.status.mood){
+          moodText.value = state.status.mood;
+          var savedColor = (state.customMoodColors && state.customMoodColors[state.status.mood]) || MOOD_COLORS[state.status.mood] || '#5a8fd6';
+          moodColorInput.value = savedColor;
+          updateIndicator(state.status.mood, savedColor);
+        }
+        labelInput.focus();
+
+        // live color preview as user types mood name or changes color
+        moodText.addEventListener('input', function(){
+          var m = moodText.value.trim();
+          var c = (state.customMoodColors&&state.customMoodColors[m]) || MOOD_COLORS[m] || moodColorInput.value;
+          moodColorInput.value = c;
+          updateIndicator(m, c);
         });
-        moodCustomInput.addEventListener('keydown', function(e){
-          if(e.key === 'Enter'){
-            e.preventDefault();
-            logMood(moodCustomInput.value.trim());
-          }
+        moodColorInput.addEventListener('input', function(){
+          updateIndicator(moodText.value.trim(), moodColorInput.value);
         });
-        moodCustomInput.addEventListener('blur', function(){
-          if(moodCustomInput.value.trim()) logMood(moodCustomInput.value.trim());
+
+        // preset picker — fills the text field and sets color, no logging yet
+        moodPreset.addEventListener('change', function(){
+          var val = moodPreset.value;
+          if(val === '__manage__'){
+            moodPreset.value = '';
+            openManageMoodsWindow();
+            return;
+          }
+          if(val){
+            moodText.value = val;
+            var c = (state.customMoodColors&&state.customMoodColors[val]) || MOOD_COLORS[val] || '#5a8fd6';
+            moodColorInput.value = c;
+            updateIndicator(val, c);
+            if(!labelInput.value.trim()) labelInput.value = val;
+          }
+          moodPreset.value = ''; // reset so same item can be re-picked
         });
 
         buddySelect.addEventListener('change', function(){
           newRow.style.display = (buddySelect.value === '__new__') ? 'flex' : 'none';
         });
 
-        labelInput.addEventListener('input', function(){
-          var match = state.statusPresets.find(function(p){
-            return p.label.toLowerCase() === labelInput.value.trim().toLowerCase();
-          });
-          if(match) composeEl.innerHTML = match.html;
-        });
-
-        el.querySelector('.mi-close').addEventListener('click', function(){ closeWindow(id); });
-        el.querySelector('.mi-photo').addEventListener('click', function(){ composeEl._insertPhoto && composeEl._insertPhoto(); });
-        el.querySelector('.mi-voice').addEventListener('click', function(){ startVoiceRecording(composeEl, el.querySelector('.mi-voice')); });
-        el.querySelector('.mi-time').addEventListener('click', function(){ appendPlainText(composeEl, (isRichEmpty(composeEl)?'':' ') + fmtTime(Date.now()) + ' '); });
-        el.querySelector('.mi-date').addEventListener('click', function(){ appendPlainText(composeEl, (isRichEmpty(composeEl)?'':' ') + fmtDateShort(Date.now()) + ' '); });
-
-        function applyStatus(label, html, closeAfter){
-          state.status = { label: label, html: html, ts: Date.now() };
-          state.statusLog.push({ label: label, html: html, ts: Date.now(), author: state.account.screenName });
-          if(el.querySelector('#status-save-preset').checked && label){
-            var existing = state.statusPresets.find(function(p){ return p.label.toLowerCase() === label.toLowerCase(); });
-            if(existing) existing.html = html;
-            else state.statusPresets.push({ id: uid(), label: label, html: html });
+        function applyStatus(label, closeAfter){
+          var currentMood = moodText.value.trim();
+          var currentColor = moodColorInput.value;
+          // save custom mood color if it's a new mood or color changed
+          if(currentMood){
+            if(!state.customMoods.includes(currentMood) && !MOOD_COLORS[currentMood]){
+              state.customMoods.push(currentMood);
+            }
+            state.customMoodColors[currentMood] = currentColor;
+          }
+          state.status = { label: label, html: '', ts: Date.now(), mood: currentMood };
+          if(label || currentMood){
+            state.statusLog.push({ id: uid(), label: label, html: '', ts: Date.now(), author: state.account.screenName, mood: currentMood });
+          }
+          if(currentMood){
+            state.moodLog.push({ mood: currentMood, ts: Date.now(), author: state.account.screenName });
           }
           var taggedBuddy = null;
           if(buddySelect.value === '__new__'){
@@ -2893,9 +2988,9 @@
           } else if(buddySelect.value){
             taggedBuddy = state.buddies.find(function(b){ return b.id === buddySelect.value; });
           }
-          if(taggedBuddy && html){
+          if(taggedBuddy && label){
             state.entries[taggedBuddy.id] = state.entries[taggedBuddy.id] || [];
-            state.entries[taggedBuddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry', statusLabel: label || null, author: state.account.screenName });
+            state.entries[taggedBuddy.id].push({ id: uid(), html: label, ts: Date.now(), kind: 'entry', statusLabel: label, author: state.account.screenName });
             renderLog(taggedBuddy.id);
             renderStats(taggedBuddy.id);
           }
@@ -2905,42 +3000,90 @@
           if(closeAfter) closeWindow(id);
         }
 
-        el.querySelector('#status-save').addEventListener('click', function(){
-          var label = labelInput.value.trim();
-          var html = isRichEmpty(composeEl) ? '' : sanitizeHTML(composeEl.innerHTML);
-          applyStatus(label, html, true);
-        });
+        el.querySelector('#status-save').addEventListener('click', function(){ applyStatus(labelInput.value.trim(), true); });
+        labelInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') applyStatus(labelInput.value.trim(), true); });
         el.querySelector('#status-clear').addEventListener('click', function(){
-          applyStatus('', '', false);
-          labelInput.value = '';
-          composeEl.innerHTML = '';
-          composeEl.removeAttribute('style');
-          buddySelect.value = '';
-          newRow.style.display = 'none';
-          el.querySelector('#status-save-preset').checked = false;
+          applyStatus('', false);
+          labelInput.value = ''; moodText.value = ''; moodColorInput.value = '#5a8fd6';
+          updateIndicator('', '#ddd'); moodPreset.value = '';
+          buddySelect.value = ''; newRow.style.display = 'none';
           labelInput.focus();
         });
       }
     });
   }
 
-  function openStatusLogWindow(){
-    var log = state.statusLog.slice().reverse();
-    var rows = log.map(function(entry){
-      var label = entry.label ? ('<b>' + escapeHtml(entry.label) + '</b> &mdash; ') : '';
-      var content = entry.html ? entry.html : '<i>(back to Online)</i>';
-      return '<div class="status-log-row"><div class="slr-ts">' + fmtDayDivider(entry.ts) + ' &middot; ' + fmtTime(entry.ts) + '</div><div class="slr-text">' + label + content + '</div></div>';
-    }).join('');
-    var body = '<div class="win-body">' + (rows || '<div class="bl-empty">No status changes yet.</div>') + '</div>';
-    createWindow({ title: 'Status Log', extraClass: 'help-win', bodyHtml: body, type: 'statuslog' });
+  function openEditStatusEntryWindow(entry, onSave){
+    var composeId = 'sl-edit-compose-' + uid();
+    var body =
+      '<div class="win-body nm-body">' +
+        '<div class="nm-row"><label>Status:</label><input type="text" id="sl-edit-label" value="'+escapeHtml(entry.label||'')+'"></div>' +
+        richComposeHtml(composeId, 'Tell me more...') +
+        '<div class="nm-send-row"><button class="btn" id="sl-edit-save">Save</button></div>' +
+      '</div>';
+    createWindow({
+      title: 'Edit Status',
+      extraClass: 'status-win',
+      bodyHtml: body,
+      type: 'editstatus',
+      onMount: function(el, id){
+        wireRichToolbar(el, composeId);
+        var compose = el.querySelector('#'+composeId);
+        if(entry.html) compose.innerHTML = entry.html;
+        el.querySelector('#sl-edit-save').addEventListener('click', function(){
+          entry.label = el.querySelector('#sl-edit-label').value.trim();
+          entry.html = isRichEmpty(compose) ? '' : sanitizeHTML(compose.innerHTML);
+          saveState();
+          refreshMyStatus();
+          if(onSave) onSave();
+          closeWindow(id);
+        });
+      }
+    });
   }
 
-  var MOOD_COLORS = {
-    Happy: '#f4c542', Sad: '#4a6fa5', Tired: '#8a8a8a', Excited: '#ff7f2a',
-    Anxious: '#a259c4', Angry: '#e0472e', Calm: '#4caf82', Stressed: '#c2185b'
-  };
-  function moodColor(mood){
-    return MOOD_COLORS[mood] || '#5a8fd6';
+
+
+  function openManageMoodsWindow(){
+    function buildBody(){
+      var allMoods = Object.keys(MOOD_COLORS).concat(state.customMoods || []);
+      var rows = allMoods.map(function(m){
+        var isBuiltin = !!MOOD_COLORS[m];
+        var color = moodColor(m);
+        return '<div class="mood-manage-row" data-mood="'+escapeHtml(m)+'">' +
+          '<input type="color" class="mm-color" value="'+color+'" title="Color for '+escapeHtml(m)+'">' +
+          '<span class="mm-name">'+escapeHtml(m)+'</span>' +
+          (!isBuiltin ? '<button class="mm-del" title="Delete">&times;</button>' : '<span style="width:20px;"></span>') +
+        '</div>';
+      }).join('');
+      return '<div class="win-body nm-body" style="overflow-y:auto;">' + rows +
+        '<div style="font-size:10px;color:#888;margin-top:8px;">Color changes apply to all moods including built-in ones.</div>' +
+        '</div>';
+    }
+    createWindow({
+      title: 'Manage Moods',
+      extraClass: 'addbuddy-win',
+      bodyHtml: buildBody(),
+      type: 'managemoods',
+      onMount: function(el, id){
+        el.querySelectorAll('.mm-color').forEach(function(inp){
+          inp.addEventListener('input', function(){
+            var mood = inp.closest('.mood-manage-row').getAttribute('data-mood');
+            state.customMoodColors[mood] = inp.value;
+            saveState();
+          });
+        });
+        el.querySelectorAll('.mm-del').forEach(function(btn){
+          btn.addEventListener('click', function(){
+            var mood = btn.closest('.mood-manage-row').getAttribute('data-mood');
+            state.customMoods = state.customMoods.filter(function(m){ return m !== mood; });
+            delete state.customMoodColors[mood];
+            saveState();
+            btn.closest('.mood-manage-row').remove();
+          });
+        });
+      }
+    });
   }
 
   function openMoodLogWindow(){
@@ -2949,40 +3092,68 @@
     if(!log.length){
       body = '<div class="win-body"><div class="bl-empty">No moods logged yet. Pick one from Set Status to start tracking.</div></div>';
     } else {
-      // frequency counts
+      // -- frequency counts --
       var counts = {};
       log.forEach(function(e){ counts[e.mood] = (counts[e.mood] || 0) + 1; });
       var sortedMoods = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
-      var maxCount = Math.max.apply(null, sortedMoods.map(function(m){ return counts[m]; }));
+      var total = log.length;
+      var topMood = sortedMoods[0];
+
+      // -- donut chart via SVG --
+      var cx = 54, cy = 54, r = 40, strokeW = 18;
+      var circumference = 2 * Math.PI * r;
+      var offset = 0;
+      var donutSegments = sortedMoods.map(function(m){
+        var pct = counts[m] / total;
+        var dash = pct * circumference;
+        var seg = '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+moodColor(m)+'" stroke-width="'+strokeW+'" stroke-dasharray="'+dash+' '+(circumference-dash)+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 '+cx+' '+cy+')" style="transition:stroke-dasharray 0.6s;"><title>'+escapeHtml(m)+': '+Math.round(pct*100)+'%</title></circle>';
+        offset += dash;
+        return seg;
+      }).join('');
+      var donutSvg = '<svg width="108" height="108" viewBox="0 0 108 108">'+donutSegments+
+        '<text x="54" y="50" text-anchor="middle" font-size="11" fill="#555">Top</text>'+
+        '<text x="54" y="63" text-anchor="middle" font-size="12" font-weight="bold" fill="'+moodColor(topMood)+'">'+escapeHtml(topMood)+'</text>'+
+      '</svg>';
+
+      // -- bar chart --
+      var maxCount = counts[sortedMoods[0]];
       var barsHtml = sortedMoods.map(function(m){
         var pct = Math.round((counts[m]/maxCount)*100);
+        var emoji = {Happy:'😊',Sad:'😢',Tired:'😴',Excited:'🤩',Anxious:'😬',Angry:'😤',Calm:'😌',Stressed:'😰'}[m] || '●';
         return '<div class="mood-bar-row">' +
-          '<span class="mood-bar-label">' + escapeHtml(m) + '</span>' +
-          '<span class="mood-bar-track"><span class="mood-bar-fill" style="width:' + pct + '%; background:' + moodColor(m) + ';"></span></span>' +
-          '<span class="mood-bar-count">' + counts[m] + '</span>' +
+          '<span class="mood-bar-label" title="'+escapeHtml(m)+'">'+emoji+' '+escapeHtml(m)+'</span>' +
+          '<span class="mood-bar-track"><span class="mood-bar-fill" style="width:'+pct+'%;background:'+moodColor(m)+';border-radius:4px;"></span></span>' +
+          '<span class="mood-bar-count">'+counts[m]+'</span>' +
         '</div>';
       }).join('');
 
-      // recent timeline (last 24, oldest to newest)
-      var recent = log.slice(-24);
-      var timelineHtml = recent.map(function(e){
-        return '<span class="mood-dot" style="background:' + moodColor(e.mood) + ';" title="' + escapeHtml(e.mood) + ' &middot; ' + fmtDayDivider(e.ts) + ' ' + fmtTime(e.ts) + '"></span>';
-      }).join('');
+      // -- current streak --
+      var streak = 0, streakMood = '', lastDate = '';
+      log.slice().reverse().forEach(function(e){
+        var d = fmtDayDivider(e.ts);
+        if(!lastDate){ lastDate = d; streakMood = e.mood; streak = 1; }
+        else if(e.mood === streakMood){ streak++; }
+        else { return; }
+      });
+      var streakHtml = '<div class="mood-streak">🔥 Current streak: <b>'+streak+'</b> entries of <b style="color:'+moodColor(streakMood)+'">'+escapeHtml(streakMood)+'</b></div>';
 
-      // detailed reverse-chronological list
-      var listHtml = log.slice().reverse().map(function(e){
-        return '<div class="status-log-row"><div class="slr-ts">' + fmtDayDivider(e.ts) + ' &middot; ' + fmtTime(e.ts) + '</div>' +
-          '<div class="slr-text"><span class="mood-dot" style="background:' + moodColor(e.mood) + ';"></span> ' + escapeHtml(e.mood) + '</div></div>';
+      // -- recent 30 dots timeline (newest right) --
+      var recent30 = log.slice(-30);
+      var dotsHtml = recent30.map(function(e){
+        return '<span class="mood-dot mood-dot-lg" style="background:'+moodColor(e.mood)+'" title="'+escapeHtml(e.mood)+' · '+fmtDayDivider(e.ts)+'"></span>';
       }).join('');
 
       body =
-        '<div class="win-body">' +
-          '<div class="mood-section-title">By Frequency</div>' +
-          '<div class="mood-bars">' + barsHtml + '</div>' +
-          '<div class="mood-section-title">Recent Timeline</div>' +
-          '<div class="mood-timeline">' + timelineHtml + '</div>' +
-          '<div class="mood-section-title">Full History</div>' +
-          listHtml +
+        '<div class="win-body" style="padding:10px;">' +
+          '<div class="mood-section-title">Your Most Common Mood</div>' +
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">' +
+            donutSvg +
+            '<div class="mood-bars" style="flex:1;">' + barsHtml + '</div>' +
+          '</div>' +
+          streakHtml +
+          '<div class="mood-section-title" style="margin-top:10px;">Recent Journey (last 30)</div>' +
+          '<div class="mood-timeline" style="gap:4px;">' + dotsHtml + '</div>' +
+          '<div style="font-size:10px;color:#aaa;margin-top:4px;">← older &nbsp; newer →</div>' +
         '</div>';
     }
     createWindow({ title: 'Mood Log', extraClass: 'moodlog-win', bodyHtml: body, type: 'moodlog' });
@@ -3261,15 +3432,28 @@
 
   // ================= BOOT =================
   loadState().then(function(){
-    normalizeState();
-    applyBackground();
-    (state.customFonts || []).forEach(function(f){ registerCustomFont(f); });
-    tickClock();
-    if(state.account && state.autoLogin){
-      enterDesktop();
-    } else {
-      showSignon();
+    try {
+      normalizeState();
+      applyBackground();
+      (state.customFonts || []).forEach(function(f){ registerCustomFont(f); });
+      tickClock();
+      if(state.account && state.autoLogin){
+        enterDesktop();
+      } else {
+        showSignon();
+      }
+    } catch(bootErr){
+      // show the real error on screen so it's visible on iPhone without dev tools
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:12px;font-size:13px;z-index:999999;font-family:monospace;white-space:pre-wrap;';
+      errDiv.textContent = 'Boot error: ' + (bootErr && bootErr.message ? bootErr.message : String(bootErr));
+      document.body.appendChild(errDiv);
     }
+  }).catch(function(loadErr){
+    var errDiv = document.createElement('div');
+    errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:12px;font-size:13px;z-index:999999;font-family:monospace;white-space:pre-wrap;';
+    errDiv.textContent = 'Load error: ' + (loadErr && loadErr.message ? loadErr.message : String(loadErr));
+    document.body.appendChild(errDiv);
   });
 
 })();
