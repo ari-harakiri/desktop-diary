@@ -834,6 +834,8 @@
       status: state.status,
       statusLog: state.statusLog,
       statusPresets: state.statusPresets,
+      moodLog: state.moodLog,
+      profile: state.profile,
       chunkCounts: {},
       updatedAt: Date.now()
     };
@@ -860,6 +862,8 @@
       state.status = meta.status || { label:'', html:'', ts:null };
       state.statusLog = meta.statusLog || [];
       state.statusPresets = meta.statusPresets || [];
+      state.moodLog = meta.moodLog || [];
+      state.profile = meta.profile || { pic:'', html:'' };
       if(state.account && meta.screenName) state.account.screenName = meta.screenName;
       var chunkCounts = meta.chunkCounts || {};
       var buddyIds = Object.keys(chunkCounts);
@@ -2520,8 +2524,13 @@
             el.querySelector('#cs-status').textContent = 'Pulling from cloud\u2026';
             pullFromCloud().then(function(found){
               el.querySelector('#cs-status').textContent = found ? 'Restored from your cloud backup.' : 'No cloud backup found yet.';
+              if(state.account){
+                document.getElementById('bl-title-text').textContent = state.account.screenName;
+                document.getElementById('bl-me-name').textContent = state.account.screenName;
+              }
               renderBuddyList();
               refreshMyStatus();
+              refreshProfilePic();
             }).catch(function(e){
               el.querySelector('#cs-status').textContent = 'Pull failed: ' + (e && e.message ? e.message : e);
             });
@@ -2572,7 +2581,7 @@
           '<div><button class="btn" id="ep-pic-btn">Choose Picture</button>' +
           '<button class="btn" id="ep-pic-clear" style="margin-top:4px;">Remove</button></div>' +
         '</div>' +
-        '<div class="field-row"><label>Profile HTML (MySpace-style)</label>' +
+        '<div class="field-row"><label>Profile HTML</label>' +
           '<textarea id="ep-html" style="width:100%; height:150px; font-family:monospace; font-size:12px;" placeholder="&lt;h1&gt;Welcome to my page!&lt;/h1&gt;&#10;&lt;marquee&gt;hi there&lt;/marquee&gt;"></textarea></div>' +
         '<div class="nm-send-row" style="gap:6px;">' +
           '<button class="btn" id="ep-preview">Preview</button>' +
@@ -2646,8 +2655,11 @@
   }
 
   function openViewProfileWindow(previewHtml, previewPic){
+    // may be called directly (with preview strings) OR as a click handler (first
+    // arg is an Event) — only treat args as previews when they're actually strings.
+    var isPreview = (typeof previewHtml === 'string');
     var pic = (typeof previewPic === 'string') ? previewPic : ((state.profile && state.profile.pic) || '');
-    var html = (typeof previewHtml === 'string') ? previewHtml : ((state.profile && state.profile.html) || '');
+    var html = isPreview ? previewHtml : ((state.profile && state.profile.html) || '');
     var picHtml = pic ? '<img src="'+pic+'" class="vp-pic">' : '';
     var name = escapeHtml(state.account.screenName);
     var customHtml = html || '<div class="vp-empty">No profile yet. Use File &rarr; Edit Profile to make one!</div>';
