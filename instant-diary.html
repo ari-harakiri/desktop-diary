@@ -326,6 +326,8 @@
   .vp-pic { width:90px; height:90px; border-radius:6px; object-fit:cover; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.3); }
   .vp-name { font-size:16px; font-weight:bold; color:#0850d0; }
   .vp-custom { padding:12px; overflow-wrap:break-word; }
+  .vp-section { padding:10px 12px; overflow-wrap:break-word; border-top:1px solid #e0ddd5; }
+  .vp-section:first-of-type { border-top:none; }
   .vp-custom img { max-width:100%; }
   .vp-empty { color:#888; font-size:12px; text-align:center; padding:20px; }
   .setup-win { width: min(290px, 92vw); height: min(340px, 68vh); }
@@ -561,7 +563,7 @@
     statusLog: [],                    // history: { label, html, ts }
     statusPresets: [],                // saved reusable statuses: { id, label, html }
     moodLog: [],                      // mood tracker history: { mood, ts }
-    profile: { pic: '', html: '' },   // profile picture (data URL) + custom MySpace-style HTML
+    profile: { pic: '', html: '', header: '', aboutMe: '' },  // profile picture + two HTML sections
     background: { color: '', image: '' },  // custom desktop background (device-local, not synced)
     customFonts: [],        // user-uploaded fonts (device-local, not synced): { id, name, dataUrl }
     stickyNotes: [],        // desktop sticky notes (device-local): { id, text, color, x, y, w, h }
@@ -580,7 +582,13 @@
     if(!Array.isArray(state.statusLog)) state.statusLog = [];
     if(!Array.isArray(state.statusPresets)) state.statusPresets = [];
     if(!Array.isArray(state.moodLog)) state.moodLog = [];
-    if(!state.profile) state.profile = { pic: '', html: '' };
+    if(!state.profile) state.profile = { pic: '', html: '', header: '', aboutMe: '' };
+    if(!state.profile.header && !state.profile.aboutMe && state.profile.html){
+      // migrate old single html field into aboutMe
+      state.profile.aboutMe = state.profile.html;
+    }
+    if(state.profile.header === undefined) state.profile.header = '';
+    if(state.profile.aboutMe === undefined) state.profile.aboutMe = '';
     if(!state.background) state.background = { color: '', image: '' };
     if(!Array.isArray(state.customFonts)) state.customFonts = [];
     if(!Array.isArray(state.stickyNotes)) state.stickyNotes = [];
@@ -3105,8 +3113,10 @@
           '<div><button class="btn" id="ep-pic-btn">Choose Picture</button>' +
           '<button class="btn" id="ep-pic-clear" style="margin-top:4px;">Remove</button></div>' +
         '</div>' +
-        '<div class="field-row"><label>Profile HTML</label>' +
-          '<textarea id="ep-html" style="width:100%; height:150px; font-family:monospace; font-size:12px;" placeholder="&lt;h1&gt;Welcome to my page!&lt;/h1&gt;&#10;&lt;marquee&gt;hi there&lt;/marquee&gt;"></textarea></div>' +
+        '<div class="field-row"><label>Header</label>' +
+          '<textarea id="ep-header" style="width:100%; height:70px; font-family:monospace; font-size:12px;" placeholder="&lt;h1&gt;My Page&lt;/h1&gt;&#10;&lt;marquee&gt;welcome&lt;/marquee&gt;"></textarea></div>' +
+        '<div class="field-row"><label>About Me</label>' +
+          '<textarea id="ep-about" style="width:100%; height:100px; font-family:monospace; font-size:12px;" placeholder="&lt;p&gt;Hi! I love...&lt;/p&gt;"></textarea></div>' +
         '<div class="nm-send-row" style="gap:6px;">' +
           '<button class="btn" id="ep-preview">Preview</button>' +
           '<button class="btn" id="ep-save">Save Profile</button>' +
@@ -3126,7 +3136,8 @@
           else { img.style.display = 'none'; ph.style.display = 'flex'; }
         }
         showPic();
-        el.querySelector('#ep-html').value = (state.profile && state.profile.html) || '';
+        el.querySelector('#ep-header').value = (state.profile && state.profile.header) || '';
+        el.querySelector('#ep-about').value = (state.profile && state.profile.aboutMe) || '';
 
         el.querySelector('#ep-pic-btn').addEventListener('click', function(){
           var input = document.createElement('input');
@@ -3162,13 +3173,16 @@
         el.querySelector('#ep-pic-clear').addEventListener('click', function(){ picData = ''; showPic(); });
 
         el.querySelector('#ep-preview').addEventListener('click', function(){
-          var tempHtml = sanitizeProfileHTML(el.querySelector('#ep-html').value);
-          openViewProfileWindow(tempHtml, picData);
+          var h = sanitizeProfileHTML(el.querySelector('#ep-header').value);
+          var a = sanitizeProfileHTML(el.querySelector('#ep-about').value);
+          openViewProfileWindow(h, a, picData);
         });
         el.querySelector('#ep-save').addEventListener('click', function(){
           state.profile = {
             pic: picData,
-            html: sanitizeProfileHTML(el.querySelector('#ep-html').value)
+            header: sanitizeProfileHTML(el.querySelector('#ep-header').value),
+            aboutMe: sanitizeProfileHTML(el.querySelector('#ep-about').value),
+            html: '' // kept for backward compat but no longer used
           };
           saveState();
           refreshProfilePic();
@@ -3178,19 +3192,21 @@
     });
   }
 
-  function openViewProfileWindow(previewHtml, previewPic){
-    // may be called directly (with preview strings) OR as a click handler (first
-    // arg is an Event) — only treat args as previews when they're actually strings.
-    var isPreview = (typeof previewHtml === 'string');
+  function openViewProfileWindow(previewHeader, previewAbout, previewPic){
+    // supports being called as a click handler (args are Events) OR directly with preview strings
+    var isPreview = (typeof previewHeader === 'string' && typeof previewAbout === 'string');
     var pic = (typeof previewPic === 'string') ? previewPic : ((state.profile && state.profile.pic) || '');
-    var html = isPreview ? previewHtml : ((state.profile && state.profile.html) || '');
+    var header = isPreview ? previewHeader : ((state.profile && state.profile.header) || '');
+    var aboutMe = isPreview ? previewAbout : ((state.profile && state.profile.aboutMe) || '');
     var picHtml = pic ? '<img src="'+pic+'" class="vp-pic">' : '';
     var name = escapeHtml(state.account.screenName);
-    var customHtml = html || '<div class="vp-empty">No profile yet. Use File &rarr; Edit Profile to make one!</div>';
+    var isEmpty = !header && !aboutMe;
     var body =
       '<div class="win-body vp-body">' +
         '<div class="vp-header">' + picHtml + '<div class="vp-name">' + name + '</div></div>' +
-        '<div class="vp-custom">' + customHtml + '</div>' +
+        (header ? '<div class="vp-section">' + header + '</div>' : '') +
+        (aboutMe ? '<div class="vp-section">' + aboutMe + '</div>' : '') +
+        (isEmpty ? '<div class="vp-empty">No profile yet. Use File &rarr; Edit Profile to make one!</div>' : '') +
       '</div>';
     createWindow({ title: 'Profile', extraClass: 'profile-win', bodyHtml: body, type: 'viewprofile' });
   }
