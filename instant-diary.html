@@ -52,7 +52,7 @@
   #desktop {
     position: relative; width: 100%; height: 100vh; height: 100dvh;
     overflow: hidden;
-    background: #bfe3fb;
+    background: #000;
   }
   #bg-scene { position:absolute; inset:0; z-index:0; overflow:hidden; }
   #bg-scene svg { width:100%; height:100%; display:block; }
@@ -174,9 +174,24 @@
   #buddylist-win { width: min(168px, 46vw); height: min(380px, 74vh); top: 16px; right: 16px; }
   #buddylist-win .win-body { padding: 0; display:flex; flex-direction:column; }
   .bl-me { padding: 5px 7px; font-size:10.5px; border-bottom:1px solid #ccc; background:#f5f5f0; }
+  .bl-me-top { display:flex; gap:7px; align-items:center; }
+  .bl-me-pic { width:38px; height:38px; border-radius:4px; object-fit:cover; border:1px solid #b0aca0; cursor:pointer; flex-shrink:0; }
+  .bl-me-pic-placeholder { width:38px; height:38px; border-radius:4px; border:1px solid #b0aca0; background:#dce8f7; color:#7a97c2; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; cursor:pointer; flex-shrink:0; }
+  .bl-me-info { display:flex; flex-direction:column; min-width:0; }
   .bl-me b { display:block; font-size:11.5px; }
   .bl-status-edit { font-size:9px; color:#0850d0; text-decoration:underline; cursor:pointer; display:block; margin-top:2px; }
   .status-log-row { padding:6px 4px; border-bottom:1px solid #eee; font-size:11.5px; }
+  .mood-section-title { font-size:11px; font-weight:bold; color:#0850d0; margin:12px 0 6px; }
+  .mood-section-title:first-child { margin-top:0; }
+  .mood-bars { display:flex; flex-direction:column; gap:6px; }
+  .mood-bar-row { display:flex; align-items:center; gap:6px; font-size:11px; }
+  .mood-bar-label { width:60px; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mood-bar-track { flex:1; height:12px; background:#eee; border-radius:6px; overflow:hidden; }
+  .mood-bar-fill { display:block; height:100%; border-radius:6px; }
+  .mood-bar-count { width:18px; text-align:right; flex-shrink:0; color:#666; }
+  .mood-timeline { display:flex; flex-wrap:wrap; gap:5px; padding:2px 0; }
+  .mood-dot { display:inline-block; width:14px; height:14px; border-radius:50%; box-shadow: inset 0 0 2px rgba(0,0,0,.35); vertical-align:middle; }
+  .status-log-row .mood-dot { width:10px; height:10px; margin-right:2px; }
   .status-log-row .slr-ts { color:#888; font-size:10px; }
   .status-log-row .slr-text { margin-top:2px; }
   .nm-row select { flex:1; font-family:Tahoma,Arial,sans-serif; font-size:12px; border:1px solid #7f9db9; border-radius:3px; padding:5px 6px; background:#fff; }
@@ -196,7 +211,7 @@
   .bl-empty { padding:12px 8px; font-size:10.5px; color:#777; text-align:center; }
 
   /* ---------- IM window ---------- */
-  .im-win { width: min(320px, 92vw); height: min(420px, 76vh); }
+  .im-win { width: min(320px, 92vw); height: min(520px, 84vh); }
   .im-stats { font-size:10px; color:#666; padding:3px 8px; background:#f5f5f0; border-bottom:1px solid #ddd; text-align:right; }
   .im-toolbar { display:flex; gap:3px; padding:4px 5px; background:#ece9d8; border-bottom:1px solid #ccc; }
   .im-toolbar button { width:24px; height:22px; font-size:11px; border:1px solid #b0aca0; border-radius:3px; background:#fff; cursor:pointer; }
@@ -248,7 +263,7 @@
   .vr-cancel { background:#555; color:#fff; }
   .im-log audio, .status-log-row audio, .slr-text audio { max-width:100%; display:block; margin:4px 0; }
   .rich-compose {
-    width:100%; min-height:44px; max-height:120px; overflow-y:auto;
+    width:100%; min-height:64px; max-height:22vh; overflow-y:auto;
     border:1px solid #7f9db9; border-radius:3px; background:#fff;
     padding:5px 6px; font-size:13px; line-height:1.4;
   }
@@ -281,6 +296,18 @@
 
   .addbuddy-win { width: min(280px, 92vw); height: min(230px, 58vh); }
   .help-win { width: min(280px, 92vw); height: min(300px, 60vh); }
+  .moodlog-win { width: min(320px, 92vw); height: min(460px, 78vh); }
+  .profile-win { width: min(340px, 94vw); height: min(500px, 82vh); }
+  .profile-pic-edit { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+  .ep-pic { width:70px; height:70px; border-radius:6px; object-fit:cover; border:1px solid #b0aca0; }
+  .ep-pic-ph { width:70px; height:70px; border-radius:6px; border:1px dashed #b0aca0; background:#f0f0ea; color:#999; display:flex; align-items:center; justify-content:center; font-size:10px; text-align:center; }
+  .vp-body { padding:0; }
+  .vp-header { display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px; background:linear-gradient(180deg,#dce8f7,#f5f5f0); border-bottom:1px solid #ccc; }
+  .vp-pic { width:90px; height:90px; border-radius:6px; object-fit:cover; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+  .vp-name { font-size:16px; font-weight:bold; color:#0850d0; }
+  .vp-custom { padding:12px; overflow-wrap:break-word; }
+  .vp-custom img { max-width:100%; }
+  .vp-empty { color:#888; font-size:12px; text-align:center; padding:20px; }
   .setup-win { width: min(290px, 92vw); height: min(340px, 68vh); }
   .status-win { width: min(300px, 92vw); height: min(420px, 80vh); }
 
@@ -434,26 +461,36 @@
     <div class="menubar">
       <div class="m-item">File
         <div class="m-drop">
+          <div id="menu-editprofile">Edit Profile&hellip;</div>
+          <div id="menu-viewprofile">View Profile&hellip;</div>
           <div id="menu-setstatus">Set Status&hellip;</div>
           <div id="menu-statuslog">Status Log&hellip;</div>
+          <div id="menu-moodlog">Mood Log&hellip;</div>
           <div id="menu-cloudsync">Sync&hellip;</div>
           <div id="menu-account">Account Settings&hellip;</div>
           <div id="menu-signoff">Sign Off</div>
         </div>
       </div>
-      <div class="m-item">Buddies
+      <div class="m-item">Options
         <div class="m-drop">
           <div id="menu-addbuddy">Add Buddy&hellip;</div>
           <div id="menu-addcategory">Add Category&hellip;</div>
+          <div id="menu-renamecategory">Rename Category&hellip;</div>
           <div id="menu-sendim">Send Instant Message&hellip;</div>
         </div>
       </div>
     </div>
     <div class="win-body">
       <div class="bl-me">
-        <b id="bl-me-name">Screen Name</b>
-        <span><span class="dot online" id="bl-me-dot"></span> <span id="bl-me-sub">Online</span></span>
-        <span class="bl-status-edit" id="bl-status-edit">Set Status</span>
+        <div class="bl-me-top">
+          <img id="bl-me-pic" class="bl-me-pic" alt="" style="display:none;">
+          <div class="bl-me-pic-placeholder" id="bl-me-pic-ph">?</div>
+          <div class="bl-me-info">
+            <b id="bl-me-name">Screen Name</b>
+            <span><span class="dot online" id="bl-me-dot"></span> <span id="bl-me-sub">Online</span></span>
+            <span class="bl-status-edit" id="bl-status-edit">Set Status</span>
+          </div>
+        </div>
       </div>
       <div class="bl-list" id="bl-list"></div>
       <div class="bl-toolbar">
@@ -473,6 +510,7 @@
       <div class="sm-item" id="sm-bgphoto">Add Background Photo&hellip;</div>
       <div class="sm-item" id="sm-bgdefault">Restore Default Background</div>
     </div>
+    <input type="color" id="bg-color-input" style="position:fixed; width:1px; height:1px; opacity:0; left:4px; bottom:4px; border:none; padding:0;">
     <div id="tb-items" style="display:flex; gap:4px;"></div>
     <div id="tb-clock"></div>
   </div>
@@ -491,6 +529,8 @@
     status: { label: '', html: '', ts: null },   // current status
     statusLog: [],                    // history: { label, html, ts }
     statusPresets: [],                // saved reusable statuses: { id, label, html }
+    moodLog: [],                      // mood tracker history: { mood, ts }
+    profile: { pic: '', html: '' },   // profile picture (data URL) + custom MySpace-style HTML
     background: { color: '', image: '' },  // custom desktop background (device-local, not synced)
     customFonts: [],        // user-uploaded fonts (device-local, not synced): { id, name, dataUrl }
     groups: [ { id: 'default', name: 'Buddies' } ],
@@ -507,6 +547,8 @@
     if(!state.status) state.status = { label: '', html: '', ts: null };
     if(!Array.isArray(state.statusLog)) state.statusLog = [];
     if(!Array.isArray(state.statusPresets)) state.statusPresets = [];
+    if(!Array.isArray(state.moodLog)) state.moodLog = [];
+    if(!state.profile) state.profile = { pic: '', html: '' };
     if(!state.background) state.background = { color: '', image: '' };
     if(!Array.isArray(state.customFonts)) state.customFonts = [];
     state.entries = state.entries || {};
@@ -560,20 +602,16 @@
     }
   });
 
+  var bgColorInput = document.getElementById('bg-color-input');
+  bgColorInput.addEventListener('input', function(){
+    state.background = { color: bgColorInput.value, image: '' };
+    applyBackground();
+    saveState();
+  });
   document.getElementById('sm-bgcolor').addEventListener('click', function(){
     document.getElementById('start-menu').classList.remove('open');
-    var picker = document.createElement('input');
-    picker.type = 'color';
-    picker.value = (state.background && state.background.color) || '#3a6ea5';
-    picker.style.position = 'fixed'; picker.style.left = '-9999px';
-    document.body.appendChild(picker);
-    picker.addEventListener('input', function(){
-      state.background = { color: picker.value, image: '' };
-      applyBackground();
-      saveState();
-    });
-    picker.addEventListener('change', function(){ picker.remove(); });
-    picker.click();
+    bgColorInput.value = (state.background && state.background.color) || '#3a6ea5';
+    bgColorInput.click();
   });
 
   document.getElementById('sm-bgphoto').addEventListener('click', function(){
@@ -1113,7 +1151,21 @@
     document.getElementById('bl-title-text').textContent = state.account.screenName;
     document.getElementById('bl-me-name').textContent = state.account.screenName;
     refreshMyStatus();
+    refreshProfilePic();
     renderBuddyList();
+  }
+
+  function refreshProfilePic(){
+    var img = document.getElementById('bl-me-pic');
+    var ph = document.getElementById('bl-me-pic-ph');
+    if(state.profile && state.profile.pic){
+      img.src = state.profile.pic;
+      img.style.display = 'block';
+      ph.style.display = 'none';
+    } else {
+      img.style.display = 'none';
+      ph.style.display = 'flex';
+    }
   }
 
   (function(){
@@ -1121,6 +1173,8 @@
     function bringToFront(){ blWin.style.zIndex = ++zCounter; }
     blWin.addEventListener('mousedown', bringToFront);
     blWin.addEventListener('touchstart', bringToFront, { passive: true });
+    document.getElementById('bl-me-pic').addEventListener('click', openViewProfileWindow);
+    document.getElementById('bl-me-pic-ph').addEventListener('click', openEditProfileWindow);
   })();
 
   function refreshMyStatus(){
@@ -1261,9 +1315,13 @@
   document.getElementById('menu-sendim').addEventListener('click', function(){ openNewMessageWindow(); });
   document.getElementById('menu-setstatus').addEventListener('click', openSetStatusWindow);
   document.getElementById('menu-statuslog').addEventListener('click', openStatusLogWindow);
+  document.getElementById('menu-moodlog').addEventListener('click', openMoodLogWindow);
   document.getElementById('menu-cloudsync').addEventListener('click', openCloudSyncWindow);
   document.getElementById('menu-account').addEventListener('click', openAccountSettingsWindow);
+  document.getElementById('menu-editprofile').addEventListener('click', openEditProfileWindow);
+  document.getElementById('menu-viewprofile').addEventListener('click', openViewProfileWindow);
   document.getElementById('menu-addcategory').addEventListener('click', openAddCategoryWindow);
+  document.getElementById('menu-renamecategory').addEventListener('click', openRenameCategoryWindow);
   document.getElementById('bl-status-edit').addEventListener('click', openSetStatusWindow);
 
   function signOff(){
@@ -1627,12 +1685,24 @@
         var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange);
         return;
       }
-      // no prior selection inside the box (e.g. it was empty and never
-      // focused yet, or focus was stolen by a native color/select picker) —
-      // place the caret INSIDE the deepest last node rather than just after
-      // it, so it stays nested within any existing color/size formatting
-      // instead of resetting to plain black text.
-      if(!target.firstChild){ target.appendChild(document.createTextNode('\u200b')); }
+      if(!target.firstChild){
+        // box genuinely empty: create a real (invisible) anchor character and
+        // SELECT it — not just collapse past it — so clicking Bold, Italic,
+        // and Underline in a row before typing anything all actually apply
+        // and combine, instead of only the last click sticking.
+        var marker = document.createTextNode('\u200b');
+        target.appendChild(marker);
+        var range0 = document.createRange();
+        range0.selectNodeContents(marker);
+        var sel0 = window.getSelection();
+        sel0.removeAllRanges();
+        sel0.addRange(range0);
+        return;
+      }
+      // box has existing content but selection was lost (e.g. a native
+      // color/select picker stole focus) — place the caret at the very end,
+      // nested inside the last element, so continuing formatting doesn't
+      // reset color/size back to default.
       var node = target;
       while(node.lastChild) node = node.lastChild;
       var range = document.createRange();
@@ -1809,6 +1879,7 @@
         renderStats(buddyId);
         var input = el.querySelector('#'+inputId);
         wireRichToolbar(el, inputId);
+        input.focus();
 
         var editingEntryId = null;
         var banner = el.querySelector('#editbanner-'+buddyId);
@@ -1928,7 +1999,7 @@
         lastDay = divider;
       }
       var isPrompt = entry.kind === 'prompt';
-      var sender = isPrompt ? 'Prompt' : escapeHtml(state.account.screenName);
+      var sender = isPrompt ? 'Prompt' : escapeHtml(entry.author || state.account.screenName);
       var content = (entry.html !== undefined) ? entry.html : escapeHtml(entry.text || '');
       var statusTag = entry.statusLabel !== undefined
         ? ('<span class="status-tag">Status' + (entry.statusLabel ? ': ' + escapeHtml(entry.statusLabel) : '') + '</span><br>')
@@ -1957,7 +2028,7 @@
     if(isRichEmpty(input)) return;
     var html = sanitizeHTML(input.innerHTML);
     state.entries[buddyId] = state.entries[buddyId] || [];
-    state.entries[buddyId].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry' });
+    state.entries[buddyId].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry', author: state.account.screenName });
     saveState();
     input.innerHTML = '';
     renderLog(buddyId);
@@ -1969,7 +2040,7 @@
   function insertPromptMessage(buddyId){
     var p = WRITING_PROMPTS[Math.floor(Math.random()*WRITING_PROMPTS.length)];
     state.entries[buddyId] = state.entries[buddyId] || [];
-    state.entries[buddyId].push({ id: uid(), html: escapeHtml(p), ts: Date.now(), kind: 'prompt' });
+    state.entries[buddyId].push({ id: uid(), html: escapeHtml(p), ts: Date.now(), kind: 'prompt', author: state.account.screenName });
     saveState();
     renderLog(buddyId);
     renderStats(buddyId);
@@ -1995,7 +2066,7 @@
           '<option value="">Choose a buddy</option>' + buddyOptions +
           '<option value="__new__">+ New Buddy</option>' +
         '</select></div>' +
-        '<div class="nm-row" id="nm-newbuddy-row" style="display:none;"><label>New:</label><input type="text" id="nm-to-new" placeholder="Buddy name" value="'+(prefillName && !prefillMatch ? escapeHtml(prefillName) : '')+'"></div>' +
+        '<div class="nm-row" id="nm-newbuddy-row" style="display:none;"><label>New:</label><input type="text" id="nm-to-new" placeholder="Name" value="'+(prefillName && !prefillMatch ? escapeHtml(prefillName) : '')+'"></div>' +
         richComposeHtml('nm-body', '') +
         '<div class="pct-key">%t = time &nbsp; %d = date</div>' +
         '<div class="nm-send-row"><button class="btn" id="nm-send">Send</button></div>' +
@@ -2010,6 +2081,7 @@
       onMount: function(el, id){
         wireRichToolbar(el, 'nm-body');
         var composeEl = el.querySelector('#nm-body');
+        composeEl.focus();
         var toSelect = el.querySelector('#nm-to-select');
         var newRow = el.querySelector('#nm-newbuddy-row');
         var newInput = el.querySelector('#nm-to-new');
@@ -2042,7 +2114,7 @@
           if(isRichEmpty(composeEl)) { composeEl.focus(); return; }
           var html = sanitizeHTML(composeEl.innerHTML);
           state.entries[buddy.id] = state.entries[buddy.id] || [];
-          state.entries[buddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry' });
+          state.entries[buddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry', author: state.account.screenName });
           saveState();
           playDing();
           renderBuddyList();
@@ -2126,6 +2198,44 @@
     });
   }
 
+  // ================= RENAME CATEGORY WINDOW =================
+  function openRenameCategoryWindow(){
+    var options = state.groups.map(function(g){ return '<option value="'+escapeHtml(g.id)+'">'+escapeHtml(g.name)+'</option>'; }).join('');
+    var body =
+      '<div class="win-body nm-body">' +
+        '<div class="nm-row"><label>Category:</label><select id="rc-select">'+options+'</select></div>' +
+        '<div class="nm-row"><label>New Name:</label><input type="text" id="rc-name"></div>' +
+        '<div class="nm-send-row"><button class="btn" id="rc-save">Rename</button></div>' +
+      '</div>';
+    createWindow({
+      title: 'Rename Category',
+      extraClass: 'addbuddy-win',
+      bodyHtml: body,
+      type: 'renamecategory',
+      onMount: function(el, id){
+        var select = el.querySelector('#rc-select');
+        var input = el.querySelector('#rc-name');
+        function loadCurrentName(){
+          var group = state.groups.find(function(g){ return g.id === select.value; });
+          input.value = group ? group.name : '';
+        }
+        loadCurrentName();
+        select.addEventListener('change', loadCurrentName);
+        function submit(){
+          var newName = input.value.trim();
+          if(!newName) return;
+          var group = state.groups.find(function(g){ return g.id === select.value; });
+          if(group) group.name = newName;
+          saveState();
+          renderBuddyList();
+          closeWindow(id);
+        }
+        el.querySelector('#rc-save').addEventListener('click', submit);
+        input.addEventListener('keydown', function(e){ if(e.key === 'Enter') submit(); });
+      }
+    });
+  }
+
   // ================= STATUS WINDOWS =================
   function openSetStatusWindow(){
     var listId = 'status-presets-' + uid();
@@ -2146,11 +2256,19 @@
       '<div class="win-body nm-body">' +
         '<div class="nm-row"><label>Status:</label><input type="text" id="status-label" list="'+listId+'" placeholder="e.g. Happy">' +
         '<datalist id="'+listId+'">'+presetOptions+'</datalist></div>' +
+        '<div class="nm-row"><label>Mood:</label><select id="mood-select">' +
+          '<option value="">&mdash; None &mdash;</option>' +
+          ['Happy','Sad','Tired','Excited','Anxious','Angry','Calm','Stressed'].map(function(m){
+            return '<option value="'+m+'">'+m+'</option>';
+          }).join('') +
+          '<option value="__custom__">+ Custom Mood</option>' +
+        '</select></div>' +
+        '<div class="nm-row" id="mood-custom-row" style="display:none;"><label>Custom:</label><input type="text" id="mood-custom" placeholder="Type a mood"></div>' +
         '<div class="nm-row"><label>Buddy:</label><select id="status-buddy-select">' +
           '<option value="">&mdash; None &mdash;</option>' + buddyOptions +
           '<option value="__new__">+ New Buddy</option>' +
         '</select></div>' +
-        '<div class="nm-row" id="status-newbuddy-row" style="display:none;"><label>New:</label><input type="text" id="status-buddy-new" placeholder="Buddy name"></div>' +
+        '<div class="nm-row" id="status-newbuddy-row" style="display:none;"><label>New:</label><input type="text" id="status-buddy-new" placeholder="Name"></div>' +
         richComposeHtml(composeId, "What's going on?") +
         '<div class="pct-key">%t = time &nbsp; %d = date</div>' +
         '<div class="check-row" style="margin-top:8px;"><span class="ck"><input type="checkbox" id="status-save-preset"><label for="status-save-preset">Save for later use</label></span></div>' +
@@ -2175,7 +2293,37 @@
 
         if(state.status && state.status.html) composeEl.innerHTML = state.status.html;
         if(state.status && state.status.label) labelInput.value = state.status.label;
-        labelInput.focus();
+        composeEl.focus();
+
+        var moodSelect = el.querySelector('#mood-select');
+        var moodCustomRow = el.querySelector('#mood-custom-row');
+        var moodCustomInput = el.querySelector('#mood-custom');
+
+        function logMood(mood){
+          if(!mood) return;
+          labelInput.value = mood;
+          state.moodLog.push({ mood: mood, ts: Date.now(), author: state.account.screenName });
+          saveState();
+          composeEl.focus();
+        }
+        moodSelect.addEventListener('change', function(){
+          if(moodSelect.value === '__custom__'){
+            moodCustomRow.style.display = 'flex';
+            moodCustomInput.focus();
+          } else {
+            moodCustomRow.style.display = 'none';
+            logMood(moodSelect.value);
+          }
+        });
+        moodCustomInput.addEventListener('keydown', function(e){
+          if(e.key === 'Enter'){
+            e.preventDefault();
+            logMood(moodCustomInput.value.trim());
+          }
+        });
+        moodCustomInput.addEventListener('blur', function(){
+          if(moodCustomInput.value.trim()) logMood(moodCustomInput.value.trim());
+        });
 
         buddySelect.addEventListener('change', function(){
           newRow.style.display = (buddySelect.value === '__new__') ? 'flex' : 'none';
@@ -2196,7 +2344,7 @@
 
         function applyStatus(label, html, closeAfter){
           state.status = { label: label, html: html, ts: Date.now() };
-          state.statusLog.push({ label: label, html: html, ts: Date.now() });
+          state.statusLog.push({ label: label, html: html, ts: Date.now(), author: state.account.screenName });
           if(el.querySelector('#status-save-preset').checked && label){
             var existing = state.statusPresets.find(function(p){ return p.label.toLowerCase() === label.toLowerCase(); });
             if(existing) existing.html = html;
@@ -2211,7 +2359,7 @@
           }
           if(taggedBuddy && html){
             state.entries[taggedBuddy.id] = state.entries[taggedBuddy.id] || [];
-            state.entries[taggedBuddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry', statusLabel: label || null });
+            state.entries[taggedBuddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry', statusLabel: label || null, author: state.account.screenName });
             renderLog(taggedBuddy.id);
             renderStats(taggedBuddy.id);
           }
@@ -2230,6 +2378,7 @@
           applyStatus('', '', false);
           labelInput.value = '';
           composeEl.innerHTML = '';
+          composeEl.removeAttribute('style');
           buddySelect.value = '';
           newRow.style.display = 'none';
           el.querySelector('#status-save-preset').checked = false;
@@ -2248,6 +2397,59 @@
     }).join('');
     var body = '<div class="win-body">' + (rows || '<div class="bl-empty">No status changes yet.</div>') + '</div>';
     createWindow({ title: 'Status Log', extraClass: 'help-win', bodyHtml: body, type: 'statuslog' });
+  }
+
+  var MOOD_COLORS = {
+    Happy: '#f4c542', Sad: '#4a6fa5', Tired: '#8a8a8a', Excited: '#ff7f2a',
+    Anxious: '#a259c4', Angry: '#e0472e', Calm: '#4caf82', Stressed: '#c2185b'
+  };
+  function moodColor(mood){
+    return MOOD_COLORS[mood] || '#5a8fd6';
+  }
+
+  function openMoodLogWindow(){
+    var log = state.moodLog || [];
+    var body;
+    if(!log.length){
+      body = '<div class="win-body"><div class="bl-empty">No moods logged yet. Pick one from Set Status to start tracking.</div></div>';
+    } else {
+      // frequency counts
+      var counts = {};
+      log.forEach(function(e){ counts[e.mood] = (counts[e.mood] || 0) + 1; });
+      var sortedMoods = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
+      var maxCount = Math.max.apply(null, sortedMoods.map(function(m){ return counts[m]; }));
+      var barsHtml = sortedMoods.map(function(m){
+        var pct = Math.round((counts[m]/maxCount)*100);
+        return '<div class="mood-bar-row">' +
+          '<span class="mood-bar-label">' + escapeHtml(m) + '</span>' +
+          '<span class="mood-bar-track"><span class="mood-bar-fill" style="width:' + pct + '%; background:' + moodColor(m) + ';"></span></span>' +
+          '<span class="mood-bar-count">' + counts[m] + '</span>' +
+        '</div>';
+      }).join('');
+
+      // recent timeline (last 24, oldest to newest)
+      var recent = log.slice(-24);
+      var timelineHtml = recent.map(function(e){
+        return '<span class="mood-dot" style="background:' + moodColor(e.mood) + ';" title="' + escapeHtml(e.mood) + ' &middot; ' + fmtDayDivider(e.ts) + ' ' + fmtTime(e.ts) + '"></span>';
+      }).join('');
+
+      // detailed reverse-chronological list
+      var listHtml = log.slice().reverse().map(function(e){
+        return '<div class="status-log-row"><div class="slr-ts">' + fmtDayDivider(e.ts) + ' &middot; ' + fmtTime(e.ts) + '</div>' +
+          '<div class="slr-text"><span class="mood-dot" style="background:' + moodColor(e.mood) + ';"></span> ' + escapeHtml(e.mood) + '</div></div>';
+      }).join('');
+
+      body =
+        '<div class="win-body">' +
+          '<div class="mood-section-title">By Frequency</div>' +
+          '<div class="mood-bars">' + barsHtml + '</div>' +
+          '<div class="mood-section-title">Recent Timeline</div>' +
+          '<div class="mood-timeline">' + timelineHtml + '</div>' +
+          '<div class="mood-section-title">Full History</div>' +
+          listHtml +
+        '</div>';
+    }
+    createWindow({ title: 'Mood Log', extraClass: 'moodlog-win', bodyHtml: body, type: 'moodlog' });
   }
 
   // ================= HELP WINDOW =================
@@ -2333,11 +2535,135 @@
   }
 
   // ================= CHANGE PASSWORD WINDOW =================
+  // ================= PROFILE WINDOWS =================
+  // More permissive than entry sanitizing (this is the user's own creative page),
+  // but still strips <script>, event handlers, and javascript: URLs so a synced
+  // or shared profile can't run malicious code.
+  function sanitizeProfileHTML(rawHtml){
+    var container = document.createElement('div');
+    container.innerHTML = rawHtml;
+    var blockedTags = { SCRIPT:1, IFRAME:1, OBJECT:1, EMBED:1, LINK:1, META:1, BASE:1, FORM:1 };
+    (function clean(node){
+      Array.prototype.slice.call(node.childNodes).forEach(function(child){
+        if(child.nodeType === 1){
+          var tag = child.tagName;
+          if(blockedTags[tag]){ node.removeChild(child); return; }
+          Array.prototype.slice.call(child.attributes || []).forEach(function(attr){
+            var name = attr.name.toLowerCase();
+            var val = (attr.value || '');
+            if(name.indexOf('on') === 0){ child.removeAttribute(attr.name); return; }
+            if((name === 'href' || name === 'src' || name === 'style') && /javascript:/i.test(val)){
+              child.removeAttribute(attr.name); return;
+            }
+          });
+          clean(child);
+        }
+      });
+    })(container);
+    return container.innerHTML;
+  }
+
+  function openEditProfileWindow(){
+    var body =
+      '<div class="win-body nm-body">' +
+        '<div class="profile-pic-edit">' +
+          '<img id="ep-pic" class="ep-pic" style="display:none;">' +
+          '<div class="ep-pic-ph" id="ep-pic-ph">No picture</div>' +
+          '<div><button class="btn" id="ep-pic-btn">Choose Picture</button>' +
+          '<button class="btn" id="ep-pic-clear" style="margin-top:4px;">Remove</button></div>' +
+        '</div>' +
+        '<div class="field-row"><label>Profile HTML (MySpace-style)</label>' +
+          '<textarea id="ep-html" style="width:100%; height:150px; font-family:monospace; font-size:12px;" placeholder="&lt;h1&gt;Welcome to my page!&lt;/h1&gt;&#10;&lt;marquee&gt;hi there&lt;/marquee&gt;"></textarea></div>' +
+        '<div class="nm-send-row" style="gap:6px;">' +
+          '<button class="btn" id="ep-preview">Preview</button>' +
+          '<button class="btn" id="ep-save">Save Profile</button>' +
+        '</div>' +
+      '</div>';
+    createWindow({
+      title: 'Edit Profile',
+      extraClass: 'profile-win',
+      bodyHtml: body,
+      type: 'editprofile',
+      onMount: function(el, id){
+        var picData = (state.profile && state.profile.pic) || '';
+        var img = el.querySelector('#ep-pic');
+        var ph = el.querySelector('#ep-pic-ph');
+        function showPic(){
+          if(picData){ img.src = picData; img.style.display = 'block'; ph.style.display = 'none'; }
+          else { img.style.display = 'none'; ph.style.display = 'flex'; }
+        }
+        showPic();
+        el.querySelector('#ep-html').value = (state.profile && state.profile.html) || '';
+
+        el.querySelector('#ep-pic-btn').addEventListener('click', function(){
+          var input = document.createElement('input');
+          input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
+          document.body.appendChild(input);
+          input.addEventListener('change', function(){
+            var file = input.files && input.files[0];
+            if(file){
+              var reader = new FileReader();
+              reader.onload = function(e){
+                var im = new Image();
+                im.onload = function(){
+                  var maxDim = 300;
+                  var w = im.width, h = im.height;
+                  if(w > maxDim || h > maxDim){
+                    if(w >= h){ h = Math.round(h*maxDim/w); w = maxDim; }
+                    else { w = Math.round(w*maxDim/h); h = maxDim; }
+                  }
+                  var canvas = document.createElement('canvas');
+                  canvas.width = w; canvas.height = h;
+                  canvas.getContext('2d').drawImage(im, 0, 0, w, h);
+                  picData = canvas.toDataURL('image/jpeg', 0.8);
+                  showPic();
+                };
+                im.src = e.target.result;
+              };
+              reader.readAsDataURL(file);
+            }
+            input.remove();
+          });
+          input.click();
+        });
+        el.querySelector('#ep-pic-clear').addEventListener('click', function(){ picData = ''; showPic(); });
+
+        el.querySelector('#ep-preview').addEventListener('click', function(){
+          var tempHtml = sanitizeProfileHTML(el.querySelector('#ep-html').value);
+          openViewProfileWindow(tempHtml, picData);
+        });
+        el.querySelector('#ep-save').addEventListener('click', function(){
+          state.profile = {
+            pic: picData,
+            html: sanitizeProfileHTML(el.querySelector('#ep-html').value)
+          };
+          saveState();
+          refreshProfilePic();
+          closeWindow(id);
+        });
+      }
+    });
+  }
+
+  function openViewProfileWindow(previewHtml, previewPic){
+    var pic = (typeof previewPic === 'string') ? previewPic : ((state.profile && state.profile.pic) || '');
+    var html = (typeof previewHtml === 'string') ? previewHtml : ((state.profile && state.profile.html) || '');
+    var picHtml = pic ? '<img src="'+pic+'" class="vp-pic">' : '';
+    var name = escapeHtml(state.account.screenName);
+    var customHtml = html || '<div class="vp-empty">No profile yet. Use File &rarr; Edit Profile to make one!</div>';
+    var body =
+      '<div class="win-body vp-body">' +
+        '<div class="vp-header">' + picHtml + '<div class="vp-name">' + name + '</div></div>' +
+        '<div class="vp-custom">' + customHtml + '</div>' +
+      '</div>';
+    createWindow({ title: 'Profile', extraClass: 'profile-win', bodyHtml: body, type: 'viewprofile' });
+  }
+
   function openAccountSettingsWindow(){
     var body =
       '<div class="win-body nm-body">' +
         '<div class="field-row"><label>Screen Name</label><input type="text" id="acc-name" value="'+escapeHtml(state.account.screenName)+'"></div>' +
-        '<div class="field-row"><label>New Password (optional)</label><input type="password" id="acc-newpw" placeholder="Leave blank to keep current"></div>' +
+        '<div class="field-row"><label>New Password (optional)</label><input type="password" id="acc-newpw"></div>' +
         '<div class="field-row"><label>Confirm New Password</label><input type="password" id="acc-newpw2"></div>' +
         '<div class="field-row"><label>Current Password (required)</label><input type="password" id="acc-current"></div>' +
         '<div class="signon-error" id="acc-error"></div>' +
