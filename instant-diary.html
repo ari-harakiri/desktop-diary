@@ -577,6 +577,13 @@
 </div>
 
 <script>
+window.onerror = function(msg, src, line, col, err){
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:10px;font-size:12px;z-index:999999;font-family:monospace;white-space:pre-wrap;word-break:break-all;';
+  d.textContent = 'Error: ' + msg + '\nLine: ' + line + '\nSource: ' + src;
+  document.body.appendChild(d);
+};
+try {
 (function(){
 
   var STORAGE_KEY = 'buddy-diary-data-v1';
@@ -3013,6 +3020,67 @@
     });
   }
 
+  function renderStatusLogBody(){
+    var log = state.statusLog.slice().reverse();
+    if(!log.length) return '<div class="bl-empty">No status changes yet.</div>';
+    return log.map(function(entry){
+      var name = escapeHtml(entry.author || (state.account && state.account.screenName) || '');
+      var moodDot = entry.mood ? '<span class="mood-dot" style="background:'+moodColor(entry.mood)+';margin-right:4px;vertical-align:middle;"></span>' : '';
+      var moodLine = entry.mood ? '<div class="slr-text">' + moodDot + name + ' is <b>' + escapeHtml(entry.mood) + '</b></div>' : '';
+      var statusText = entry.label ? '<div class="sl-status-label">' + escapeHtml(entry.label) + '</div>' : '';
+      var richBody = (entry.html && entry.html !== entry.label) ? '<div class="sl-body">' + entry.html + '</div>' : '';
+      var entryId = entry.id || '';
+      return '<div class="status-log-row" data-slid="'+escapeHtml(entryId)+'">' +
+        '<div class="slr-ts">' + fmtDayDivider(entry.ts) + ' &middot; ' + fmtTime(entry.ts) +
+          (entryId ? '<span class="sl-actions"><span class="sl-edit">✎</span><span class="sl-del">✕</span></span>' : '') +
+        '</div>' +
+        moodLine +
+        statusText +
+        richBody +
+      '</div>';
+    }).join('');
+  }
+
+  function openStatusLogWindow(){
+    var winRef = createWindow({
+      title: 'Status Log',
+      extraClass: 'help-win',
+      bodyHtml: '<div class="win-body" id="sl-body-wrap">' + renderStatusLogBody() + '</div>',
+      type: 'statuslog',
+      onMount: function(el, id){
+        function wireActions(){
+          el.querySelectorAll('.sl-del').forEach(function(btn){
+            btn.onclick = function(){
+              var row = btn.closest('.status-log-row');
+              var slid = row && row.getAttribute('data-slid');
+              if(!slid) return;
+              appConfirm('Delete this status entry?', function(ok){
+                if(!ok) return;
+                state.statusLog = state.statusLog.filter(function(e){ return e.id !== slid; });
+                saveState();
+                el.querySelector('#sl-body-wrap').innerHTML = renderStatusLogBody();
+                wireActions();
+              });
+            };
+          });
+          el.querySelectorAll('.sl-edit').forEach(function(btn){
+            btn.onclick = function(){
+              var row = btn.closest('.status-log-row');
+              var slid = row && row.getAttribute('data-slid');
+              var entry = state.statusLog.find(function(e){ return e.id === slid; });
+              if(!entry) return;
+              openEditStatusEntryWindow(entry, function(){
+                el.querySelector('#sl-body-wrap').innerHTML = renderStatusLogBody();
+                wireActions();
+              });
+            };
+          });
+        }
+        wireActions();
+      }
+    });
+  }
+
   function openEditStatusEntryWindow(entry, onSave){
     var composeId = 'sl-edit-compose-' + uid();
     var body =
@@ -3457,6 +3525,12 @@
   });
 
 })();
+} catch(e){
+  var _ed = document.createElement('div');
+  _ed.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:10px;font-size:12px;z-index:999999;font-family:monospace;white-space:pre-wrap;word-break:break-all;';
+  _ed.textContent = 'Top-level error: ' + (e && e.message ? e.message : String(e)) + (e && e.stack ? '\n' + e.stack.split('\n').slice(0,4).join('\n') : '');
+  document.body.appendChild(_ed);
+}
 </script>
 </body>
 </html>
