@@ -554,6 +554,12 @@ window.onerror = function(msg, src, line, col, err){
   // never actionable and was alarming users for essentially no reason, so we
   // skip showing the banner for that specific unhelpful case.
   if(msg === 'Script error.' && !line && !src) return;
+  // Chromium-based iOS browsers (Chrome, Brave, etc.) inject an internal
+  // "__gCrWeb" bridge script into every page for autofill/password-manager
+  // integration. When it fails to initialize in time, the browser blames it on
+  // the page URL even though it's entirely the browser's own internal code —
+  // nothing to do with this app, so it's not worth alarming anyone about.
+  if(typeof msg === 'string' && msg.indexOf('__gCrWeb') !== -1) return;
   var d = document.createElement('div');
   d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:10px;font-size:12px;z-index:999999;font-family:monospace;white-space:pre-wrap;word-break:break-all;';
   d.textContent = 'Error: ' + msg + '\nLine: ' + line + '\nSource: ' + src;
@@ -596,6 +602,7 @@ try {
     state.statusLog.forEach(function(e){ if(!e.id) e.id = uid(); });
     if(!Array.isArray(state.statusPresets)) state.statusPresets = [];
     if(!Array.isArray(state.moodLog)) state.moodLog = [];
+    state.moodLog.forEach(function(e){ if(!e.id) e.id = uid(); });
     if(!state.profile) state.profile = { pic: '', html: '', header: '', aboutMe: '' };
     if(!state.profile.header && !state.profile.aboutMe && state.profile.html){
       // migrate old single html field into aboutMe
@@ -3308,13 +3315,15 @@ try {
             state.customMoodColors[currentMood] = currentColor;
           }
           state.status = { label: label, html: '', ts: Date.now(), mood: currentMood };
-          if(label || currentMood){
-            state.statusLog.push({ id: uid(), label: label, html: '', ts: Date.now(), author: state.account.screenName, mood: currentMood });
-          }
+          var newMoodLogId = null;
           // only add a Mood Log entry when the mood actually changed from what it was before —
           // re-saving a status with the same mood (e.g. just editing the label) shouldn't log again
           if(currentMood && currentMood !== previousMood){
-            state.moodLog.push({ mood: currentMood, ts: Date.now(), author: state.account.screenName });
+            newMoodLogId = uid();
+            state.moodLog.push({ id: newMoodLogId, mood: currentMood, ts: Date.now(), author: state.account.screenName });
+          }
+          if(label || currentMood){
+            state.statusLog.push({ id: uid(), label: label, html: '', ts: Date.now(), author: state.account.screenName, mood: currentMood, moodLogId: newMoodLogId });
           }
           var taggedBuddy = null;
           if(buddySelect.value === '__new__'){
@@ -3425,7 +3434,7 @@ try {
     // -- recent 30 dots timeline (newest right) --
     var recent30 = log.slice(-30);
     var dotsHtml = recent30.map(function(e){
-      return '<span class="mood-dot mood-dot-lg" style="background:'+moodColor(e.mood)+'" title="'+escapeHtml(e.mood)+' · '+fmtDayDivider(e.ts)+'"></span>';
+      return '<span class="mood-dot mood-dot-lg" data-mood-id="'+escapeHtml(e.id)+'" style="background:'+moodColor(e.mood)+';cursor:pointer;" title="'+escapeHtml(e.mood)+' · '+fmtDayDivider(e.ts)+' · tap to delete"></span>';
     }).join('');
 
     return '<div style="padding:10px;">' +
@@ -3467,6 +3476,10 @@ try {
               if(!slid) return;
               appConfirm('Delete this status entry?', function(ok){
                 if(!ok) return;
+                var entry = state.statusLog.find(function(e){ return e.id === slid; });
+                if(entry && entry.moodLogId){
+                  state.moodLog = state.moodLog.filter(function(m){ return m.id !== entry.moodLogId; });
+                }
                 state.statusLog = state.statusLog.filter(function(e){ return e.id !== slid; });
                 saveState();
                 contentEl.innerHTML = renderStatusLogBody();
@@ -3487,6 +3500,21 @@ try {
             };
           });
         }
+        function wireMoodActions(){
+          contentEl.querySelectorAll('.mood-dot[data-mood-id]').forEach(function(dot){
+            dot.onclick = function(){
+              var mid = dot.getAttribute('data-mood-id');
+              if(!mid) return;
+              appConfirm('Delete this mood entry?', function(ok){
+                if(!ok) return;
+                state.moodLog = (state.moodLog || []).filter(function(m){ return m.id !== mid; });
+                saveState();
+                contentEl.innerHTML = renderMoodLogBody();
+                wireMoodActions();
+              });
+            };
+          });
+        }
         function showTab(tab){
           tabBtns.forEach(function(b){
             var active = b.getAttribute('data-tab') === tab;
@@ -3495,6 +3523,7 @@ try {
           });
           if(tab === 'mood'){
             contentEl.innerHTML = renderMoodLogBody();
+            wireMoodActions();
           } else {
             contentEl.innerHTML = renderStatusLogBody();
             wireStatusActions();
