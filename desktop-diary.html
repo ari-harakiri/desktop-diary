@@ -245,7 +245,7 @@
   .lock-toggle input { cursor:pointer; }
   .lock-icon { font-size:10px; }
   .locked-content { filter:blur(4px); transition:filter 0.2s; cursor:pointer; user-select:none; }
-  .locked-content:active, .locked-content.revealed { filter:none; }
+  .locked-content.revealed { filter:none; }
   .edit-cancel { color:#0850d0; text-decoration:underline; cursor:pointer; }
   .im-compose-row { border-top:1px solid #ccc; background:#fff; padding:5px; }
   .rich-toolbar { display:flex; gap:4px; padding:4px 5px; background:#ece9d8; border-bottom:1px solid #ccc; align-items:center; flex-wrap:wrap; }
@@ -536,24 +536,21 @@
     <div class="menubar">
       <div class="m-item">File
         <div class="m-drop">
-          <div id="menu-editprofile">Edit Profile&hellip;</div>
-          <div id="menu-viewprofile">View Blog&hellip;</div>
-          <div id="menu-newpost">New Post&hellip;</div>
-          <div id="menu-setstatus">Set Status&hellip;</div>
-          <div id="menu-statuslog">Status Log&hellip;</div>
-          <div id="menu-moodlog">Mood Log&hellip;</div>
           <div id="menu-cloudsync">Sync&hellip;</div>
           <div id="menu-account">Account Settings&hellip;</div>
           <div id="menu-signoff">Sign Off</div>
         </div>
       </div>
-      <div class="m-item">Options
+      <div class="m-item">View
         <div class="m-drop">
-          <div id="menu-addbuddy">Add Buddy&hellip;</div>
-          <div id="menu-editbuddy">Edit Buddy&hellip;</div>
-          <div id="menu-addcategory">Add Category&hellip;</div>
-          <div id="menu-renamecategory">Edit Category&hellip;</div>
-          <div id="menu-sendim">Send Message&hellip;</div>
+          <div id="menu-viewprofile">Blog&hellip;</div>
+          <div id="menu-logs">Logs&hellip;</div>
+        </div>
+      </div>
+      <div class="m-item">Edit
+        <div class="m-drop">
+          <div id="menu-editprofile">Profile&hellip;</div>
+          <div id="menu-buddies">Buddies&hellip;</div>
         </div>
       </div>
     </div>
@@ -585,11 +582,8 @@
     <div id="tb-start"><span class="ttl-icon" id="tb-start-icon"></span><span>Start</span></div>
     <div id="start-menu">
       <div class="sm-item" id="sm-stickynote">New Sticky Note</div>
-      <div class="sm-item" id="sm-bgcolor">Change Background Color&hellip;</div>
-      <div class="sm-item" id="sm-bgphoto">Add Background Photo&hellip;</div>
-      <div class="sm-item" id="sm-bgdefault">Restore Default</div>
+      <div class="sm-item" id="sm-bgedit">Edit Background&hellip;</div>
     </div>
-    <input type="color" id="bg-color-input" style="position:fixed; width:1px; height:1px; opacity:0; left:4px; bottom:4px; border:none; padding:0;">
     <div id="tb-items" style="display:flex; gap:4px;"></div>
     <div id="tb-clock"></div>
   </div>
@@ -947,105 +941,88 @@ try {
     document.getElementById('start-menu').classList.remove('open');
     createStickyNote();
   });
-  var bgColorInput = document.getElementById('bg-color-input');
-  bgColorInput.addEventListener('input', function(){
-    state.background = { color: bgColorInput.value, image: '' };
-    applyBackground();
-    saveState();
-  });
-
-  var activeBgPicker = null;
-  document.getElementById('sm-bgcolor').addEventListener('click', function(e){
+  document.getElementById('sm-bgedit').addEventListener('click', function(e){
     e.stopPropagation();
     document.getElementById('start-menu').classList.remove('open');
-    if(activeBgPicker){ activeBgPicker.remove(); activeBgPicker = null; return; }
+    openEditBackgroundWindow();
+  });
+
+  function openEditBackgroundWindow(){
     var COLORS = [
       '#3a6ea5','#1a3a5c','#2d7dd2','#0d3aa8','#5c3d99','#8e24aa',
       '#c62828','#e57373','#f06292','#e91e63','#ff7043','#f4a261',
       '#fdd835','#aed581','#43a047','#1b5e20','#00838f','#00acc1',
       '#ffffff','#e0e0e0','#9e9e9e','#616161','#333333','#000000'
     ];
-    var picker = document.createElement('div');
-    picker.style.cssText='position:fixed;left:4px;bottom:42px;z-index:999999;background:#fff;border:2px solid #0054e3;border-radius:8px;padding:10px;box-shadow:0 4px 14px rgba(0,0,0,.4);display:grid;grid-template-columns:repeat(6,28px);gap:6px;';
-    COLORS.forEach(function(c){
-      var sw = document.createElement('div');
-      sw.style.cssText='width:28px;height:28px;border-radius:4px;background:'+c+';border:2px solid rgba(0,0,0,.2);cursor:pointer;box-sizing:border-box;';
-      if((state.background&&state.background.color)===c) sw.style.borderColor='#0054e3';
-      sw.addEventListener('click', function(){
-        state.background = { color: c, image: '' };
-        applyBackground(); saveState();
-        picker.remove(); activeBgPicker = null;
-      });
-      picker.appendChild(sw);
-    });
-    // custom color via native picker (fires from grid button tap — direct gesture, reliable)
-    var customRow = document.createElement('div');
-    customRow.style.cssText='grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:2px;';
-    var customLabel = document.createElement('label');
-    customLabel.style.cssText='font-size:11px;color:#444;cursor:pointer;display:flex;align-items:center;gap:6px;';
-    customLabel.textContent='Custom: ';
-    var customInput = document.createElement('input');
-    customInput.type='color';
-    customInput.value=(state.background&&state.background.color)||'#3a6ea5';
-    customInput.style.cssText='width:36px;height:28px;border:1px solid #aaa;border-radius:4px;cursor:pointer;padding:0;';
-    customInput.addEventListener('input', function(){
-      state.background = { color: customInput.value, image: '' };
-      applyBackground(); saveState();
-    });
-    customLabel.appendChild(customInput);
-    customRow.appendChild(customLabel);
-    picker.appendChild(customRow);
-    document.body.appendChild(picker);
-    activeBgPicker = picker;
-    setTimeout(function(){
-      document.addEventListener('click', function dismiss(ev){
-        if(!picker.contains(ev.target)){ picker.remove(); activeBgPicker=null; document.removeEventListener('click',dismiss); }
-      });
-    }, 0);
-  });
-
-  document.getElementById('sm-bgphoto').addEventListener('click', function(e){
-    e.stopPropagation();
-    document.getElementById('start-menu').classList.remove('open');
-    var input = document.createElement('input');
-    input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
-    document.body.appendChild(input);
-    input.addEventListener('change', function(){
-      var file = input.files && input.files[0];
-      if(file){
-        var reader = new FileReader();
-        reader.onload = function(e){
-          var img = new Image();
-          img.onload = function(){
-            var maxDim = 1600;
-            var w = img.width, h = img.height;
-            if(w > maxDim || h > maxDim){
-              if(w >= h){ h = Math.round(h * maxDim / w); w = maxDim; }
-              else { w = Math.round(w * maxDim / h); h = maxDim; }
+    var swatchesHtml = COLORS.map(function(c){
+      var sel = (state.background && state.background.color) === c;
+      return '<div class="bg-swatch" data-color="'+c+'" style="width:28px;height:28px;border-radius:4px;background:'+c+';border:2px solid '+(sel?'#0054e3':'rgba(0,0,0,.2)')+';cursor:pointer;box-sizing:border-box;"></div>';
+    }).join('');
+    var body =
+      '<div class="win-body nm-body">' +
+        '<div style="display:grid;grid-template-columns:repeat(6,28px);gap:6px;margin-bottom:10px;">'+swatchesHtml+'</div>' +
+        '<div class="nm-row"><label>Custom:</label><input type="color" id="eb-custom-color" value="'+((state.background&&state.background.color)||'#3a6ea5')+'" style="width:44px;height:28px;border:1px solid #aaa;border-radius:4px;cursor:pointer;padding:0;"></div>' +
+        '<div class="nm-row"><label>Photo:</label><button class="btn" id="eb-upload-photo">Upload Photo&hellip;</button></div>' +
+        '<div class="nm-send-row"><button class="btn" id="eb-restore" style="color:#c0392b;border-color:#c0392b;">Restore Default</button></div>' +
+      '</div>';
+    createWindow({
+      title: 'Edit Background',
+      extraClass: 'addbuddy-win',
+      bodyHtml: body,
+      type: 'editbackground',
+      onMount: function(el, id){
+        el.querySelectorAll('.bg-swatch').forEach(function(sw){
+          sw.addEventListener('click', function(){
+            state.background = { color: sw.getAttribute('data-color'), image: '' };
+            applyBackground(); saveState();
+            el.querySelectorAll('.bg-swatch').forEach(function(s){ s.style.borderColor = 'rgba(0,0,0,.2)'; });
+            sw.style.borderColor = '#0054e3';
+          });
+        });
+        el.querySelector('#eb-custom-color').addEventListener('input', function(e2){
+          state.background = { color: e2.target.value, image: '' };
+          applyBackground(); saveState();
+        });
+        el.querySelector('#eb-upload-photo').addEventListener('click', function(){
+          var input = document.createElement('input');
+          input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
+          document.body.appendChild(input);
+          input.addEventListener('change', function(){
+            var file = input.files && input.files[0];
+            if(file){
+              var reader = new FileReader();
+              reader.onload = function(e3){
+                var img = new Image();
+                img.onload = function(){
+                  var maxDim = 1600;
+                  var w = img.width, h = img.height;
+                  if(w > maxDim || h > maxDim){
+                    if(w >= h){ h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                  }
+                  var canvas = document.createElement('canvas');
+                  canvas.width = w; canvas.height = h;
+                  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                  state.background = { color: '', image: canvas.toDataURL('image/jpeg', 0.8) };
+                  applyBackground();
+                  saveState();
+                };
+                img.src = e3.target.result;
+              };
+              reader.readAsDataURL(file);
             }
-            var canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            state.background = { color: '', image: canvas.toDataURL('image/jpeg', 0.8) };
-            applyBackground();
-            saveState();
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+            input.remove();
+          });
+          input.click();
+        });
+        el.querySelector('#eb-restore').addEventListener('click', function(){
+          state.background = { color: '', image: '' };
+          applyBackground(); saveState();
+          closeWindow(id);
+        });
       }
-      input.remove();
     });
-    input.click();
-  });
-
-  document.getElementById('sm-bgdefault').addEventListener('click', function(e){
-    e.stopPropagation();
-    document.getElementById('start-menu').classList.remove('open');
-    state.background = { color: '', image: '' };
-    applyBackground();
-    saveState();
-  });
+  }
 
   // Menu bars rely on :hover for desktop mouse users, but touchscreens don't have
   // real hover, so we also support tap-to-toggle here for reliability on mobile.
@@ -1474,6 +1451,63 @@ try {
     box.querySelector('#ac-cancel').addEventListener('click', function(){ done(false); });
     overlay.addEventListener('click', function(e){ if(e.target === overlay) done(false); });
   }
+  // Prompts for the account password to reveal a locked entry. cb(true) if correct, cb(false) if cancelled/incorrect-and-gave-up.
+  function appPasscodePrompt(cb){
+    if(!state.account.password){
+      openInfoWindow('Set an account password first in File \u2192 Account Settings.');
+      cb(false);
+      return;
+    }
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999999;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#ece9d8;border:2px solid #0054e3;border-radius:6px;padding:18px 20px;max-width:260px;width:90%;font-size:13px;box-shadow:0 4px 18px rgba(0,0,0,.5);';
+    box.innerHTML = '<div style="margin-bottom:10px;">🔒 Enter your password to view this entry</div>' +
+      '<input type="password" id="pc-input" style="width:100%;box-sizing:border-box;padding:4px;margin-bottom:6px;">' +
+      '<div id="pc-error" style="color:#c0392b;min-height:14px;margin-bottom:8px;"></div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button class="btn" id="pc-cancel">Cancel</button>' +
+        '<button class="btn" id="pc-ok">Unlock</button>' +
+      '</div>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    var input = box.querySelector('#pc-input');
+    var errEl = box.querySelector('#pc-error');
+    function done(result){ document.body.removeChild(overlay); cb(result); }
+    function attempt(){
+      if(input.value === state.account.password){ done(true); }
+      else { errEl.textContent = 'Incorrect password.'; input.value=''; input.focus(); }
+    }
+    box.querySelector('#pc-ok').addEventListener('click', attempt);
+    box.querySelector('#pc-cancel').addEventListener('click', function(){ done(false); });
+    input.addEventListener('keydown', function(e){ if(e.key==='Enter') attempt(); });
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) done(false); });
+    setTimeout(function(){ input.focus(); }, 30);
+  }
+  // Prompts for a single line of text. cb(value) if confirmed, cb(null) if cancelled.
+  function appTextPrompt(message, defaultValue, cb){
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999999;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#ece9d8;border:2px solid #0054e3;border-radius:6px;padding:18px 20px;max-width:260px;width:90%;font-size:13px;box-shadow:0 4px 18px rgba(0,0,0,.5);';
+    box.innerHTML = '<div style="margin-bottom:10px;">'+escapeHtml(message)+'</div>' +
+      '<input type="text" id="tp-input" style="width:100%;box-sizing:border-box;padding:4px;margin-bottom:10px;">' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+        '<button class="btn" id="tp-cancel">Cancel</button>' +
+        '<button class="btn" id="tp-ok">OK</button>' +
+      '</div>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    var input = box.querySelector('#tp-input');
+    input.value = defaultValue || '';
+    function done(result){ document.body.removeChild(overlay); cb(result); }
+    function submit(){ done(input.value); }
+    box.querySelector('#tp-ok').addEventListener('click', submit);
+    box.querySelector('#tp-cancel').addEventListener('click', function(){ done(null); });
+    input.addEventListener('keydown', function(e){ if(e.key==='Enter') submit(); });
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) done(null); });
+    setTimeout(function(){ input.focus(); input.select(); }, 30);
+  }
   function fmtTime(ts){
     var d = new Date(ts);
     var h = d.getHours(); var m = d.getMinutes();
@@ -1891,21 +1925,14 @@ try {
 
   document.getElementById('bl-close').addEventListener('click', signOff);
   document.getElementById('menu-signoff').addEventListener('click', signOff);
-  document.getElementById('bl-addbuddy-btn').addEventListener('click', openAddBuddyWindow);
-  document.getElementById('menu-addbuddy').addEventListener('click', openAddBuddyWindow);
+  document.getElementById('bl-addbuddy-btn').addEventListener('click', openBuddiesWindow);
+  document.getElementById('menu-buddies').addEventListener('click', openBuddiesWindow);
   document.getElementById('bl-sendim-btn').addEventListener('click', function(){ openNewMessageWindow(); });
-  document.getElementById('menu-sendim').addEventListener('click', function(){ openNewMessageWindow(); });
-  document.getElementById('menu-setstatus').addEventListener('click', openSetStatusWindow);
-  document.getElementById('menu-statuslog').addEventListener('click', openStatusLogWindow);
-  document.getElementById('menu-moodlog').addEventListener('click', openMoodLogWindow);
+  document.getElementById('menu-logs').addEventListener('click', function(){ openLogsWindow('status'); });
   document.getElementById('menu-cloudsync').addEventListener('click', openCloudSyncWindow);
   document.getElementById('menu-account').addEventListener('click', openAccountSettingsWindow);
   document.getElementById('menu-editprofile').addEventListener('click', openEditProfileWindow);
   document.getElementById('menu-viewprofile').addEventListener('click', openViewProfileWindow);
-  document.getElementById('menu-newpost').addEventListener('click', function(){ openBlogPostEditor(null); });
-  document.getElementById('menu-addcategory').addEventListener('click', openAddCategoryWindow);
-  document.getElementById('menu-renamecategory').addEventListener('click', openRenameCategoryWindow);
-  document.getElementById('menu-editbuddy').addEventListener('click', openEditBuddyWindow);
   document.getElementById('bl-status-edit').addEventListener('click', openSetStatusWindow);
 
   function signOff(){
@@ -2486,9 +2513,16 @@ try {
         banner.querySelector('.edit-cancel').addEventListener('click', cancelEdit);
 
         logEl.addEventListener('click', function(e){
-          // tap-to-reveal locked content
+          // passcode-gated reveal for locked content
           if(e.target.classList.contains('locked-content')){
-            e.target.classList.toggle('revealed');
+            if(e.target.classList.contains('revealed')){
+              e.target.classList.remove('revealed');
+              return;
+            }
+            var targetEl = e.target;
+            appPasscodePrompt(function(ok){
+              if(ok) targetEl.classList.add('revealed');
+            });
             return;
           }
           var actionEl = e.target.closest('.entry-action');
@@ -2556,7 +2590,7 @@ try {
         el.querySelector('#voice-'+buddyId).addEventListener('click', function(){
           startVoiceRecording(input, el.querySelector('#voice-'+buddyId));
         });
-        el.querySelector('#addb-'+buddyId).addEventListener('click', openAddBuddyWindow);
+        el.querySelector('#addb-'+buddyId).addEventListener('click', openBuddiesWindow);
 
         el.querySelector('.mi-close').addEventListener('click', function(){ closeWindow(id); });
         el.querySelector('.mi-clear').addEventListener('click', function(){ cancelEdit(); });
@@ -2565,7 +2599,7 @@ try {
         el.querySelector('.mi-ts').addEventListener('click', function(){ appendPlainText(input, (isRichEmpty(input)?'':' ') + fmtTime(Date.now()) + ' '); });
         el.querySelector('.mi-date').addEventListener('click', function(){ appendPlainText(input, (isRichEmpty(input)?'':' ') + fmtDateShort(Date.now()) + ' '); });
         el.querySelector('.mi-prompt').addEventListener('click', function(){ insertPromptMessage(buddyId); });
-        el.querySelector('.mi-addbuddy').addEventListener('click', openAddBuddyWindow);
+        el.querySelector('.mi-addbuddy').addEventListener('click', openBuddiesWindow);
       }
     });
   }
@@ -2721,123 +2755,81 @@ try {
     });
   }
 
-  // ================= ADD BUDDY WINDOW =================
-  function openAddBuddyWindow(){
+  // ================= BUDDIES WINDOW (add + edit combined) =================
+  function openBuddiesWindow(){
+    var buddyOptions = state.buddies.map(function(b){ return '<option value="'+escapeHtml(b.id)+'">'+escapeHtml(b.name)+'</option>'; }).join('');
     var body =
       '<div class="win-body nm-body">' +
-        '<div class="nm-row"><label>Name:</label><input type="text" id="ab-name" placeholder="Name"></div>' +
-        '<div class="nm-row"><label>Category:</label><select id="ab-group">'+groupOptionsHtml()+'<option value="__new__">+ New Category</option></select></div>' +
-        '<div class="nm-row" id="ab-newgroup-row" style="display:none;"><label>New:</label><input type="text" id="ab-newgroup-name" placeholder="Category name"></div>' +
-        '<div class="nm-send-row"><button class="btn" id="ab-add">Add Buddy</button></div>' +
-      '</div>';
-    createWindow({
-      title: 'Add Buddy',
-      extraClass: 'addbuddy-win',
-      bodyHtml: body,
-      type: 'addbuddy',
-      onMount: function(el, id){
-        var input = el.querySelector('#ab-name');
-        var groupSel = el.querySelector('#ab-group');
-        var newRow = el.querySelector('#ab-newgroup-row');
-        input.focus();
-        groupSel.addEventListener('change', function(){
-          newRow.style.display = (groupSel.value === '__new__') ? 'flex' : 'none';
-        });
-        function submit(){
-          var name = input.value.trim();
-          if(!name) return;
-          var groupId = groupSel.value;
-          if(groupId === '__new__'){
-            var newName = el.querySelector('#ab-newgroup-name').value.trim();
-            if(!newName){ el.querySelector('#ab-newgroup-name').focus(); return; }
-            var newGroup = { id: uid(), name: newName };
-            state.groups.push(newGroup);
-            groupId = newGroup.id;
-          }
-          ensureBuddy(name, groupId);
-          saveState();
-          renderBuddyList();
-          closeWindow(id);
-        }
-        el.querySelector('#ab-add').addEventListener('click', submit);
-        input.addEventListener('keydown', function(e){ if(e.key === 'Enter') submit(); });
-      }
-    });
-  }
-
-  // ================= ADD CATEGORY WINDOW =================
-  function openAddCategoryWindow(){
-    var body =
-      '<div class="win-body nm-body">' +
-        '<div class="nm-row"><label>Name:</label><input type="text" id="ac-name" placeholder="Category name"></div>' +
-        '<div class="nm-send-row"><button class="btn" id="ac-add">Create Category</button></div>' +
-      '</div>';
-    createWindow({
-      title: 'Add Category',
-      extraClass: 'addbuddy-win',
-      bodyHtml: body,
-      type: 'addcategory',
-      onMount: function(el, id){
-        var input = el.querySelector('#ac-name');
-        input.focus();
-        function submit(){
-          var name = input.value.trim();
-          if(!name) return;
-          state.groups.push({ id: uid(), name: name });
-          saveState();
-          renderBuddyList();
-          closeWindow(id);
-        }
-        el.querySelector('#ac-add').addEventListener('click', submit);
-        input.addEventListener('keydown', function(e){ if(e.key === 'Enter') submit(); });
-      }
-    });
-  }
-
-  // ================= EDIT CATEGORY WINDOW =================
-  function openRenameCategoryWindow(){
-    var options = state.groups.map(function(g){ return '<option value="'+escapeHtml(g.id)+'">'+escapeHtml(g.name)+'</option>'; }).join('');
-    var body =
-      '<div class="win-body nm-body">' +
-        '<div class="nm-row"><label>Category:</label><select id="rc-select">'+options+'</select></div>' +
-        '<div class="nm-row"><label>Name:</label><input type="text" id="rc-name"></div>' +
+        '<div class="nm-row"><label>Buddy:</label><select id="bw-select"><option value="__new__">+ Add New Buddy</option>'+buddyOptions+'</select></div>' +
+        '<div class="nm-row"><label>Name:</label><input type="text" id="bw-name" placeholder="Name"></div>' +
+        '<div class="nm-row"><label>Category:</label><select id="bw-group">'+groupOptionsHtml()+'<option value="__new__">+ New Category</option></select></div>' +
+        '<div class="nm-row" id="bw-newgroup-row" style="display:none;"><label>New:</label><input type="text" id="bw-newgroup-name" placeholder="Category name"></div>' +
+        '<div class="nm-row" id="bw-group-manage-row"><label></label><div style="display:flex;gap:6px;">' +
+          '<button class="btn" id="bw-group-rename" style="font-size:11px;padding:3px 8px;">Rename Category</button>' +
+          '<button class="btn" id="bw-group-delete" style="font-size:11px;padding:3px 8px;color:#c0392b;border-color:#c0392b;">Delete Category</button>' +
+        '</div></div>' +
         '<div class="nm-send-row" style="gap:8px;">' +
-          '<button class="btn" id="rc-delete" style="color:#c0392b;border-color:#c0392b;">Delete Category</button>' +
-          '<button class="btn" id="rc-save">Save</button>' +
+          '<button class="btn" id="bw-delete" style="color:#c0392b;border-color:#c0392b;">Delete Buddy</button>' +
+          '<button class="btn" id="bw-save">Add Buddy</button>' +
         '</div>' +
       '</div>';
     createWindow({
-      title: 'Edit Category',
+      title: 'Buddies',
       extraClass: 'addbuddy-win',
       bodyHtml: body,
-      type: 'renamecategory',
+      type: 'buddies',
       onMount: function(el, id){
-        var select = el.querySelector('#rc-select');
-        var input = el.querySelector('#rc-name');
-        var deleteBtn = el.querySelector('#rc-delete');
-        function loadCurrentName(){
-          var group = state.groups.find(function(g){ return g.id === select.value; });
-          input.value = group ? group.name : '';
-          // can't delete the default Buddies category
-          deleteBtn.disabled = (select.value === 'default');
-          deleteBtn.style.opacity = (select.value === 'default') ? '0.4' : '1';
+        var select = el.querySelector('#bw-select');
+        var nameInput = el.querySelector('#bw-name');
+        var groupSelect = el.querySelector('#bw-group');
+        var newGroupRow = el.querySelector('#bw-newgroup-row');
+        var deleteBtn = el.querySelector('#bw-delete');
+        var saveBtn = el.querySelector('#bw-save');
+        var groupRenameBtn = el.querySelector('#bw-group-rename');
+        var groupDeleteBtn = el.querySelector('#bw-group-delete');
+        function updateGroupButtons(){
+          var isNew = groupSelect.value === '__new__';
+          var isDefault = groupSelect.value === 'default';
+          groupRenameBtn.style.display = isNew ? 'none' : '';
+          groupDeleteBtn.style.display = (isNew || isDefault) ? 'none' : '';
         }
-        loadCurrentName();
-        select.addEventListener('change', loadCurrentName);
-        function submit(){
-          var newName = input.value.trim();
-          if(!newName) return;
-          var group = state.groups.find(function(g){ return g.id === select.value; });
-          if(group) group.name = newName;
-          saveState();
-          renderBuddyList();
-          closeWindow(id);
+        function loadCurrent(){
+          newGroupRow.style.display = 'none';
+          if(select.value === '__new__'){
+            nameInput.value = '';
+            groupSelect.value = 'default';
+            deleteBtn.style.display = 'none';
+            saveBtn.textContent = 'Add Buddy';
+          } else {
+            var b = state.buddies.find(function(x){ return x.id === select.value; });
+            if(b){ nameInput.value = b.name; groupSelect.value = b.groupId || 'default'; }
+            deleteBtn.style.display = '';
+            saveBtn.textContent = 'Save';
+          }
+          updateGroupButtons();
         }
-        el.querySelector('#rc-save').addEventListener('click', submit);
-        input.addEventListener('keydown', function(e){ if(e.key === 'Enter') submit(); });
-        deleteBtn.addEventListener('click', function(){
-          if(select.value === 'default') return;
-          var group = state.groups.find(function(g){ return g.id === select.value; });
+        loadCurrent();
+        select.addEventListener('change', loadCurrent);
+        groupSelect.addEventListener('change', function(){
+          newGroupRow.style.display = (groupSelect.value === '__new__') ? 'flex' : 'none';
+          updateGroupButtons();
+        });
+        groupRenameBtn.addEventListener('click', function(){
+          var group = state.groups.find(function(g){ return g.id === groupSelect.value; });
+          if(!group) return;
+          appTextPrompt('Rename category', group.name, function(newName){
+            if(newName === null) return;
+            newName = newName.trim();
+            if(!newName) return;
+            group.name = newName;
+            saveState();
+            renderBuddyList();
+            var opt = groupSelect.querySelector('option[value="'+group.id+'"]');
+            if(opt) opt.textContent = newName;
+          });
+        });
+        groupDeleteBtn.addEventListener('click', function(){
+          var group = state.groups.find(function(g){ return g.id === groupSelect.value; });
           if(!group) return;
           appConfirm('Delete category "' + group.name + '"? Its buddies will move to "Buddies".', function(confirmed){
             if(!confirmed) return;
@@ -2847,58 +2839,37 @@ try {
             state.groups = state.groups.filter(function(g){ return g.id !== group.id; });
             saveState();
             renderBuddyList();
-            closeWindow(id);
+            var opt = groupSelect.querySelector('option[value="'+group.id+'"]');
+            if(opt) opt.remove();
+            loadCurrent();
           });
         });
-      }
-    });
-  }
-
-  // ================= EDIT BUDDY WINDOW =================
-  function openEditBuddyWindow(){
-    if(!state.buddies.length){
-      openInfoWindow('No buddies to edit yet.');
-      return;
-    }
-    var buddyOptions = state.buddies.map(function(b){ return '<option value="'+escapeHtml(b.id)+'">'+escapeHtml(b.name)+'</option>'; }).join('');
-    var groupOptions = state.groups.map(function(g){ return '<option value="'+escapeHtml(g.id)+'">'+escapeHtml(g.name)+'</option>'; }).join('');
-    var body =
-      '<div class="win-body nm-body">' +
-        '<div class="nm-row"><label>Buddy:</label><select id="eb-select">'+buddyOptions+'</select></div>' +
-        '<div class="nm-row"><label>Name:</label><input type="text" id="eb-name"></div>' +
-        '<div class="nm-row"><label>Category:</label><select id="eb-group">'+groupOptions+'</select></div>' +
-        '<div class="nm-send-row" style="gap:8px;">' +
-          '<button class="btn" id="eb-delete" style="color:#c0392b;border-color:#c0392b;">Delete Buddy</button>' +
-          '<button class="btn" id="eb-save">Save</button>' +
-        '</div>' +
-      '</div>';
-    createWindow({
-      title: 'Edit Buddy',
-      extraClass: 'addbuddy-win',
-      bodyHtml: body,
-      type: 'editbuddy',
-      onMount: function(el, id){
-        var select = el.querySelector('#eb-select');
-        var nameInput = el.querySelector('#eb-name');
-        var groupSelect = el.querySelector('#eb-group');
-        function loadCurrent(){
-          var b = state.buddies.find(function(x){ return x.id === select.value; });
-          if(!b) return;
-          nameInput.value = b.name;
-          groupSelect.value = b.groupId || 'default';
-        }
-        loadCurrent();
-        select.addEventListener('change', loadCurrent);
+        nameInput.focus();
         function submit(){
-          var newName = nameInput.value.trim();
-          if(!newName) return;
-          var b = state.buddies.find(function(x){ return x.id === select.value; });
-          if(b){ b.name = newName; b.groupId = groupSelect.value; }
-          saveState(); renderBuddyList(); closeWindow(id);
+          var name = nameInput.value.trim();
+          if(!name) return;
+          var groupId = groupSelect.value;
+          if(groupId === '__new__'){
+            var newName = el.querySelector('#bw-newgroup-name').value.trim();
+            if(!newName){ el.querySelector('#bw-newgroup-name').focus(); return; }
+            var newGroup = { id: uid(), name: newName };
+            state.groups.push(newGroup);
+            groupId = newGroup.id;
+          }
+          if(select.value === '__new__'){
+            ensureBuddy(name, groupId);
+          } else {
+            var b = state.buddies.find(function(x){ return x.id === select.value; });
+            if(b){ b.name = name; b.groupId = groupId; }
+          }
+          saveState();
+          renderBuddyList();
+          closeWindow(id);
         }
-        el.querySelector('#eb-save').addEventListener('click', submit);
+        saveBtn.addEventListener('click', submit);
         nameInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') submit(); });
-        el.querySelector('#eb-delete').addEventListener('click', function(){
+        deleteBtn.addEventListener('click', function(){
+          if(select.value === '__new__') return;
           var b = state.buddies.find(function(x){ return x.id === select.value; });
           if(!b) return;
           appConfirm('Delete "' + b.name + '" and all their entries? This can\'t be undone.', function(confirmed){
@@ -3087,15 +3058,94 @@ try {
     }).join('');
   }
 
-  function openStatusLogWindow(){
-    var winRef = createWindow({
-      title: 'Status Log',
+  function renderMoodLogBody(){
+    var log = state.moodLog || [];
+    if(!log.length) return '<div class="bl-empty">No moods logged yet. Pick one from Set Status to start tracking.</div>';
+
+    // -- frequency counts --
+    var counts = {};
+    log.forEach(function(e){ counts[e.mood] = (counts[e.mood] || 0) + 1; });
+    var sortedMoods = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
+    var total = log.length;
+    var topMood = sortedMoods[0];
+
+    // -- donut chart via SVG --
+    var cx = 54, cy = 54, r = 40, strokeW = 18;
+    var circumference = 2 * Math.PI * r;
+    var offset = 0;
+    var donutSegments = sortedMoods.map(function(m){
+      var pct = counts[m] / total;
+      var dash = pct * circumference;
+      var seg = '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+moodColor(m)+'" stroke-width="'+strokeW+'" stroke-dasharray="'+dash+' '+(circumference-dash)+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 '+cx+' '+cy+')" style="transition:stroke-dasharray 0.6s;"><title>'+escapeHtml(m)+': '+Math.round(pct*100)+'%</title></circle>';
+      offset += dash;
+      return seg;
+    }).join('');
+    var donutSvg = '<svg width="108" height="108" viewBox="0 0 108 108">'+donutSegments+
+      '<text x="54" y="50" text-anchor="middle" font-size="11" fill="#555">Top</text>'+
+      '<text x="54" y="63" text-anchor="middle" font-size="12" font-weight="bold" fill="'+moodColor(topMood)+'">'+escapeHtml(topMood)+'</text>'+
+    '</svg>';
+
+    // -- bar chart --
+    var maxCount = counts[sortedMoods[0]];
+    var barsHtml = sortedMoods.map(function(m){
+      var pct = Math.round((counts[m]/maxCount)*100);
+      var emoji = {Happy:'😊',Sad:'😢',Tired:'😴',Excited:'🤩',Anxious:'😬',Angry:'😤',Calm:'😌',Stressed:'😰'}[m] || '●';
+      return '<div class="mood-bar-row">' +
+        '<span class="mood-bar-label" title="'+escapeHtml(m)+'">'+emoji+' '+escapeHtml(m)+'</span>' +
+        '<span class="mood-bar-track"><span class="mood-bar-fill" style="width:'+pct+'%;background:'+moodColor(m)+';border-radius:4px;"></span></span>' +
+        '<span class="mood-bar-count">'+counts[m]+'</span>' +
+      '</div>';
+    }).join('');
+
+    // -- current streak --
+    var streak = 0, streakMood = '', lastDate = '';
+    log.slice().reverse().forEach(function(e){
+      var d = fmtDayDivider(e.ts);
+      if(!lastDate){ lastDate = d; streakMood = e.mood; streak = 1; }
+      else if(e.mood === streakMood){ streak++; }
+      else { return; }
+    });
+    var streakHtml = '<div class="mood-streak">🔥 Current streak: <b>'+streak+'</b> entries of <b style="color:'+moodColor(streakMood)+'">'+escapeHtml(streakMood)+'</b></div>';
+
+    // -- recent 30 dots timeline (newest right) --
+    var recent30 = log.slice(-30);
+    var dotsHtml = recent30.map(function(e){
+      return '<span class="mood-dot mood-dot-lg" style="background:'+moodColor(e.mood)+'" title="'+escapeHtml(e.mood)+' · '+fmtDayDivider(e.ts)+'"></span>';
+    }).join('');
+
+    return '<div style="padding:10px;">' +
+        '<div class="mood-section-title">Your Most Common Mood</div>' +
+        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">' +
+          donutSvg +
+          '<div class="mood-bars" style="flex:1;">' + barsHtml + '</div>' +
+        '</div>' +
+        streakHtml +
+        '<div class="mood-section-title" style="margin-top:10px;">Recent Journey (last 30)</div>' +
+        '<div class="mood-timeline" style="gap:4px;">' + dotsHtml + '</div>' +
+        '<div style="font-size:10px;color:#aaa;margin-top:4px;">← older &nbsp; newer →</div>' +
+      '</div>';
+  }
+
+  // ================= LOGS WINDOW (Status Log + Mood Log combined, tabbed) =================
+  function openLogsWindow(initialTab){
+    var body =
+      '<div class="win-body" id="logs-body-wrap" style="padding:0;">' +
+        '<div class="logs-tabs" style="display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid #ccc;">' +
+          '<button class="btn logs-tab-btn" data-tab="status" style="flex:1;">Status Log</button>' +
+          '<button class="btn logs-tab-btn" data-tab="mood" style="flex:1;">Mood Log</button>' +
+        '</div>' +
+        '<div id="logs-content"></div>' +
+      '</div>';
+    createWindow({
+      title: 'Logs',
       extraClass: 'help-win',
-      bodyHtml: '<div class="win-body" id="sl-body-wrap">' + renderStatusLogBody() + '</div>',
-      type: 'statuslog',
+      bodyHtml: body,
+      type: 'logs',
       onMount: function(el, id){
-        function wireActions(){
-          el.querySelectorAll('.sl-del').forEach(function(btn){
+        var contentEl = el.querySelector('#logs-content');
+        var tabBtns = el.querySelectorAll('.logs-tab-btn');
+        function wireStatusActions(){
+          contentEl.querySelectorAll('.sl-del').forEach(function(btn){
             btn.onclick = function(){
               var row = btn.closest('.status-log-row');
               var slid = row && row.getAttribute('data-slid');
@@ -3104,25 +3154,41 @@ try {
                 if(!ok) return;
                 state.statusLog = state.statusLog.filter(function(e){ return e.id !== slid; });
                 saveState();
-                el.querySelector('#sl-body-wrap').innerHTML = renderStatusLogBody();
-                wireActions();
+                contentEl.innerHTML = renderStatusLogBody();
+                wireStatusActions();
               });
             };
           });
-          el.querySelectorAll('.sl-edit').forEach(function(btn){
+          contentEl.querySelectorAll('.sl-edit').forEach(function(btn){
             btn.onclick = function(){
               var row = btn.closest('.status-log-row');
               var slid = row && row.getAttribute('data-slid');
               var entry = state.statusLog.find(function(e){ return e.id === slid; });
               if(!entry) return;
               openEditStatusEntryWindow(entry, function(){
-                el.querySelector('#sl-body-wrap').innerHTML = renderStatusLogBody();
-                wireActions();
+                contentEl.innerHTML = renderStatusLogBody();
+                wireStatusActions();
               });
             };
           });
         }
-        wireActions();
+        function showTab(tab){
+          tabBtns.forEach(function(b){
+            var active = b.getAttribute('data-tab') === tab;
+            b.style.background = active ? '#316ac5' : '';
+            b.style.color = active ? '#fff' : '';
+          });
+          if(tab === 'mood'){
+            contentEl.innerHTML = renderMoodLogBody();
+          } else {
+            contentEl.innerHTML = renderStatusLogBody();
+            wireStatusActions();
+          }
+        }
+        tabBtns.forEach(function(b){
+          b.addEventListener('click', function(){ showTab(b.getAttribute('data-tab')); });
+        });
+        showTab(initialTab || 'status');
       }
     });
   }
@@ -3200,79 +3266,6 @@ try {
     });
   }
 
-  function openMoodLogWindow(){
-    var log = state.moodLog || [];
-    var body;
-    if(!log.length){
-      body = '<div class="win-body"><div class="bl-empty">No moods logged yet. Pick one from Set Status to start tracking.</div></div>';
-    } else {
-      // -- frequency counts --
-      var counts = {};
-      log.forEach(function(e){ counts[e.mood] = (counts[e.mood] || 0) + 1; });
-      var sortedMoods = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
-      var total = log.length;
-      var topMood = sortedMoods[0];
-
-      // -- donut chart via SVG --
-      var cx = 54, cy = 54, r = 40, strokeW = 18;
-      var circumference = 2 * Math.PI * r;
-      var offset = 0;
-      var donutSegments = sortedMoods.map(function(m){
-        var pct = counts[m] / total;
-        var dash = pct * circumference;
-        var seg = '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+moodColor(m)+'" stroke-width="'+strokeW+'" stroke-dasharray="'+dash+' '+(circumference-dash)+'" stroke-dashoffset="'+(-offset)+'" transform="rotate(-90 '+cx+' '+cy+')" style="transition:stroke-dasharray 0.6s;"><title>'+escapeHtml(m)+': '+Math.round(pct*100)+'%</title></circle>';
-        offset += dash;
-        return seg;
-      }).join('');
-      var donutSvg = '<svg width="108" height="108" viewBox="0 0 108 108">'+donutSegments+
-        '<text x="54" y="50" text-anchor="middle" font-size="11" fill="#555">Top</text>'+
-        '<text x="54" y="63" text-anchor="middle" font-size="12" font-weight="bold" fill="'+moodColor(topMood)+'">'+escapeHtml(topMood)+'</text>'+
-      '</svg>';
-
-      // -- bar chart --
-      var maxCount = counts[sortedMoods[0]];
-      var barsHtml = sortedMoods.map(function(m){
-        var pct = Math.round((counts[m]/maxCount)*100);
-        var emoji = {Happy:'😊',Sad:'😢',Tired:'😴',Excited:'🤩',Anxious:'😬',Angry:'😤',Calm:'😌',Stressed:'😰'}[m] || '●';
-        return '<div class="mood-bar-row">' +
-          '<span class="mood-bar-label" title="'+escapeHtml(m)+'">'+emoji+' '+escapeHtml(m)+'</span>' +
-          '<span class="mood-bar-track"><span class="mood-bar-fill" style="width:'+pct+'%;background:'+moodColor(m)+';border-radius:4px;"></span></span>' +
-          '<span class="mood-bar-count">'+counts[m]+'</span>' +
-        '</div>';
-      }).join('');
-
-      // -- current streak --
-      var streak = 0, streakMood = '', lastDate = '';
-      log.slice().reverse().forEach(function(e){
-        var d = fmtDayDivider(e.ts);
-        if(!lastDate){ lastDate = d; streakMood = e.mood; streak = 1; }
-        else if(e.mood === streakMood){ streak++; }
-        else { return; }
-      });
-      var streakHtml = '<div class="mood-streak">🔥 Current streak: <b>'+streak+'</b> entries of <b style="color:'+moodColor(streakMood)+'">'+escapeHtml(streakMood)+'</b></div>';
-
-      // -- recent 30 dots timeline (newest right) --
-      var recent30 = log.slice(-30);
-      var dotsHtml = recent30.map(function(e){
-        return '<span class="mood-dot mood-dot-lg" style="background:'+moodColor(e.mood)+'" title="'+escapeHtml(e.mood)+' · '+fmtDayDivider(e.ts)+'"></span>';
-      }).join('');
-
-      body =
-        '<div class="win-body" style="padding:10px;">' +
-          '<div class="mood-section-title">Your Most Common Mood</div>' +
-          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">' +
-            donutSvg +
-            '<div class="mood-bars" style="flex:1;">' + barsHtml + '</div>' +
-          '</div>' +
-          streakHtml +
-          '<div class="mood-section-title" style="margin-top:10px;">Recent Journey (last 30)</div>' +
-          '<div class="mood-timeline" style="gap:4px;">' + dotsHtml + '</div>' +
-          '<div style="font-size:10px;color:#aaa;margin-top:4px;">← older &nbsp; newer →</div>' +
-        '</div>';
-    }
-    createWindow({ title: 'Mood Log', extraClass: 'moodlog-win', bodyHtml: body, type: 'moodlog' });
-  }
-
   // ================= HELP WINDOW =================
   function openHelpWindow(){
     var body =
@@ -3304,8 +3297,8 @@ try {
           '<li>Tap a buddy to open a conversation and write an entry.</li>' +
           '<li>The dot shows recency: <span style="color:#3db34a;">●</span> today, <span style="color:#e6a817;">●</span> this week, <span style="color:#999;">●</span> longer ago.</li>' +
           '<li>Set a status under File → Set Status. Past ones are in the Status Log.</li>' +
-          '<li>Your blog lives under File → View Blog. Write posts with File → New Post.</li>' +
-          '<li>Sync your data across devices with File → Sync (Google sign-in required).</li>' +
+          '<li>Your blog lives under View → Blog. Use the + New Post button there to write one.</li>' +
+          '<li>Sync your data across devices under File → Sync (Google sign-in required).</li>' +
           '<li>Everything saves automatically on this device.</li>' +
         '</ul>' +
       '</div>';
@@ -3522,12 +3515,13 @@ try {
           '</div>' +
           '<div class="blog-post-body">' + (post.html || '') + '</div>' +
         '</div>';
-      }).join('') : '<div class="vp-empty">No posts yet. Use File &rarr; New Post to write your first one!</div>';
+      }).join('') : '<div class="vp-empty">No posts yet. Tap + New Post above to write your first one!</div>';
 
       return '<div class="win-body vp-body" id="blog-view-body">' +
         '<div class="vp-header">' + picHtml + '<div class="vp-name">' + name + '</div></div>' +
         (header ? '<div class="vp-section">' + header + '</div>' : '') +
         (aboutMe ? '<div class="vp-section">' + aboutMe + '</div>' : '') +
+        '<div class="vp-newpost-row" style="padding:0 4px 8px;"><button class="btn" id="vp-newpost-btn">+ New Post</button></div>' +
         '<div class="blog-posts-list">' + postsHtml + '</div>' +
       '</div>';
     }
@@ -3538,7 +3532,17 @@ try {
       bodyHtml: buildBlogBody(),
       type: 'viewprofile',
       onMount: function(el, id){
-        function wirePostActions(){
+        function wireActions(){
+          var newPostBtn = el.querySelector('#vp-newpost-btn');
+          if(newPostBtn){
+            newPostBtn.onclick = function(){
+              openBlogPostEditor(null, function(){
+                var wb = el.querySelector('.win-body');
+                if(wb) wb.outerHTML = buildBlogBody();
+                wireActions();
+              });
+            };
+          }
           el.querySelectorAll('.bp-edit').forEach(function(btn){
             btn.onclick = function(){
               var postEl = btn.closest('.blog-post');
@@ -3546,11 +3550,9 @@ try {
               var post = (state.blogPosts||[]).find(function(p){ return p.id === postId; });
               if(!post) return;
               openBlogPostEditor(post, function(){
-                el.querySelector('#blog-view-body').outerHTML = buildBlogBody().replace('<div class="win-body vp-body" id="blog-view-body">','<div class="win-body vp-body" id="blog-view-body">');
-                // simplest: rebuild the whole window content
                 var wb = el.querySelector('.win-body');
                 if(wb) wb.outerHTML = buildBlogBody();
-                wirePostActions();
+                wireActions();
               });
             };
           });
@@ -3564,12 +3566,12 @@ try {
                 saveState();
                 var wb = el.querySelector('.win-body');
                 if(wb) wb.outerHTML = buildBlogBody();
-                wirePostActions();
+                wireActions();
               });
             };
           });
         }
-        wirePostActions();
+        wireActions();
       }
     });
   }
