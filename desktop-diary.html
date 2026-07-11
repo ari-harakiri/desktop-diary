@@ -96,18 +96,24 @@
     display: flex; font-size: 11px; padding: 2px 2px;
   }
   .menubar .m-item { position: relative; padding: 4px 9px; cursor: pointer; border-radius:3px; }
-  .menubar .m-item:hover { background: #316ac5; color:#fff; }
   .menubar .m-drop {
     display: none; position: absolute; top: 100%; left: 0;
     background: #fff; border: 1px solid #888; box-shadow: 2px 2px 8px rgba(0,0,0,.35);
     min-width: 150px; z-index: 5; border-radius: 0 4px 4px 4px; overflow:hidden;
   }
-  .menubar .m-item:hover .m-drop { display: block; }
   .menubar .m-item.open .m-drop { display: block; }
   .m-drop div { padding: 6px 12px; color: #000; white-space: nowrap; }
-  .m-drop div:hover { background: #316ac5; color:#fff; }
   .m-drop div.mi-active { font-weight: bold; }
   .m-drop div.mi-active::after { content: ' \2713'; }
+  /* Hover-to-open only for real mouse pointers — on touchscreens, :hover styles
+     make the browser treat the first tap as "hover" rather than a real click,
+     requiring extra taps before anything actually registers. Touch already has
+     its own reliable tap-to-toggle handler below, so it doesn't need this. */
+  @media (hover: hover) and (pointer: fine) {
+    .menubar .m-item:hover { background: #316ac5; color:#fff; }
+    .menubar .m-item:hover .m-drop { display: block; }
+    .m-drop div:hover { background: #316ac5; color:#fff; }
+  }
   .locked-content { filter:blur(4px); transition:filter 0.2s; cursor:pointer; user-select:none; }
   .locked-content.revealed { filter:none; }
   .win-body { flex: 1; overflow: auto; padding: 6px; background: #fff; -webkit-overflow-scrolling: touch; }
@@ -348,6 +354,7 @@
   .nm-send-row { display:flex; justify-content:flex-end; margin-top:8px; }
 
   .addbuddy-win { width: min(280px, 92vw); height: min(230px, 58vh); }
+  .bgedit-win { width: min(280px, 92vw); height: min(310px, 66vh); }
   .help-win { width: min(300px, 92vw); height: min(420px, 78vh); }
   .help-section-title { font-weight:bold; color:#0850d0; margin:6px 0 4px; }
   .help-platform { font-weight:bold; margin:4px 0 2px; color:#333; }
@@ -421,7 +428,7 @@
 
   /* ---------- mobile: popups float over the mini buddy list, draggable but screen-bound ---------- */
   @media (max-width: 700px) {
-    .im-win, .nm-win, .addbuddy-win {
+    .im-win, .nm-win, .addbuddy-win, .bgedit-win {
       box-shadow: 0 6px 24px rgba(0,0,0,.55);
     }
     .bl-row { min-height: 40px; padding: 7px 8px; font-size:12px; }
@@ -542,6 +549,11 @@
 
 <script>
 window.onerror = function(msg, src, line, col, err){
+  // Cross-origin scripts (Firebase, Google Sign-In) report errors as a blank
+  // "Script error." with no line/source, per browser security rules. That's
+  // never actionable and was alarming users for essentially no reason, so we
+  // skip showing the banner for that specific unhelpful case.
+  if(msg === 'Script error.' && !line && !src) return;
   var d = document.createElement('div');
   d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:10px;font-size:12px;z-index:999999;font-family:monospace;white-space:pre-wrap;word-break:break-all;';
   d.textContent = 'Error: ' + msg + '\nLine: ' + line + '\nSource: ' + src;
@@ -915,18 +927,18 @@ try {
     ];
     var swatchesHtml = COLORS.map(function(c){
       var sel = (state.background && state.background.color) === c;
-      return '<div class="bg-swatch" data-color="'+c+'" style="width:28px;height:28px;border-radius:4px;background:'+c+';border:2px solid '+(sel?'#0054e3':'rgba(0,0,0,.2)')+';cursor:pointer;box-sizing:border-box;"></div>';
+      return '<div class="bg-swatch" data-color="'+c+'" style="width:22px;height:22px;border-radius:4px;background:'+c+';border:2px solid '+(sel?'#0054e3':'rgba(0,0,0,.2)')+';cursor:pointer;box-sizing:border-box;"></div>';
     }).join('');
     var body =
       '<div class="win-body nm-body">' +
-        '<div style="display:grid;grid-template-columns:repeat(6,28px);gap:6px;margin-bottom:10px;">'+swatchesHtml+'</div>' +
-        '<div class="nm-row"><label>Custom:</label><input type="color" id="eb-custom-color" value="'+((state.background&&state.background.color)||'#3a6ea5')+'" style="width:44px;height:28px;border:1px solid #aaa;border-radius:4px;cursor:pointer;padding:0;"></div>' +
+        '<div style="display:grid;grid-template-columns:repeat(6,22px);gap:4px;margin-bottom:8px;">'+swatchesHtml+'</div>' +
+        '<div class="nm-row"><label>Custom:</label><input type="color" id="eb-custom-color" value="'+((state.background&&state.background.color)||'#3a6ea5')+'" style="width:44px;height:26px;border:1px solid #aaa;border-radius:4px;cursor:pointer;padding:0;"></div>' +
         '<div class="nm-row"><label>Photo:</label><button class="btn" id="eb-upload-photo">Upload Photo&hellip;</button></div>' +
         '<div class="nm-send-row"><button class="btn" id="eb-restore" style="color:#c0392b;border-color:#c0392b;">Restore Default</button></div>' +
       '</div>';
     createWindow({
       title: 'Edit Background',
-      extraClass: 'addbuddy-win',
+      extraClass: 'bgedit-win',
       bodyHtml: body,
       type: 'editbackground',
       onMount: function(el, id){
@@ -1186,6 +1198,10 @@ try {
       profile: state.profile,
       blogPosts: state.blogPosts,
       bgColor: (state.background && state.background.color) || '',
+      hasBgImage: !!(state.background && state.background.image),
+      customFonts: state.customFonts,
+      customMoods: state.customMoods,
+      customMoodColors: state.customMoodColors,
       stickyNotes: (state.stickyNotes || []).map(function(n){
         return { id:n.id, text:n.text, color:n.color, x:n.x, y:n.y, w:n.w, h:n.h };
       }),
@@ -1200,6 +1216,13 @@ try {
         writes.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).set({ entries: chunk }));
       });
     });
+    // background image lives in its own doc (can be a large data URI) so it never
+    // risks pushing the meta doc over Firestore's ~1MB document size limit
+    if(state.background && state.background.image){
+      writes.push(db.collection('users').doc(uid).collection('diary').doc('background').set({ image: state.background.image }));
+    } else {
+      writes.push(db.collection('users').doc(uid).collection('diary').doc('background').delete().catch(function(){}));
+    }
     writes.push(db.collection('users').doc(uid).collection('diary').doc('meta').set(meta));
     return Promise.all(writes);
   }
@@ -1219,7 +1242,9 @@ try {
       state.drafts = meta.drafts || {};
       state.profile = meta.profile || { pic:'', html:'' };
       if(Array.isArray(meta.blogPosts)) state.blogPosts = meta.blogPosts;
-      if(meta.bgColor) state.background = { color: meta.bgColor, image: (state.background && state.background.image) || '' };
+      if(Array.isArray(meta.customFonts)) state.customFonts = meta.customFonts;
+      if(Array.isArray(meta.customMoods)) state.customMoods = meta.customMoods;
+      if(meta.customMoodColors && typeof meta.customMoodColors === 'object') state.customMoodColors = meta.customMoodColors;
       if(Array.isArray(meta.stickyNotes)) state.stickyNotes = meta.stickyNotes;
       if(state.account && meta.screenName) state.account.screenName = meta.screenName;
       var chunkCounts = meta.chunkCounts || {};
@@ -1237,7 +1262,17 @@ try {
           state.entries[buddyId] = all;
         });
       });
-      return Promise.all(fetches).then(function(){
+      // background image lives in its own doc; only fetch it if push indicated one exists
+      var bgFetch = meta.hasBgImage
+        ? db.collection('users').doc(uid).collection('diary').doc('background').get().then(function(bgSnap){
+            state.background = { color: meta.bgColor || '', image: (bgSnap.exists && bgSnap.data().image) || '' };
+          }).catch(function(){
+            state.background = { color: meta.bgColor || '', image: '' };
+          })
+        : Promise.resolve().then(function(){
+            state.background = { color: meta.bgColor || '', image: '' };
+          });
+      return Promise.all(fetches.concat([bgFetch])).then(function(){
         normalizeState();
         return saveState().then(function(){ return true; });
       });
@@ -1442,6 +1477,15 @@ try {
     input.addEventListener('keydown', function(e){ if(e.key==='Enter') attempt(); });
     overlay.addEventListener('click', function(e){ if(e.target === overlay) done(false); });
     setTimeout(function(){ input.focus(); }, 30);
+  }
+
+  // Runs `action` immediately for an unlocked entry, or behind a password check for a locked one.
+  function runIfUnlocked(entry, action){
+    if(entry.locked){
+      appPasscodePrompt(function(ok){ if(ok) action(); });
+    } else {
+      action();
+    }
   }
   // Prompts for a single line of text. cb(value) if confirmed, cb(null) if cancelled.
   function appTextPrompt(message, defaultValue, cb){
@@ -2501,13 +2545,9 @@ try {
           if(!entry) return;
           var action = actionEl.getAttribute('data-action');
           if(action === 'edit'){
-            if(entry.locked){
-              appPasscodePrompt(function(ok){ if(ok) startEdit(entry); });
-            } else {
-              startEdit(entry);
-            }
+            runIfUnlocked(entry, function(){ startEdit(entry); });
           } else if(action === 'delete'){
-            function doDelete(){
+            runIfUnlocked(entry, function(){
               appConfirm('Delete this entry? This can\'t be undone.', function(confirmed){
                 if(!confirmed) return;
                 state.entries[buddyId] = list.filter(function(x){ return x.id !== entryId; });
@@ -2517,12 +2557,7 @@ try {
                 renderStats(buddyId);
                 renderBuddyList();
               });
-            }
-            if(entry.locked){
-              appPasscodePrompt(function(ok){ if(ok) doDelete(); });
-            } else {
-              doDelete();
-            }
+            });
           }
         });
 
@@ -2754,9 +2789,7 @@ try {
               var draft = (state.drafts[key] || []).find(function(d){ return d.id === draftId; });
               if(!draft) return;
               closeWindow(id);
-              if(key === '__status__'){
-                openEditStatusEntryWindow(null, null, draft.html);
-              } else if(key === '__blog__'){
+              if(key === '__blog__'){
                 openBlogPostEditor(null, null, draft.html);
               } else if(key === '__newmessage__'){
                 openNewMessageWindow();
