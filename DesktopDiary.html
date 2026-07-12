@@ -94,6 +94,11 @@
     box-shadow: inset 0 1px 1px rgba(255,255,255,.5);
   }
   .titlebar button.win-btn:active { filter: brightness(0.85); }
+  .titlebar button.min-btn, .titlebar button.max-btn {
+    background: linear-gradient(180deg,var(--th-item-1,#7fb8ff),var(--th-item-2,#2f6fd8));
+    border-color: var(--th-item-border, rgba(255,255,255,.5));
+  }
+  #taskbar .tb-item.minimized { opacity:.72; font-style:italic; }
   .menubar {
     background: #ece9d8; border-bottom: 1px solid #b0aca0;
     display: flex; font-size: 11px; padding: 2px 2px;
@@ -383,6 +388,10 @@
   .paint-menubar .m-drop { background:#fff7fa; border-color:#a95d79; }
   .paint-menubar .m-drop [data-a].disabled { color:#888; pointer-events:none; text-shadow:1px 1px #fff; }
   .paint-menu-shortcut { float:right; margin-left:28px; color:#666; }
+  .paint-undo-btn { font-size:14px; line-height:1; padding:5px 9px; border-radius:5px; background:linear-gradient(180deg,#ffd9ee,#ff8ecb); border:1px outset #ff5fae; color:#7a1250; font-weight:bold; cursor:pointer; }
+  .paint-undo-btn:hover:not(.disabled) { background:linear-gradient(180deg,#ffe6f4,#ffa3d6); border-color:#ff3d9a; }
+  .paint-undo-btn:active:not(.disabled) { background:linear-gradient(180deg,#ff8ecb,#ffd9ee); border-style:inset; }
+  .paint-undo-btn.disabled { opacity:.45; cursor:default; pointer-events:none; }
   .paint-main { display:flex; flex:1; min-height:0; background:#8d858c; }
   .paint-tools { width:78px; padding:5px; flex-shrink:0; background:linear-gradient(180deg,#f9d4e1,#e8afc4); border-right:1px solid #a9657f; overflow:auto; }
   .paint-tools-title { margin:0 0 5px; font-size:10px; font-weight:bold; color:#444; }
@@ -395,7 +404,7 @@
   .paint-tool-btn.active { border:2px inset var(--paint-rose-dark); background:linear-gradient(180deg,#f8c8d9,#e99ab7); color:#5f1735; font-weight:bold; }
   .paint-tool-btn.active .paint-tool-icon { background:transparent; border-color:transparent; color:#fff; }
   .paint-tool-btn:hover:not(.active) { background:#fff9fb; border-color:#c77a98; }
-  .paint-workspace { flex:1; min-width:0; min-height:0; overflow:auto; padding:12px; display:block; position:relative; }
+  .paint-workspace { flex:1; min-width:0; min-height:0; overflow:auto; padding:0; display:block; position:relative; }
   .paint-workspace canvas { background:#fff; display:block; box-shadow:2px 2px 0 #444; touch-action:none; cursor:crosshair; }
   .paint-workspace.zoom-grid canvas { image-rendering:pixelated; background-image:linear-gradient(rgba(0,0,0,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.12) 1px,transparent 1px); }
   .paint-selection-box { display:none; position:absolute; pointer-events:none; border:1px dashed #000; outline:1px dashed #fff; outline-offset:-2px; box-sizing:border-box; z-index:2; }
@@ -411,6 +420,9 @@
   .paint-text-dialog textarea { width:100%; height:110px; box-sizing:border-box; resize:vertical; padding:6px; font:14px Arial,sans-serif; }
   .paint-text-dialog-controls { display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin-bottom:7px; font-size:11px; }
   .paint-palette { display:grid; grid-template-columns:repeat(14,22px); gap:2px; }
+  .paint-recent-label { font-size:9px; font-weight:bold; color:#555; margin:6px 0 3px; }
+  .paint-recent-colors { display:flex; flex-wrap:wrap; gap:2px; min-height:18px; }
+  .paint-recent-colors:empty::after { content:'None yet — pick a custom color to start a history.'; font-size:9px; font-style:italic; color:#888; }
   .paint-color-swatch { width:22px; height:18px; border:2px outset #fff; cursor:pointer; box-sizing:border-box; }
   .paint-color-swatch.active { outline:2px solid var(--paint-rose-dark); outline-offset:-2px; }
   .paint-status { display:flex; justify-content:space-between; gap:8px; margin-top:5px; padding:3px 6px; font-size:10px; background:#fff0f5; border:1px inset #fff; color:#59464e; }
@@ -631,9 +643,10 @@
     <div id="tb-start"><span class="ttl-icon" id="tb-start-icon"></span><span>Start</span></div>
     <div id="start-menu">
       <div class="sm-item" id="sm-stickynote">New Sticky Note</div>
+      <div class="sm-item" id="sm-paint">Paint</div>
       <div class="sm-item" id="sm-bgedit">Edit Background</div>
       <div class="sm-item" id="sm-themeedit">Edit Theme</div>
-      <div class="sm-item" id="sm-paint">Paint</div>
+      <div class="sm-item" id="sm-showdesktop">Show Desktop</div>
     </div>
     <div id="tb-items" style="display:flex; gap:4px;"></div>
     <div id="tb-clock"></div>
@@ -684,6 +697,7 @@ try {
     profile: { pic: '', html: '', header: '', aboutMe: '' },  // profile picture + two HTML sections
     blogPosts: [],          // blog posts: { id, title, html, ts, editedAt }
     background: { color: '', image: '' },  // custom desktop background (device-local, not synced)
+    paintRecentColors: [],  // recently used custom colors in Paint (device-local, not synced)
     theme: { preset: 'classic', customColors: ['#3d95ff'], startColor: '#7ed957', clockColor: '#1a4fc4', calDaysColors: ['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a'], fontColor: '#ffffff' }, // window chrome color (titlebar/taskbar/Start button)
     customFonts: [],        // user-uploaded fonts (device-local, not synced): { id, name, dataUrl }
     stickyNotes: [],        // desktop sticky notes (device-local): { id, text, color, x, y, w, h }
@@ -717,6 +731,7 @@ try {
     if(!Array.isArray(state.blogPosts)) state.blogPosts = [];
     if(!state.background) state.background = { color: '', image: '', gradient: '' };
     if(state.background.gradient === undefined) state.background.gradient = '';
+    if(!Array.isArray(state.paintRecentColors)) state.paintRecentColors = [];
     if(!state.theme || typeof state.theme !== 'object') state.theme = { preset: 'classic' };
     if(!state.theme.preset) state.theme.preset = 'classic';
     // migrate the old single customColor field into the new customColors array
@@ -754,6 +769,8 @@ try {
   }
 
   var openWindows = [];     // { id, type, buddyId, el, tbEl }
+  var activeWindowId = null;
+  var showDesktopHidden = []; // window ids minimized by the "Show Desktop" toggle
   var logFilterByBuddy = {};       // buddyId -> 'photo'|'voice'|'prompt'|null
   var searchQueryByBuddy = {};     // buddyId -> string
   var zCounter = 100;
@@ -1245,6 +1262,11 @@ try {
     document.getElementById('start-menu').classList.remove('open');
     openPaintWindow();
   });
+  document.getElementById('sm-showdesktop').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('start-menu').classList.remove('open');
+    showDesktop();
+  });
 
   function openEditBackgroundWindow(){
     var COLORS = [
@@ -1658,18 +1680,18 @@ try {
       '<input class="paint-import" type="file" accept="image/*" hidden></div>'+
       '<div class="paint-main"><div class="paint-tools"><div class="paint-tools-title">DRAWING TOOLS</div><div class="paint-tool-grid">'+th+'</div><div style="font-size:9px;margin-top:9px;color:#555;font-weight:bold">CURRENT COLOR</div><div class="paint-current" style="height:30px;background:#000;border:3px inset #ddd" title="Selected drawing color"></div></div>'+
       '<div class="paint-workspace"><canvas width="640" height="420"></canvas><div class="paint-selection-box"></div><div class="paint-canvas-handle" data-edge="right" title="Drag to change canvas width"></div><div class="paint-canvas-handle" data-edge="bottom" title="Drag to change canvas height"></div><div class="paint-canvas-handle" data-edge="corner" title="Drag to change canvas size"></div></div></div>'+
-      '<div class="paint-bottom"><div class="paint-options"><label><b>Tool size:</b> <input class="paint-size" type="range" min="1" max="40" value="3" style="width:120px;vertical-align:middle"> <span class="paint-size-value">3 px</span></label><label title="Fill rectangles and ellipses instead of drawing only their outlines"><input class="paint-filled" type="checkbox"> Fill rectangles &amp; ellipses</label><label><b>Zoom:</b> <select class="paint-zoom"><option>50</option><option selected>100</option><option>200</option><option>400</option><option>800</option></select>%</label><label><b>Custom color:</b> <input class="paint-custom" type="color" value="#000000" style="vertical-align:middle"></label></div>'+
-      '<div class="paint-palette">'+ph+'</div><div class="paint-status"><span class="paint-message">Ready</span><span class="paint-dimensions">640 × 420</span><span class="paint-coords">0, 0</span></div></div></div>';
+      '<div class="paint-bottom"><div class="paint-options"><button type="button" class="btn paint-undo-btn" data-a="undo" title="Undo (Ctrl+Z)">↩️</button><label><b>Tool size:</b> <input class="paint-size" type="range" min="1" max="40" value="3" style="width:120px;vertical-align:middle"> <span class="paint-size-value">3 px</span></label><label title="Fill rectangles and ellipses instead of drawing only their outlines"><input class="paint-filled" type="checkbox"> Fill rectangles &amp; ellipses</label><label><b>Zoom:</b> <select class="paint-zoom"><option>50</option><option selected>100</option><option>200</option><option>400</option><option>800</option></select>%</label><label><b>Custom color:</b> <input class="paint-custom" type="color" value="#000000" style="vertical-align:middle"></label></div>'+
+      '<div class="paint-palette">'+ph+'</div><div class="paint-recent-label">RECENT COLORS</div><div class="paint-recent-colors"></div><div class="paint-status"><span class="paint-message">Ready</span><span class="paint-dimensions">640 × 420</span><span class="paint-coords">0, 0</span></div></div></div>';
     createWindow({title:'DesktopDiary Paint v1.7',extraClass:'paint-win',bodyHtml:body,type:'paint',onMount:function(el){
       var cv=el.querySelector('canvas'),cx=cv.getContext('2d',{willReadFrequently:true}),msg=el.querySelector('.paint-message'),dim=el.querySelector('.paint-dimensions'),co=el.querySelector('.paint-coords');
-      var box=el.querySelector('.paint-current'),sz=el.querySelector('.paint-size'),szv=el.querySelector('.paint-size-value'),fi=el.querySelector('.paint-import'),workspace=el.querySelector('.paint-workspace');
+      var box=el.querySelector('.paint-current'),sz=el.querySelector('.paint-size'),szv=el.querySelector('.paint-size-value'),fi=el.querySelector('.paint-import'),workspace=el.querySelector('.paint-workspace'),recentBox=el.querySelector('.paint-recent-colors');
       var filledBox=el.querySelector('.paint-filled'),zoomBox=el.querySelector('.paint-zoom'),selBox=el.querySelector('.paint-selection-box'),canvasHandles=el.querySelectorAll('.paint-canvas-handle');
       var tool='pencil',color='#000000',size=3,drawing=false,start,base,hist=[],redo=[],limit=40,selection=null,clipboard=null,moveBase=null,moveBefore=null,moving=false,moveCanvas=null,dragOffset=null,lastText=null,preserveLastText=false,textDefaults={font:'Arial',size:16,bold:false,italic:false,color:'#000000'},textTransform=null,textOrigin=null,textMoved=false;
       function setup(){cx.lineCap='round';cx.lineJoin='round';dim.textContent=cv.width+' × '+cv.height;setTimeout(updateCanvasHandles,0);}
       function blank(w,h){clearSelection();cv.width=w;cv.height=h;cx=cv.getContext('2d',{willReadFrequently:true});cx.fillStyle='#fff';cx.fillRect(0,0,w,h);setup();applyZoom();}
       function snap(){return{w:cv.width,h:cv.height,d:cx.getImageData(0,0,cv.width,cv.height)};}
       function restore(s){clearSelection();cv.width=s.w;cv.height=s.h;cx=cv.getContext('2d',{willReadFrequently:true});cx.putImageData(s.d,0,0);setup();applyZoom();}
-      function setMenuEnabled(action,enabled){var n=el.querySelector('[data-a='+action+']');if(!n)return;n.classList.toggle('disabled',!enabled);n.setAttribute('aria-disabled',enabled?'false':'true');}
+      function setMenuEnabled(action,enabled){el.querySelectorAll('[data-a='+action+']').forEach(function(n){n.classList.toggle('disabled',!enabled);n.setAttribute('aria-disabled',enabled?'false':'true');});}
       function buttons(){setMenuEnabled('undo',!!hist.length);setMenuEnabled('redo',!!redo.length);setMenuEnabled('editText',!!lastText);['cut','copy','delete','crop','resizeSel'].forEach(function(a){setMenuEnabled(a,!!selection);});setMenuEnabled('paste',!!clipboard);}
       function showSelection(){selBox.classList.remove('text-active');if(!selection){selBox.style.display='none';return;}var r=cv.getBoundingClientRect(),wr=workspace.getBoundingClientRect(),sx=r.width/cv.width,sy=r.height/cv.height;selBox.style.display='block';selBox.style.left=(cv.offsetLeft+selection.x*sx)+'px';selBox.style.top=(cv.offsetTop+selection.y*sy)+'px';selBox.style.width=Math.max(1,selection.w*sx)+'px';selBox.style.height=Math.max(1,selection.h*sy)+'px';}
       function clearSelection(){selection=null;moving=false;selBox.classList.remove('text-active');selBox.style.display='none';buttons();}
@@ -1731,6 +1753,9 @@ try {
       function pos(e){var r=cv.getBoundingClientRect();return{x:Math.max(0,Math.min(cv.width,(e.clientX-r.left)*cv.width/r.width)),y:Math.max(0,Math.min(cv.height,(e.clientY-r.top)*cv.height/r.height))};}
       function rgb(h){var n=parseInt(h.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];}
       function pick(c){color=c;box.style.background=c;el.querySelector('.paint-custom').value=c;el.querySelectorAll('.paint-color-swatch').forEach(function(s){s.classList.toggle('active',s.dataset.color.toLowerCase()===c.toLowerCase());});}
+      function renderRecent(){recentBox.innerHTML=state.paintRecentColors.map(function(c){return '<button class="paint-color-swatch'+(c.toLowerCase()===color.toLowerCase()?' active':'')+'" data-color="'+c+'" title="'+c+'" style="background:'+c+'"></button>';}).join('');recentBox.querySelectorAll('.paint-color-swatch').forEach(function(s){s.onclick=function(){pick(s.dataset.color);rememberColor(s.dataset.color);};});}
+      function rememberColor(c){c=c.toLowerCase();state.paintRecentColors=state.paintRecentColors.filter(function(x){return x.toLowerCase()!==c;});state.paintRecentColors.unshift(c);if(state.paintRecentColors.length>16)state.paintRecentColors.length=16;renderRecent();saveState();}
+      renderRecent();
       function fill(x,y){
         x=Math.floor(x);y=Math.floor(y);var w=cv.width,h=cv.height,im=cx.getImageData(0,0,w,h),d=im.data,k=(y*w+x)*4,t=[d[k],d[k+1],d[k+2],d[k+3]],f=rgb(color),tol=18;
         if(Math.abs(t[0]-f[0])<=tol&&Math.abs(t[1]-f[1])<=tol&&Math.abs(t[2]-f[2])<=tol)return;
@@ -1743,12 +1768,12 @@ try {
       function down(e){if(e.button!==undefined&&e.button!==0)return;e.preventDefault();try{el.focus({preventScroll:true});}catch(_){el.focus();}cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);start=pos(e);var before=snap();base=before.d;
         if(tool==='select'){if(inSelection(start)){moveBefore=before;moveCanvas=document.createElement('canvas');moveCanvas.width=selection.w;moveCanvas.height=selection.h;moveCanvas.getContext('2d').drawImage(cv,selection.x,selection.y,selection.w,selection.h,0,0,selection.w,selection.h);dragOffset={x:start.x-selection.x,y:start.y-selection.y};cx.fillStyle='#fff';cx.fillRect(selection.x,selection.y,selection.w,selection.h);moveBase=cx.getImageData(0,0,cv.width,cv.height);moving=true;drawing=true;}else{clearSelection();selection={x:start.x|0,y:start.y|0,w:0,h:0};drawing=true;showSelection();}return;}
         if(tool==='fill'){fill(start.x,start.y);commit(before);msg.textContent='Filled area';return;}
-        if(tool==='eyedropper'){var d=cx.getImageData(Math.min(cv.width-1,start.x|0),Math.min(cv.height-1,start.y|0),1,1).data;pick('#'+[d[0],d[1],d[2]].map(function(v){return v.toString(16).padStart(2,'0');}).join(''));msg.textContent='Color picked';return;}
+        if(tool==='eyedropper'){var d=cx.getImageData(Math.min(cv.width-1,start.x|0),Math.min(cv.height-1,start.y|0),1,1).data;var picked='#'+[d[0],d[1],d[2]].map(function(v){return v.toString(16).padStart(2,'0');}).join('');pick(picked);rememberColor(picked);msg.textContent='Color picked';return;}
         if(tool==='text'){if(hitText(start,lastText)){textTransform=hitTextHandle(start,lastText)?'resize':'move';textOrigin={x:lastText.x,y:lastText.y,w:lastText.w,h:lastText.h};dragOffset={x:start.x-lastText.x,y:start.y-lastText.y};textMoved=false;drawing=true;return;}clearSelection();selection={x:start.x|0,y:start.y|0,w:0,h:0};drawing=true;showSelection();msg.textContent='Drag to size the text box';return;}
         drawing=true;if(tool==='pencil'||tool==='brush'||tool==='eraser'){cx.beginPath();cx.moveTo(start.x,start.y);cx.lineTo(start.x+.01,start.y+.01);cx.strokeStyle=tool==='eraser'?'#fff':color;cx.lineWidth=tool==='pencil'?1:(tool==='eraser'?size*2:size);cx.stroke();}
       }
       function move(e){var p=pos(e);co.textContent=(p.x|0)+', '+(p.y|0);if(tool==='text'&&!drawing){var over=hitText(p,lastText),handle=hitTextHandle(p,lastText);cv.style.cursor=handle?'nwse-resize':(over?'move':'crosshair');if(over)msg.textContent=handle?'Drag to resize text box':'Drag to move; click to edit';}else if(tool!=='text')cv.style.cursor='crosshair';if(!drawing)return;e.preventDefault();if(tool==='text'){if(textTransform&&lastText){if(Math.abs(p.x-start.x)>2||Math.abs(p.y-start.y)>2)textMoved=true;cx.putImageData(lastText.before.d,0,0);if(textTransform==='move'){lastText.x=Math.max(0,Math.min(cv.width-lastText.w,Math.round(p.x-dragOffset.x)));lastText.y=Math.max(0,Math.min(cv.height-lastText.h,Math.round(p.y-dragOffset.y)));}else{lastText.w=Math.max(20,Math.min(cv.width-lastText.x,Math.round(p.x-lastText.x)));lastText.h=Math.max(20,Math.min(cv.height-lastText.y,Math.round(p.y-lastText.y)));}renderText(lastText);showTextBox();return;}selection=normalized(start,p);showSelection();return;}if(tool==='select'){if(moving){var nx=Math.max(0,Math.min(cv.width-selection.w,Math.round(p.x-dragOffset.x))),ny=Math.max(0,Math.min(cv.height-selection.h,Math.round(p.y-dragOffset.y)));cx.putImageData(moveBase,0,0);cx.drawImage(moveCanvas,nx,ny);selection.x=nx;selection.y=ny;}else selection=normalized(start,p);showSelection();return;}if(tool==='pencil'||tool==='brush'||tool==='eraser'){cx.strokeStyle=tool==='eraser'?'#fff':color;cx.lineWidth=tool==='pencil'?1:(tool==='eraser'?size*2:size);cx.lineTo(p.x,p.y);cx.stroke();}else shape(p,e);}
-      function up(e){if(!drawing)return;if(tool==='text'){drawing=false;if(textTransform){var changed=textMoved;textTransform=null;if(changed){showTextBox();msg.textContent='Text box updated';}else editLastText();return;}var rect=normalized(start,pos(e));if(rect.w<12||rect.h<12)rect={x:Math.min(cv.width-1,start.x|0),y:Math.min(cv.height-1,start.y|0),w:Math.max(1,Math.min(240,cv.width-(start.x|0))),h:Math.max(1,Math.min(100,cv.height-(start.y|0)))};clearSelection();addTextAt(rect,{w:cv.width,h:cv.height,d:base});return;}if(tool==='select'){drawing=false;if(moving){moving=false;commit(moveBefore);moveBefore=null;moveBase=null;moveCanvas=null;msg.textContent='Selection moved';}else{selection=normalized(start,pos(e));if(!selection.w||!selection.h)clearSelection();else msg.textContent=selection.w+' × '+selection.h+' selected';}showSelection();buttons();return;}if(tool==='line'||tool==='rect'||tool==='ellipse')shape(pos(e),e);drawing=false;commit({w:cv.width,h:cv.height,d:base});base=null;msg.textContent='Drawing saved';}
+      function up(e){if(!drawing)return;if(tool==='text'){drawing=false;if(textTransform){var changed=textMoved;textTransform=null;if(changed){showTextBox();msg.textContent='Text box updated';}else editLastText();return;}var rect=normalized(start,pos(e));if(rect.w<12||rect.h<12)rect={x:Math.min(cv.width-1,start.x|0),y:Math.min(cv.height-1,start.y|0),w:Math.max(1,Math.min(240,cv.width-(start.x|0))),h:Math.max(1,Math.min(100,cv.height-(start.y|0)))};clearSelection();addTextAt(rect,{w:cv.width,h:cv.height,d:base});return;}if(tool==='select'){drawing=false;if(moving){moving=false;commit(moveBefore);moveBefore=null;moveBase=null;moveCanvas=null;msg.textContent='Selection moved';}else{selection=normalized(start,pos(e));if(!selection.w||!selection.h)clearSelection();else msg.textContent=selection.w+' × '+selection.h+' selected';}showSelection();buttons();return;}if(tool==='line'||tool==='rect'||tool==='ellipse')shape(pos(e),e);drawing=false;commit({w:cv.width,h:cv.height,d:base});base=null;msg.textContent='Stroke added';}
       function transformSelection(k){var before=snap(),s=document.createElement('canvas'),sc=s.getContext('2d'),w=selection.w,h=selection.h,swap=k==='l'||k==='r';s.width=w;s.height=h;sc.drawImage(cv,selection.x,selection.y,w,h,0,0,w,h);var t=document.createElement('canvas'),x=t.getContext('2d');t.width=swap?h:w;t.height=swap?w:h;x.save();if(k==='h'){x.translate(w,0);x.scale(-1,1);}if(k==='v'){x.translate(0,h);x.scale(1,-1);}if(k==='l'){x.translate(0,w);x.rotate(-Math.PI/2);}if(k==='r'){x.translate(h,0);x.rotate(Math.PI/2);}x.drawImage(s,0,0);x.restore();cx.fillStyle='#fff';cx.fillRect(selection.x,selection.y,w,h);cx.drawImage(t,selection.x,selection.y);selection.w=Math.min(t.width,cv.width-selection.x);selection.h=Math.min(t.height,cv.height-selection.y);commit(before);showSelection();buttons();msg.textContent='Selection transformed';}
       function transform(k){if(selection){transformSelection(k);return;}var before=snap();clearSelection();var t=document.createElement('canvas'),x=t.getContext('2d'),w=cv.width,h=cv.height,swap=k==='l'||k==='r';t.width=swap?h:w;t.height=swap?w:h;x.fillStyle='#fff';x.fillRect(0,0,t.width,t.height);x.save();if(k==='h'){x.translate(w,0);x.scale(-1,1);}if(k==='v'){x.translate(0,h);x.scale(1,-1);}if(k==='l'){x.translate(0,w);x.rotate(-Math.PI/2);}if(k==='r'){x.translate(h,0);x.rotate(Math.PI/2);}x.drawImage(cv,0,0);x.restore();cv.width=t.width;cv.height=t.height;cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(t,0,0);setup();applyZoom();commit(before);msg.textContent='Image transformed';}
       function resize(){resizeDialog(function(w,h){var before=snap(),t=document.createElement('canvas');t.width=w;t.height=h;var x=t.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(cv,0,0,w,h);blank(w,h);cx.drawImage(t,0,0);commit(before);msg.textContent='Image resized to '+w+' × '+h;});}
@@ -1759,7 +1784,7 @@ try {
       canvasHandles.forEach(function(handle){handle.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();var edge=handle.dataset.edge,before=snap(),ow=cv.width,oh=cv.height,sx=cv.offsetWidth/cv.width,sy=cv.offsetHeight/cv.height,startX=e.clientX,startY=e.clientY,changed=false;function drag(ev){var w=edge==='bottom'?ow:Math.max(1,Math.min(4096,Math.round(ow+(ev.clientX-startX)/sx))),h=edge==='right'?oh:Math.max(1,Math.min(4096,Math.round(oh+(ev.clientY-startY)/sy)));if(w===cv.width&&h===cv.height)return;changed=true;blank(w,h);cx.putImageData(before.d,0,0);msg.textContent='Canvas size: '+w+' × '+h;}function finish(){document.removeEventListener('pointermove',drag);document.removeEventListener('pointerup',finish);if(changed){commit(before);msg.textContent='Canvas resized without scaling artwork';}updateCanvasHandles();}document.addEventListener('pointermove',drag);document.addEventListener('pointerup',finish);});});
       cv.addEventListener('pointerdown',down);cv.addEventListener('pointermove',move);cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
       el.querySelectorAll('.paint-tool-btn').forEach(function(b){b.onclick=function(){tool=b.dataset.tool;if(tool!=='select')clearSelection();el.querySelectorAll('.paint-tool-btn').forEach(function(q){q.classList.remove('active');});b.classList.add('active');if(tool==='text')showTextBox();msg.textContent=tool==='text'?'Text: drag a box; drag existing text to move or resize':b.title;};});
-      el.querySelectorAll('.paint-color-swatch').forEach(function(s){s.onclick=function(){pick(s.dataset.color);};});el.querySelector('.paint-custom').oninput=function(e){pick(e.target.value);};sz.oninput=function(){size=parseInt(sz.value,10);szv.textContent=size+' px';};zoomBox.onchange=applyZoom;fi.onchange=function(){load(fi.files[0]);fi.value='';};
+      el.querySelectorAll('.paint-color-swatch').forEach(function(s){s.onclick=function(){pick(s.dataset.color);};});el.querySelector('.paint-custom').oninput=function(e){pick(e.target.value);};el.querySelector('.paint-custom').onchange=function(e){rememberColor(e.target.value);};sz.oninput=function(){size=parseInt(sz.value,10);szv.textContent=size+' px';};zoomBox.onchange=applyZoom;fi.onchange=function(){load(fi.files[0]);fi.value='';};
       el.querySelectorAll('[data-a]').forEach(function(b){b.onclick=function(){if(b.classList.contains('disabled'))return;var a=b.dataset.a;if(a==='new')newImg();if(a==='import')fi.click();if(a==='export')save();if(a==='undo')undoIt();if(a==='redo')redoIt();if(a==='editText')editLastText();if(a==='cut')cutSelection();if(a==='copy')copySelection();if(a==='paste')pasteSelection();if(a==='delete')deleteSelection();if(a==='crop')cropSelection();if(a==='resizeSel')resizeSelection();if(a==='clear')clear();if(a==='fh')transform('h');if(a==='fv')transform('v');if(a==='rl')transform('l');if(a==='rr')transform('r');if(a==='resize')resize();if(a==='setbg'){state.background={color:'',gradient:'',image:cv.toDataURL('image/png')};applyBackground();saveState();msg.textContent='Set as desktop background';}if(a==='about')openInfoWindow('DesktopDiary Paint v1.7 — 32-pixel bubblegum buttons with 28-pixel icons.');};});
       el.tabIndex=0;el.onkeydown=function(e){var k=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;if(mod&&k==='n'){e.preventDefault();newImg();}if(mod&&k==='z'){e.preventDefault();e.shiftKey?redoIt():undoIt();}if(mod&&k==='y'){e.preventDefault();redoIt();}if(mod&&k==='s'){e.preventDefault();save();}if(mod&&k==='o'){e.preventDefault();fi.click();}if(mod&&k==='c'){e.preventDefault();copySelection();}if(mod&&k==='x'){e.preventDefault();cutSelection();}if(mod&&k==='v'){e.preventDefault();pasteSelection();}if(k==='delete'||k==='backspace'){if(selection){e.preventDefault();deleteSelection();}}if(k==='escape')clearSelection();};
       blank(640,420);hist=[];redo=[];buttons();
@@ -2767,7 +2792,7 @@ try {
     el.innerHTML =
       '<div class="titlebar">' +
         '<span class="t-title">' + mascotSVG(15) + '<span>' + escapeHtml(opts.title) + '</span></span>' +
-        '<span class="t-btns"><button class="win-btn max-btn" title="Maximize">&#9723;</button><button class="win-btn close-btn">X</button></span>' +
+        '<span class="t-btns"><button class="win-btn min-btn" title="Minimize">&#8211;</button><button class="win-btn max-btn" title="Maximize">&#9723;</button><button class="win-btn close-btn">X</button></span>' +
       '</div>' +
       (opts.menuHtml || '') +
       opts.bodyHtml;
@@ -2788,11 +2813,15 @@ try {
     el.style.top = pos.y + 'px';
     el.style.visibility = 'visible';
 
-    var record = { id: id, el: el, type: opts.type, buddyId: opts.buddyId, maximized: false, prevRect: null };
+    var record = { id: id, el: el, type: opts.type, buddyId: opts.buddyId, maximized: false, prevRect: null, minimized: false };
     openWindows.push(record);
     addTaskbarItem(record, opts.title);
 
     el.querySelector('.close-btn').addEventListener('click', function(){ closeWindow(id); });
+    el.querySelector('.min-btn').addEventListener('click', function(e){
+      e.stopPropagation();
+      minimizeWindow(record);
+    });
     el.querySelector('.max-btn').addEventListener('click', function(e){
       e.stopPropagation();
       toggleMaximize(record);
@@ -2834,15 +2863,32 @@ try {
     rec.el.remove();
     if(rec.tbEl) rec.tbEl.remove();
     openWindows = openWindows.filter(function(w){ return w.id !== id; });
+    if(activeWindowId === id) activeWindowId = null;
+    showDesktopHidden = showDesktopHidden.filter(function(wid){ return wid !== id; });
+  }
+
+  function minimizeWindow(rec){
+    if(!rec || rec.minimized) return;
+    rec.el.style.display = 'none';
+    rec.minimized = true;
+    if(rec.tbEl){ rec.tbEl.classList.remove('active'); rec.tbEl.classList.add('minimized'); }
+    if(activeWindowId === rec.id) activeWindowId = null;
   }
 
   function focusWindow(id){
+    var rec = openWindows.find(function(w){ return w.id === id; });
+    if(!rec) return;
+    if(rec.minimized){
+      rec.el.style.display = '';
+      rec.minimized = false;
+      if(rec.tbEl) rec.tbEl.classList.remove('minimized');
+    }
+    activeWindowId = id;
     openWindows.forEach(function(w){
       w.el.style.zIndex = (w.id === id) ? (++zCounter) : w.el.style.zIndex;
     });
     document.querySelectorAll('.tb-item').forEach(function(t){ t.classList.remove('active'); });
-    var rec = openWindows.find(function(w){ return w.id === id; });
-    if(rec && rec.tbEl) rec.tbEl.classList.add('active');
+    if(rec.tbEl) rec.tbEl.classList.add('active');
   }
 
   function addTaskbarItem(rec, label){
@@ -2850,9 +2896,38 @@ try {
     var item = document.createElement('div');
     item.className = 'tb-item';
     item.textContent = label;
-    item.addEventListener('click', function(){ focusWindow(rec.id); });
+    item.addEventListener('click', function(){
+      if(!rec.minimized && activeWindowId === rec.id){
+        minimizeWindow(rec);
+      } else {
+        focusWindow(rec.id);
+      }
+    });
     tb.appendChild(item);
     rec.tbEl = item;
+  }
+
+  // Minimizes every open window (classic "Show Desktop"); pressing it again
+  // restores only the windows that this action minimized, leaving windows the
+  // user had already minimized by hand untouched.
+  function showDesktop(){
+    if(showDesktopHidden.length){
+      var ids = showDesktopHidden.slice();
+      showDesktopHidden = [];
+      ids.forEach(function(wid){
+        var rec = openWindows.find(function(w){ return w.id === wid; });
+        if(rec && rec.minimized) focusWindow(rec.id);
+      });
+    } else {
+      var hidden = [];
+      openWindows.forEach(function(rec){
+        if(!rec.minimized){
+          minimizeWindow(rec);
+          hidden.push(rec.id);
+        }
+      });
+      showDesktopHidden = hidden;
+    }
   }
 
   function makeDraggable(winEl, handleEl){
