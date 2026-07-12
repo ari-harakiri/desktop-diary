@@ -154,6 +154,7 @@
   #signon-wrap {
     position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     width: min(300px, 92vw);
+    z-index: 60;
   }
   .desktop-icon {
     position:absolute; top:16px; left:16px; width:64px;
@@ -195,6 +196,7 @@
   #connecting-wrap {
     position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     width: min(300px, 92vw);
+    z-index: 60;
   }
   #connecting-wrap .win-body { background:#ece9d8; padding: 16px 18px; }
   .progress-track { height: 16px; border: 1px solid #7f9db9; border-radius:3px; background:#fff; overflow:hidden; margin-top:10px; }
@@ -326,7 +328,7 @@
   .status-tag { font-size:9px; color:#0850d0; font-weight:bold; display:inline-block; margin-bottom:2px; }
   .pct-key { font-size:9px; color:#888; padding:3px 6px; background:#f5f5f0; border-top:1px solid #e5e2d5; }
   /* ---- sticky notes ---- */
-  #sticky-layer { position:absolute; inset:0; pointer-events:none; z-index:50; }
+  #sticky-layer { position:absolute; inset:0; pointer-events:none; }
   .sticky {
     position:absolute; pointer-events:all;
     display:flex; flex-direction:column;
@@ -347,7 +349,7 @@
     display:flex; align-items:center; gap:5px; padding:4px 6px;
     cursor:move; flex-shrink:0; user-select:none; -webkit-user-select:none;
   }
-  .sticky-bar-title { flex:1; font-size:11px; font-weight:bold; color:rgba(0,0,0,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sticky-bar-title { flex:1; min-width:0; }
   .sticky-color-btn { width:16px; height:16px; border-radius:50%; border:2px solid rgba(0,0,0,.25); cursor:pointer; flex-shrink:0; }
   .sticky-close { width:16px; height:16px; border-radius:2px; border:none; background:rgba(0,0,0,.18); color:#333; font-size:12px; line-height:1; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
   .sticky-close:hover { background:rgba(0,0,0,.35); color:#fff; }
@@ -382,6 +384,29 @@
   .bgedit-win { width: min(260px, 90vw); height: min(300px, 64vh); }
   .themeedit-win { width: min(280px, 92vw); height: min(300px, 62vh); }
   .paint-win { --paint-rose:#c95d87; --paint-rose-dark:#8f3157; --paint-blush:#f7e8ee; --paint-cream:#fffaf4; --paint-ink:#3b3035; width:min(760px,96vw); height:min(650px,86vh); min-width:310px; min-height:430px; resize:both; overflow:hidden; }
+
+  /* ---- AriNet (fake in-app browser) ---- */
+  .arinet-win { width:min(400px,96vw); height:min(600px,88vh); }
+  .arinet-body { padding:0; display:flex; flex-direction:column; height:100%; }
+  .arinet-toolbar { display:flex; align-items:center; gap:4px; padding:6px 7px; background:#ece9d8; border-bottom:1px solid #b0aca0; flex-shrink:0; }
+  .arinet-nav-btn { width:24px; height:24px; border:1px solid #8ea2c2; border-radius:4px; background:linear-gradient(180deg,#fff,#dbe6f5); font-size:13px; line-height:1; cursor:pointer; flex-shrink:0; }
+  .arinet-nav-btn:disabled { opacity:.4; cursor:default; }
+  .arinet-address { flex:1; min-width:0; padding:5px 8px; border:1px inset #9cb0cf; border-radius:3px; font-size:12px; background:#fff; }
+  .arinet-go-btn { flex-shrink:0; padding:5px 10px; border:1px solid #8ea2c2; border-radius:4px; background:linear-gradient(180deg,#7fb8ff,#2f6fd8); color:#fff; font-weight:bold; font-size:11px; cursor:pointer; }
+  .arinet-bookmarks { display:flex; gap:5px; flex-wrap:wrap; padding:5px 7px; background:#f5f3ea; border-bottom:1px solid #d8d4c4; flex-shrink:0; }
+  .arinet-bookmark { display:flex; align-items:center; gap:4px; padding:3px 8px; border:1px solid #c8c2ad; border-radius:12px; background:#fff; font-size:11px; cursor:pointer; color:#333; }
+  .arinet-bookmark:active, .arinet-bookmark.active { background:#dbe9ff; border-color:#7fb8ff; }
+  .arinet-content { position:relative; flex:1; background:#fff; }
+  .arinet-frame { position:absolute; inset:0; width:100%; height:100%; border:none; display:none; }
+  .arinet-home { position:absolute; inset:0; overflow:auto; text-align:center; padding:26px 18px; background:linear-gradient(180deg,#eaf3ff,#ffffff 60%); }
+  .arinet-home h2 { font-size:22px; margin:6px 0 2px; background:linear-gradient(90deg,#ff5fa2,#7f5fff,#2fb8ff); -webkit-background-clip:text; background-clip:text; color:transparent; letter-spacing:.5px; }
+  .arinet-home .arinet-tagline { font-size:11px; color:#777; margin-bottom:18px; }
+  .arinet-home-grid { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
+  .arinet-tile { width:96px; padding:12px 8px; border:1px solid #c8d6ee; border-radius:8px; background:#fff; cursor:pointer; box-shadow:1px 2px 4px rgba(0,0,0,.08); }
+  .arinet-tile:active { background:#eef4ff; }
+  .arinet-tile-icon { font-size:26px; }
+  .arinet-tile-name { font-size:11px; font-weight:bold; color:#333; margin-top:5px; }
+  .arinet-status { padding:3px 8px; font-size:10px; color:#777; background:#ece9d8; border-top:1px solid #cfcabb; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .paint-win .win-body { padding:0; display:flex; flex-direction:column; min-height:0; color:var(--paint-ink); background:var(--paint-cream); }
   .paint-menubar { flex-shrink:0; background:linear-gradient(180deg,#ffeaf2,#efbfd1); border-bottom-color:#b86d89; }
   .paint-menubar .m-item { color:#53283a; }
@@ -588,7 +613,7 @@
 
   /* ---------- mobile: popups float over the mini buddy list, draggable but screen-bound ---------- */
   @media (max-width: 700px) {
-    .im-win, .nm-win, .addbuddy-win, .bgedit-win, .themeedit-win, .paint-win {
+    .im-win, .nm-win, .addbuddy-win, .bgedit-win, .themeedit-win, .paint-win, .arinet-win {
       box-shadow: 0 6px 24px rgba(0,0,0,.55);
     }
     .bl-row { min-height: 40px; padding: 7px 8px; font-size:12px; }
@@ -654,7 +679,7 @@
   <div id="buddylist-win" class="win" style="display:none;">
     <div class="titlebar">
       <span class="t-title"><span class="ttl-icon"></span><span id="bl-title-text">Buddy List</span></span>
-      <span class="t-btns"><button class="win-btn" id="bl-close">X</button></span>
+      <span class="t-btns"><button class="win-btn min-btn" id="bl-min" title="Minimize">&#8211;</button><button class="win-btn" id="bl-close">X</button></span>
     </div>
     <div class="menubar">
       <div class="m-item">File
@@ -716,6 +741,7 @@
     <div id="start-menu">
       <div class="sm-item" id="sm-stickynote">New Sticky Note</div>
       <div class="sm-item" id="sm-paint">Paint</div>
+      <div class="sm-item" id="sm-arinet">AriNet</div>
       <div class="sm-item" id="sm-display">Edit Display</div>
       <div class="sm-item" id="sm-showdesktop">Show Desktop</div>
     </div>
@@ -772,7 +798,7 @@ try {
     themeRecentColors: [],  // recently used custom colors in Edit Theme (device-local, not synced)
     theme: { preset: 'classic', customColors: ['#3d95ff'], startColor: '#7ed957', clockColor: '#1a4fc4', calDaysColors: ['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a'], fontColor: '#ffffff' }, // window chrome color (titlebar/taskbar/Start button)
     customFonts: [],        // user-uploaded fonts (device-local, not synced): { id, name, dataUrl }
-    stickyNotes: [],        // desktop sticky notes (device-local): { id, text, color, x, y, w, h }
+    stickyNotes: [],        // desktop sticky notes (device-local): { id, title, text, color, x, y, w, h }
     customMoods: [],        // user-added moods: ['Grateful', 'Hopeful', ...]
     customMoodColors: {},   // mood name -> hex color override
     groups: [ { id: 'default', name: 'Buddies' } ],
@@ -895,9 +921,8 @@ try {
     bar.className = 'sticky-bar';
     bar.style.background = shadeColor(note.color || '#fff9a3', -18);
 
-    var title = document.createElement('span');
-    title.className = 'sticky-bar-title';
-    title.textContent = '✎ Note';
+    var titleSpacer = document.createElement('span');
+    titleSpacer.className = 'sticky-bar-title';
 
     var colorBtn = document.createElement('button');
     colorBtn.className = 'sticky-color-btn';
@@ -909,7 +934,7 @@ try {
     closeBtn.innerHTML = '&times;';
     closeBtn.title = 'Delete note';
 
-    bar.appendChild(title);
+    bar.appendChild(titleSpacer);
     bar.appendChild(colorBtn);
     bar.appendChild(closeBtn);
 
@@ -1026,7 +1051,7 @@ try {
       saveStickyNotes();
     }
     handle.addEventListener('mousedown', function(e){
-      if(e.target.tagName === 'BUTTON') return;
+      if(e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
       e.preventDefault(); onStart(e.clientX, e.clientY);
       document.addEventListener('mousemove', onMouse);
       document.addEventListener('mouseup', onMouseUp);
@@ -1034,7 +1059,7 @@ try {
     function onMouse(e){ onMove(e.clientX, e.clientY); }
     function onMouseUp(){ onEnd(); document.removeEventListener('mousemove', onMouse); document.removeEventListener('mouseup', onMouseUp); }
     handle.addEventListener('touchstart', function(e){
-      if(e.target.tagName === 'BUTTON') return;
+      if(e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
       var t = e.touches[0]; onStart(t.clientX, t.clientY);
     }, { passive:true });
     handle.addEventListener('touchmove', function(e){
@@ -1093,6 +1118,7 @@ try {
     var pos = nextStickySpawnPos(w, h);
     var note = {
       id: uid(),
+      title: '',
       text: '',
       color: STICKY_COLORS[Math.floor(Math.random() * STICKY_COLORS.length)],
       x: pos.x,
@@ -1351,6 +1377,11 @@ try {
     e.stopPropagation();
     document.getElementById('start-menu').classList.remove('open');
     openPaintWindow();
+  });
+  document.getElementById('sm-arinet').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('start-menu').classList.remove('open');
+    openAriNetWindow();
   });
   document.getElementById('sm-showdesktop').addEventListener('click', function(e){
     e.stopPropagation();
@@ -1863,6 +1894,7 @@ try {
           updateCaldaysRow();
           updateItemRainbowUI();
         });
+        var recentColorDebounce = null;
         swatch.addEventListener('input', function(){
           if(select.value === 'caldays'){
             values.caldaysColors[selectedDay] = swatch.value;
@@ -1873,8 +1905,16 @@ try {
             if(fk && values.rainbow[fk]){ values.rainbow[fk] = false; updateItemRainbowUI(); }
           }
           commit();
+          // Some mobile/PWA webviews don't reliably fire 'change' when the
+          // native color sheet is dismissed (e.g. tapping the X). Fall back
+          // to remembering the color a moment after the user stops moving
+          // the picker, so the "Recently Used" row still gets updated.
+          var pickedHex = swatch.value;
+          clearTimeout(recentColorDebounce);
+          recentColorDebounce = setTimeout(function(){ rememberThemeColor(pickedHex); }, 500);
         });
         swatch.addEventListener('change', function(){
+          clearTimeout(recentColorDebounce);
           rememberThemeColor(swatch.value);
         });
         use2Box.addEventListener('change', function(){
@@ -2252,7 +2292,7 @@ try {
       theme: state.theme,
       customThemePresets: state.customThemePresets,
       stickyNotes: (state.stickyNotes || []).map(function(n){
-        return { id:n.id, text:n.text, color:n.color, x:n.x, y:n.y, w:n.w, h:n.h };
+        return { id:n.id, title:n.title||'', text:n.text, color:n.color, x:n.x, y:n.y, w:n.w, h:n.h };
       }),
       chunkCounts: {},
       updatedAt: Date.now()
@@ -2837,7 +2877,30 @@ try {
     refreshMyStatus();
     refreshProfilePic();
     renderBuddyList();
+    fitSearchBarWidth();
+    var rec = registerBuddyListWindow();
+    focusWindow(rec.id);
   }
+
+  // Keeps the search bar from overlapping the buddy list, which normally
+  // sits in the top-right corner. Recomputes whenever the buddy list
+  // becomes visible or the viewport is resized/rotated.
+  function fitSearchBarWidth(){
+    var search = document.getElementById('desktop-search');
+    var bl = document.getElementById('buddylist-win');
+    if(!search) return;
+    if(bl && bl.style.display !== 'none' && bl.offsetWidth){
+      var searchLeft = search.offsetLeft || 12;
+      var gap = 14;
+      var available = bl.offsetLeft - searchLeft - gap;
+      available = Math.max(140, Math.min(available, 310));
+      search.style.maxWidth = available + 'px';
+    } else {
+      search.style.maxWidth = '';
+    }
+  }
+  window.addEventListener('resize', fitSearchBarWidth);
+  window.addEventListener('orientationchange', function(){ setTimeout(fitSearchBarWidth, 150); });
 
   function refreshProfilePic(){
     var img = document.getElementById('bl-me-pic');
@@ -2852,14 +2915,24 @@ try {
     }
   }
 
-  (function(){
+  var buddyListWinRecord = null;
+  function registerBuddyListWindow(){
+    if(buddyListWinRecord) return buddyListWinRecord;
     var blWin = document.getElementById('buddylist-win');
-    function bringToFront(){ blWin.style.zIndex = ++zCounter; }
-    blWin.addEventListener('mousedown', bringToFront);
-    blWin.addEventListener('touchstart', bringToFront, { passive: true });
+    var rec = { id: 'buddylist-win', type: 'buddylist', el: blWin, buddyId: null, onClose: null, maximized: false, prevRect: null, minimized: false, tbEl: null };
+    openWindows.push(rec);
+    addTaskbarItem(rec, 'Buddy List');
+    blWin.addEventListener('mousedown', function(){ focusWindow(rec.id); });
+    blWin.addEventListener('touchstart', function(){ focusWindow(rec.id); }, { passive: true });
+    document.getElementById('bl-min').addEventListener('click', function(e){
+      e.stopPropagation();
+      minimizeWindow(rec);
+    });
     document.getElementById('bl-me-pic').addEventListener('click', openViewProfileWindow);
     document.getElementById('bl-me-pic-ph').addEventListener('click', openEditProfileWindow);
-  })();
+    buddyListWinRecord = rec;
+    return rec;
+  }
 
   function refreshMyStatus(){
     var sub = document.getElementById('bl-me-sub');
@@ -3007,7 +3080,12 @@ try {
 
   function signOff(){
     playDoorSlam();
-    openWindows.slice().forEach(function(w){ closeWindow(w.id); });
+    openWindows.slice().forEach(function(w){ if(w.id !== 'buddylist-win') closeWindow(w.id); });
+    if(buddyListWinRecord){
+      if(buddyListWinRecord.tbEl) buddyListWinRecord.tbEl.remove();
+      openWindows = openWindows.filter(function(w){ return w.id !== 'buddylist-win'; });
+      buddyListWinRecord = null;
+    }
     document.getElementById('buddylist-win').style.display = 'none';
     document.getElementById('desktop-search').style.display = 'none';
     document.getElementById('desktop-search-results').style.display = 'none';
@@ -4774,6 +4852,149 @@ try {
         });
       }
     });
+  }
+
+  // ================= ARINET (fake in-app browser) =================
+  // Extensible bookmark registry — add more entries here later.
+  var ARINET_SITES = [
+    { name: 'Mass Track', url: 'https://ari-harakiri.github.io/Mass-Track/', icon: '⚖️' }
+  ];
+
+  function openAriNetWindow(){
+    var existing = openWindows.find(function(w){ return w.type === 'arinet'; });
+    if(existing){ focusWindow(existing.id); return; }
+
+    var bookmarksHtml = ARINET_SITES.map(function(s, i){
+      return '<div class="arinet-bookmark" data-idx="' + i + '"><span>' + s.icon + '</span><span>' + escapeHtml(s.name) + '</span></div>';
+    }).join('');
+
+    var tilesHtml = ARINET_SITES.map(function(s, i){
+      return '<div class="arinet-tile" data-idx="' + i + '"><div class="arinet-tile-icon">' + s.icon + '</div><div class="arinet-tile-name">' + escapeHtml(s.name) + '</div></div>';
+    }).join('');
+
+    var body =
+      '<div class="arinet-body">' +
+        '<div class="arinet-toolbar">' +
+          '<button class="arinet-nav-btn" id="an-back" title="Back">&#8592;</button>' +
+          '<button class="arinet-nav-btn" id="an-fwd" title="Forward">&#8594;</button>' +
+          '<button class="arinet-nav-btn" id="an-home" title="Home">&#8962;</button>' +
+          '<button class="arinet-nav-btn" id="an-reload" title="Reload">&#8635;</button>' +
+          '<input class="arinet-address" id="an-address" type="text" placeholder="Type a site or pick a bookmark…">' +
+          '<button class="arinet-go-btn" id="an-go">Go</button>' +
+        '</div>' +
+        '<div class="arinet-bookmarks">' + bookmarksHtml + '</div>' +
+        '<div class="arinet-content">' +
+          '<div class="arinet-home" id="an-home-view">' +
+            '<h2>AriNet</h2>' +
+            '<div class="arinet-tagline">Ari\u2019s own little internet</div>' +
+            '<div class="arinet-home-grid">' + tilesHtml + '</div>' +
+          '</div>' +
+          '<iframe class="arinet-frame" id="an-frame" title="AriNet browser"></iframe>' +
+        '</div>' +
+        '<div class="arinet-status" id="an-status">Home</div>' +
+      '</div>';
+
+    createWindow({ title: 'AriNet', extraClass: 'arinet-win', bodyHtml: body, type: 'arinet', onMount: function(el){
+      var homeView = el.querySelector('#an-home-view');
+      var frame = el.querySelector('#an-frame');
+      var address = el.querySelector('#an-address');
+      var status = el.querySelector('#an-status');
+      var backBtn = el.querySelector('#an-back');
+      var fwdBtn = el.querySelector('#an-fwd');
+
+      // simple linear history: {label, url|null} — null url means the home view
+      var history = [{ label: 'Home', url: null }];
+      var historyIndex = 0;
+
+      function normalizeUrl(raw){
+        raw = (raw || '').trim();
+        if(!raw) return null;
+        if(!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
+        return raw;
+      }
+
+      function updateNavButtons(){
+        backBtn.disabled = historyIndex <= 0;
+        fwdBtn.disabled = historyIndex >= history.length - 1;
+      }
+
+      function renderCurrent(){
+        var entry = history[historyIndex];
+        if(entry.url){
+          homeView.style.display = 'none';
+          frame.style.display = 'block';
+          if(frame.src !== entry.url) frame.src = entry.url;
+          address.value = entry.url;
+          status.textContent = entry.url;
+        } else {
+          frame.style.display = 'none';
+          frame.src = 'about:blank';
+          homeView.style.display = 'block';
+          address.value = '';
+          status.textContent = 'Home';
+        }
+        el.querySelectorAll('.arinet-bookmark').forEach(function(b){ b.classList.remove('active'); });
+        if(entry.siteIdx !== undefined){
+          var match = el.querySelector('.arinet-bookmark[data-idx="' + entry.siteIdx + '"]');
+          if(match) match.classList.add('active');
+        }
+        updateNavButtons();
+      }
+
+      function navigateTo(url, label, siteIdx){
+        // drop any forward history once a new navigation happens
+        history = history.slice(0, historyIndex + 1);
+        history.push({ label: label || url, url: url, siteIdx: siteIdx });
+        historyIndex = history.length - 1;
+        renderCurrent();
+      }
+
+      function goHome(){
+        history = history.slice(0, historyIndex + 1);
+        history.push({ label: 'Home', url: null });
+        historyIndex = history.length - 1;
+        renderCurrent();
+      }
+
+      el.querySelector('#an-go').addEventListener('click', function(){
+        var url = normalizeUrl(address.value);
+        if(url) navigateTo(url);
+      });
+      address.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){
+          var url = normalizeUrl(address.value);
+          if(url) navigateTo(url);
+        }
+      });
+      el.querySelector('#an-home').addEventListener('click', goHome);
+      el.querySelector('#an-reload').addEventListener('click', function(){
+        var entry = history[historyIndex];
+        if(entry.url){
+          frame.src = 'about:blank';
+          setTimeout(function(){ frame.src = entry.url; }, 30);
+        }
+      });
+      backBtn.addEventListener('click', function(){
+        if(historyIndex > 0){ historyIndex--; renderCurrent(); }
+      });
+      fwdBtn.addEventListener('click', function(){
+        if(historyIndex < history.length - 1){ historyIndex++; renderCurrent(); }
+      });
+
+      function openBookmark(idx){
+        var site = ARINET_SITES[idx];
+        if(!site) return;
+        navigateTo(site.url, site.name, idx);
+      }
+      el.querySelectorAll('.arinet-bookmark').forEach(function(b){
+        b.addEventListener('click', function(){ openBookmark(parseInt(b.getAttribute('data-idx'), 10)); });
+      });
+      el.querySelectorAll('.arinet-tile').forEach(function(t){
+        t.addEventListener('click', function(){ openBookmark(parseInt(t.getAttribute('data-idx'), 10)); });
+      });
+
+      renderCurrent();
+    }});
   }
 
   // ================= HELP WINDOW =================
