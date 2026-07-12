@@ -140,11 +140,11 @@
   }
   button.btn {
     font-family: Tahoma, Arial, sans-serif; font-size: 12px; font-weight:600;
-    border: 1px solid #003c9c; border-radius: 4px;
-    background: linear-gradient(180deg,#fefefe,#e5f0fb 45%,#bcd8f6 55%,#9cc6f0);
-    padding: 6px 14px; cursor: pointer; color:#12336b;
+    border: 1px solid var(--th-button-border,#003c9c); border-radius: 4px;
+    background:var(--th-button-bg,linear-gradient(180deg,var(--th-button-1,#fefefe),var(--th-button-2,#bcd8f6) 55%,var(--th-button-3,#9cc6f0)));
+    padding: 6px 14px; cursor: pointer; color:var(--th-button-text,#12336b);
   }
-  button.btn:active { background: linear-gradient(180deg,#9cc6f0,#bcd8f6); }
+  button.btn:active { background:var(--th-button-active-bg,linear-gradient(180deg,var(--th-button-3,#9cc6f0),var(--th-button-2,#bcd8f6))); }
 
   /* ---------- mascot ---------- */
   .mascot { display:inline-block; }
@@ -384,6 +384,7 @@
   .bgedit-win { width: min(260px, 90vw); height: min(300px, 64vh); }
   .themeedit-win { width: min(280px, 92vw); height: min(300px, 62vh); }
   .paint-win { --paint-rose:#c95d87; --paint-rose-dark:#8f3157; --paint-blush:#f7e8ee; --paint-cream:#fffaf4; --paint-ink:#3b3035; width:min(760px,96vw); height:min(650px,86vh); min-width:310px; min-height:430px; resize:both; overflow:hidden; }
+  .paint-win button.btn, .paint-text-dialog button.btn, .paint-resize-dialog button.btn { background:linear-gradient(180deg,#fff9fc,#f4ccdc); border-color:#bd8298; color:#49343d; }
 
   /* ---- AriNet (fake in-app browser) ---- */
   .arinet-win { width:min(400px,96vw); height:min(600px,88vh); }
@@ -508,45 +509,65 @@
   .vp-empty { color:#888; font-size:12px; text-align:center; padding:20px; }
   .setup-win { width: min(290px, 92vw); height: min(340px, 68vh); }
   .status-win { width: min(300px, 92vw); height: min(260px, 56vh); }
-  .displayedit-win { width:min(720px,96vw); height:min(650px,88vh); }
-  .displayedit-win .win-body { padding:0; overflow:hidden; background:#e9e7dc; }
+  .displayedit-win { width:min(480px,94vw); height:min(440px,76vh); }
+  .displayedit-win .win-body { padding:0; overflow:hidden; background:#f3f1ea; }
   .display-shell { height:100%; display:flex; flex-direction:column; min-height:0; }
-  .display-preview-wrap { padding:10px 12px 8px; background:linear-gradient(#faf9f3,#dfddd2); border-bottom:1px solid #aaa; }
-  .display-preview-label { font-size:10px; color:#666; font-weight:bold; margin-bottom:5px; letter-spacing:.4px; }
-  .display-preview { height:118px; border:2px inset #ddd; position:relative; overflow:hidden; background:#3a6ea5; }
-  .display-preview-window { position:absolute; width:48%; height:72%; left:11%; top:12%; background:#ece9d8; border:1px solid var(--th-item-border); border-radius:5px; overflow:hidden; box-shadow:2px 3px 7px rgba(0,0,0,.35); }
-  .display-preview-title { height:22px; padding:4px 7px; color:var(--th-font-color,#fff); font-weight:bold; font-size:10px; background:linear-gradient(var(--th-title-angle,180deg),var(--th-title-1),var(--th-title-4),var(--th-title-7)); text-shadow:1px 1px rgba(0,0,0,.35); }
-  .display-preview-content { padding:9px; color:#555; font-size:9px; }
+  .display-main { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .display-preview-wrap { padding:10px; background:linear-gradient(180deg,#fffef9,#e4e1d8); border-right:1px solid #aaa; min-width:0; }
+  .display-preview-heading { display:block; margin-bottom:6px; }
+  .display-preview-label { font-size:11px; color:#343434; font-weight:bold; }
+  .display-preview-hint { font-size:9px; color:#74716b; margin-top:2px; }
+  .display-preview { height:150px; border:1px solid #777; border-radius:5px; position:relative; overflow:hidden; background:#3a6ea5; box-shadow:inset 0 0 0 2px rgba(255,255,255,.48),0 2px 7px rgba(0,0,0,.16); }
+  .display-preview::after { content:''; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 28px rgba(0,0,0,.15); }
+  .display-preview-window { position:absolute; width:52%; height:70%; left:9%; top:11%; background:#ece9d8; border:1px solid var(--th-item-border); border-radius:5px; overflow:hidden; box-shadow:3px 4px 9px rgba(0,0,0,.38); }
+  .display-preview-title { height:18px; padding:3px 6px; color:var(--th-font-color,#fff); font-weight:bold; font-size:9px; background:linear-gradient(var(--th-title-angle,180deg),var(--th-title-1),var(--th-title-4),var(--th-title-7)); text-shadow:1px 1px rgba(0,0,0,.35); }
+  .display-preview-content { padding:6px; color:#555; font-size:8px; }
   .display-preview-taskbar { position:absolute; height:19px; left:0; right:0; bottom:0; background:linear-gradient(var(--th-taskbar-angle,180deg),var(--th-taskbar-1),var(--th-taskbar-2),var(--th-taskbar-3)); border-top:1px solid var(--th-taskbar-border); }
   .display-preview-start { position:absolute; left:4px; bottom:2px; height:15px; padding:1px 9px; border-radius:9px; color:var(--th-font-color,#fff); font-size:8px; font-weight:bold; background:linear-gradient(var(--th-start-1),var(--th-start-2),var(--th-start-3)); border:1px solid var(--th-start-border); }
-  .display-tabs { display:flex; padding:8px 10px 0; gap:3px; background:#e9e7dc; border-bottom:1px solid #aaa; }
-  .display-tab { padding:7px 18px; border:1px solid #aaa; border-bottom:0; border-radius:6px 6px 0 0; background:linear-gradient(#fff,#d8d5c8); cursor:pointer; font-weight:bold; color:#444; }
-  .display-tab.active { color:var(--th-font-color,#fff); background:linear-gradient(180deg,var(--th-item-1),var(--th-item-2)); border-color:var(--th-item-border); text-shadow:1px 1px rgba(0,0,0,.35); }
-  .display-panels { flex:1; min-height:0; overflow:auto; padding:12px; }
+  .display-tabs { display:flex; padding:7px 8px; gap:5px; background:#dedbd1; border-bottom:1px solid #aaa; }
+  .display-tab { flex:1; padding:5px 10px; border:1px solid #aaa; border-radius:5px; background:linear-gradient(#fff,#d8d5c8); cursor:pointer; font-weight:bold; color:#444; box-shadow:inset 0 1px #fff; }
+  .display-tab.active { color:var(--th-font-color,#fff); background:linear-gradient(180deg,var(--th-item-1),var(--th-item-2)); border-color:var(--th-item-border); text-shadow:1px 1px rgba(0,0,0,.35); box-shadow:inset 0 1px rgba(255,255,255,.35),0 1px 3px rgba(0,0,0,.18); }
+  .display-tab small { display:block; margin-top:2px; font-size:9px; font-weight:normal; opacity:.78; }
+  .display-panels { flex:1; min-height:0; overflow:auto; padding:9px; }
   .display-panel { display:none; }
   .display-panel.active { display:block; }
-  .display-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .display-card { background:#f8f7f1; border:1px solid #bbb; border-radius:7px; padding:10px; box-shadow:inset 0 1px #fff; }
+  .display-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .display-card { background:#fffef9; border:1px solid #bbb; border-radius:6px; padding:8px; box-shadow:inset 0 1px #fff,0 1px 2px rgba(0,0,0,.07); }
   .display-card.wide { grid-column:1/-1; }
-  .display-card-title { font-weight:bold; color:var(--th-item-border,#333); margin-bottom:8px; padding-bottom:5px; border-bottom:1px solid #d3d0c5; }
-  .display-swatches { display:flex; flex-wrap:wrap; gap:6px; }
-  .display-swatch { width:30px; height:30px; border:2px solid rgba(0,0,0,.2); border-radius:5px; padding:0; cursor:pointer; }
+  .display-card-title { font-weight:bold; color:#333; margin-bottom:3px; }
+  .display-card-help { color:#777; font-size:9px; line-height:1.3; margin-bottom:6px; }
+  .display-swatches { display:flex; flex-wrap:wrap; gap:4px; }
+  .display-swatch { width:27px; height:27px; border:2px solid rgba(0,0,0,.2); border-radius:5px; padding:0; cursor:pointer; box-shadow:inset 0 0 0 1px rgba(255,255,255,.25); }
   .display-swatch.active { border-color:var(--th-item-border); box-shadow:0 0 0 2px var(--th-taskbar-border); }
-  .display-row { display:flex; align-items:center; gap:7px; margin:7px 0; }
+  .display-row { display:flex; align-items:center; gap:7px; margin:5px 0; }
   .display-row label { flex:1; color:#555; }
-  .display-color { width:48px; height:30px; padding:0; border:1px solid #999; border-radius:4px; cursor:pointer; }
-  .display-actions { display:flex; justify-content:space-between; gap:7px; padding:9px 12px; border-top:1px solid #aaa; background:#d7d4c8; }
+  .display-gradient-option { transition:opacity .15s ease; }
+  .display-gradient-option.disabled { opacity:.38; }
+  .display-color { width:44px; height:27px; padding:0; border:1px solid #999; border-radius:4px; cursor:pointer; }
+  .display-mode-picker { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+  .display-bg-settings { display:none; }
+  .display-bg-settings.active { display:block; }
+  .display-disclosure { background:#fffef9; border:1px solid #bbb; border-radius:6px; box-shadow:inset 0 1px #fff; }
+  .display-disclosure + .display-disclosure { margin-top:6px; }
+  .display-disclosure summary { cursor:pointer; padding:8px 10px; font-weight:bold; color:#333; list-style:none; }
+  .display-disclosure summary::-webkit-details-marker { display:none; }
+  .display-disclosure summary::after { content:'›'; float:right; font-size:16px; line-height:11px; color:#777; transform:rotate(90deg); }
+  .display-disclosure[open] summary { border-bottom:1px solid #ddd8cc; }
+  .display-disclosure[open] summary::after { transform:rotate(-90deg); }
+  .display-disclosure-body { padding:4px 10px 8px; }
+  .display-bg-mode { min-height:30px; }
+  .display-actions { display:flex; justify-content:space-between; gap:7px; padding:7px 10px; border-top:1px solid #aaa; background:#d7d4c8; box-shadow:0 -2px 7px rgba(0,0,0,.08); }
   .display-actions-right { display:flex; gap:7px; }
   .display-primary { color:var(--th-font-color,#fff); background:linear-gradient(var(--th-item-1),var(--th-item-2)); border-color:var(--th-item-border); font-weight:bold; }
-  .display-theme-preset { width:42px; height:42px; border-radius:6px; border:2px solid rgba(0,0,0,.22); cursor:pointer; position:relative; }
+  .display-theme-preset { width:43px; height:34px; border-radius:5px; border:2px solid rgba(0,0,0,.22); cursor:pointer; position:relative; }
   .display-theme-preset.active { border-color:var(--th-item-border); box-shadow:0 0 0 2px var(--th-taskbar-border); }
-  .display-theme-name { font-size:9px; text-align:center; color:#555; width:52px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .display-theme-name { font-size:8px; text-align:center; color:#555; width:52px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .display-preset-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; position:relative; }
   .display-preset-delete { position:absolute; right:-1px; top:-5px; width:16px; height:16px; padding:0; border:0; border-radius:50%; background:#b52c2c; color:white; font-size:11px; line-height:16px; cursor:pointer; }
   .display-day-colors { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
   .display-day-colors label { text-align:center; font-size:9px; color:#666; }
   .display-day-colors input { width:100%; height:27px; padding:0; border:1px solid #999; }
-  @media(max-width:650px){.display-grid{grid-template-columns:1fr}.display-card.wide{grid-column:auto}.display-preview{height:94px}.displayedit-win{height:min(650px,88vh)}}
+  @media(max-width:650px){.displayedit-win{width:min(410px,94vw);height:min(460px,76vh)}.display-grid{grid-template-columns:1fr}.display-card.wide{grid-column:auto}.display-tabs{padding:5px 7px}.display-panels{padding:7px}.display-mode-picker{gap:3px}.display-tab{padding:5px 6px}}
 
   /* ---------- taskbar (XP style) ---------- */
   #taskbar {
@@ -593,8 +614,8 @@
   .cal-cell.cal-today .cal-dot { background:#fff; }
   #tb-start {
     display:flex; align-items:center; gap:5px; padding:5px 12px 5px 8px;
-    border-radius:14px; background: linear-gradient(180deg,var(--th-start-1),var(--th-start-2) 55%,var(--th-start-3));
-    border:1px solid var(--th-start-border); color:var(--th-font-color,#fff); font-weight:bold; font-size:12px; cursor:pointer;
+    border-radius:14px; background:var(--th-start-bg,linear-gradient(180deg,var(--th-start-1),var(--th-start-2) 55%,var(--th-start-3)));
+    border:1px solid var(--th-start-border); color:var(--th-start-text,var(--th-font-color,#fff)); font-weight:bold; font-size:12px; cursor:pointer;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.5); flex-shrink:0;
   }
   #tb-start:active { filter:brightness(0.9); }
@@ -604,6 +625,11 @@
     min-width:200px; z-index:99999; display:none;
   }
   #start-menu.open { display:block; }
+  body:not(.signed-in) #sm-stickynote,
+  body:not(.signed-in) #sm-arinet,
+  body:not(.signed-in) #sm-display,
+  body:not(.signed-in) #sm-showdesktop,
+  body:not(.signed-in) #sm-signoff { display:none; }
   #start-menu .sm-item { padding:9px 14px; font-size:12px; cursor:pointer; color:#000; }
   #start-menu .sm-item:hover { background:#316ac5; color:#fff; }
 
@@ -742,8 +768,9 @@
       <div class="sm-item" id="sm-stickynote">New Sticky Note</div>
       <div class="sm-item" id="sm-paint">Paint</div>
       <div class="sm-item" id="sm-arinet">AriNet</div>
-      <div class="sm-item" id="sm-display">Edit Display</div>
+      <div class="sm-item" id="sm-display">Personalize</div>
       <div class="sm-item" id="sm-showdesktop">Show Desktop</div>
+      <div class="sm-item" id="sm-signoff">Sign Out</div>
     </div>
     <div id="tb-items" style="display:flex; gap:4px;"></div>
     <div id="tb-clock"></div>
@@ -782,6 +809,17 @@ try {
 (function(){
 
   var STORAGE_KEY = 'buddy-diary-data-v1';
+  var SESSION_KEY = 'desktop-diary-signed-in';
+
+  function hasActiveSession(){
+    try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch(e){ return false; }
+  }
+  function setActiveSession(active){
+    try {
+      if(active) sessionStorage.setItem(SESSION_KEY, '1');
+      else sessionStorage.removeItem(SESSION_KEY);
+    } catch(e){}
+  }
 
   var state = {
     account: null,          // { screenName, password }
@@ -796,7 +834,7 @@ try {
     background: { color: '', image: '' },  // custom desktop background (device-local, not synced)
     paintRecentColors: [],  // recently used custom colors in Paint (device-local, not synced)
     themeRecentColors: [],  // recently used custom colors in Edit Theme (device-local, not synced)
-    theme: { preset: 'classic', customColors: ['#3d95ff'], startColor: '#7ed957', clockColor: '#1a4fc4', calDaysColors: ['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a'], fontColor: '#ffffff' }, // window chrome color (titlebar/taskbar/Start button)
+    theme: { preset: 'classic', customColors: ['#3d95ff'], buttonColor: '#9cc6f0', startColor: '#7ed957', buttonRainbow: false, startRainbow: false, clockColor: '#1a4fc4', calDaysColors: ['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a'], fontColor: '#ffffff' }, // window chrome and interface colors
     customFonts: [],        // user-uploaded fonts (device-local, not synced): { id, name, dataUrl }
     stickyNotes: [],        // desktop sticky notes (device-local): { id, title, text, color, x, y, w, h }
     customMoods: [],        // user-added moods: ['Grateful', 'Hopeful', ...]
@@ -840,6 +878,8 @@ try {
       state.theme.customColors = [ state.theme.customColor || '#3d95ff' ];
     }
     if(!state.theme.startColor) state.theme.startColor = '#7ed957';
+    if(!state.theme.buttonColor) state.theme.buttonColor = state.theme.startColor;
+    if(state.theme.buttonRainbow === undefined) state.theme.buttonRainbow = !!state.theme.startRainbow;
     if(!state.theme.clockColor) state.theme.clockColor = '#1a4fc4';
     if(!Array.isArray(state.theme.calDaysColors) || state.theme.calDaysColors.length !== 7){
       var legacyBase = state.theme.calDaysColor || '#8f8b7a';
@@ -847,7 +887,16 @@ try {
       state.theme.calDaysColors = state.theme.calDaysRainbow ? legacyRainbow.slice() : [legacyBase,legacyBase,legacyBase,legacyBase,legacyBase,legacyBase,legacyBase];
     }
     if(!state.theme.fontColor) state.theme.fontColor = '#ffffff';
-    if(!state.theme.gradientDirection) state.theme.gradientDirection = 'vertical';
+    if(!state.theme.gradientDirection) state.theme.gradientDirection = 'horizontal';
+    if(state.theme.preset && state.theme.preset !== 'custom' && state.theme.preset.indexOf('custom-') !== 0){
+      state.theme.gradientDirection = 'vertical';
+    }
+    if(state.theme.preset && state.theme.preset !== 'custom' && state.theme.preset.indexOf('custom-') !== 0 && state.theme.preset !== 'rainbow'){
+      state.theme.accentRainbow = false;
+      state.theme.buttonRainbow = false;
+      state.theme.startRainbow = false;
+      state.theme.clockRainbow = false;
+    }
     if(!Array.isArray(state.customThemePresets)) state.customThemePresets = [];
     if(!Array.isArray(state.customFonts)) state.customFonts = [];
     if(!Array.isArray(state.stickyNotes)) state.stickyNotes = [];
@@ -1153,8 +1202,8 @@ try {
     clock1:'#1a4fc4', clock2:'#0d3aa8', clockBorder:'#0a2e85',
     start1:'#7ed957', start2:'#3a9d23', start3:'#237014', startBorder:'#1f5e10'
   };
-  var THEME_PRESET_BASE = { silver:'#8a8f99', olive:'#6b7d3d', purple:'#7a4fd1', red:'#ff1493', black:'#242424', yellow:'#ffe600', white:'#e8e8e8', deepgreen:'#145214' };
-  var THEME_PRESET_LABELS = { classic:'Classic Blue', silver:'Silver', olive:'Olive Green', purple:'Royal Purple', red:'Hot Pink', black:'Black', yellow:'Bright Yellow', white:'White', deepgreen:'Deep Green', rainbow:'Rainbow' };
+  var THEME_PRESET_BASE = { navy:'#173f70', silver:'#8a8f99', olive:'#6b7d3d', purple:'#7a4fd1', red:'#ff1493', black:'#242424', yellow:'#ffe600', white:'#e8e8e8', deepgreen:'#145214' };
+  var THEME_PRESET_LABELS = { classic:'Classic Blue', navy:'Navy Blue', silver:'Silver', olive:'Olive Green', purple:'Royal Purple', red:'Hot Pink', black:'Black', yellow:'Bright Yellow', white:'White', deepgreen:'Deep Green', rainbow:'Rainbow' };
   // Reference spectrum used to build the Rainbow theme — red through purple.
   var RAINBOW_SPECTRUM = [[0,'#ff0000'],[16,'#ff8c00'],[33,'#ffe600'],[50,'#22cc55'],[66,'#00cfff'],[83,'#3355ff'],[100,'#a020f0']];
 
@@ -1211,6 +1260,18 @@ try {
     };
   }
 
+  function deriveFlatThemeFromColor(base){
+    var border = darkenHex(base, 0.3);
+    return {
+      title1:base, title2:base, title3:base, title4:base,
+      taskbar1:base, taskbar2:base, taskbar3:base, taskbarBorder:border,
+      item1:base, item2:base, itemBorder:border,
+      itemActive1:base, itemActive2:base,
+      clock1:base, clock2:base, clockBorder:border,
+      start1:base, start2:base, start3:base, startBorder:border
+    };
+  }
+
   // Builds title/taskbar/item stops from up to 3 gradient colors, and lets Start/Clock/Calendar/Font
   // each be picked independently rather than all being derived from one accent color.
   function buildCustomPalette(theme){
@@ -1240,6 +1301,7 @@ try {
     var preset = (theme && theme.preset) || 'classic';
     if(preset === 'classic') return CLASSIC_THEME;
     var base = THEME_PRESET_BASE[preset];
+    if(preset === 'yellow') return deriveFlatThemeFromColor(base);
     return base ? deriveThemeFromColor(base) : CLASSIC_THEME;
   }
 
@@ -1346,6 +1408,21 @@ try {
     root.setProperty('--th-start-2', start2);
     root.setProperty('--th-start-3', start3);
     root.setProperty('--th-start-border', startBorder);
+    var buttonBase = isCustom ? (state.theme.buttonColor||state.theme.startColor||'#9cc6f0') : start2;
+    var button1 = lightenHex(buttonBase,.35), button2 = buttonBase, button3 = darkenHex(buttonBase,.15), buttonBorder = darkenHex(buttonBase,.35);
+    root.setProperty('--th-button-1', button1);
+    root.setProperty('--th-button-2', button2);
+    root.setProperty('--th-button-3', button3);
+    root.setProperty('--th-button-border', buttonBorder);
+    root.setProperty('--th-button-text', readableTextColor(button2));
+    var rainbowButtons = isRainbow || (isCustom && state.theme && state.theme.buttonRainbow);
+    var rainbowStart = isRainbow || (isCustom && state.theme && state.theme.startRainbow);
+    var classicButtons = preset === 'classic' && !isCustom;
+    root.setProperty('--th-button-bg', rainbowButtons ? 'linear-gradient(90deg,#ff4d4d,#ff9d3d,#ffe13d,#3ddc84,#3b82f6,#a855f7)' : (classicButtons ? 'linear-gradient(180deg,#fefefe,#e5f0fb 45%,#bcd8f6 55%,#9cc6f0)' : 'linear-gradient(180deg,'+button1+','+button2+' 55%,'+button3+')'));
+    root.setProperty('--th-button-active-bg', rainbowButtons ? 'linear-gradient(90deg,#d93b3b,#d9822f,#d9bd2f,#2fb86b,#306bd0,#8744c5)' : (classicButtons ? 'linear-gradient(180deg,#9cc6f0,#bcd8f6)' : 'linear-gradient(180deg,'+button3+','+button2+')'));
+    if(classicButtons){root.setProperty('--th-button-border','#003c9c');root.setProperty('--th-button-text','#12336b');}
+    root.setProperty('--th-start-bg', rainbowStart ? 'linear-gradient(90deg,#ff4d4d,#ff9d3d,#ffe13d,#3ddc84,#3b82f6,#a855f7)' : 'linear-gradient(180deg,'+start1+','+start2+' 55%,'+start3+')');
+    root.setProperty('--th-start-text', rainbowStart ? '#ffffff' : readableTextColor(start2));
     root.setProperty('--th-cal-days', calDays);
     root.setProperty('--th-font-color', fontColor);
     var calPopup = document.getElementById('calendar-popup');
@@ -1388,6 +1465,11 @@ try {
     document.getElementById('start-menu').classList.remove('open');
     showDesktop();
   });
+  document.getElementById('sm-signoff').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('start-menu').classList.remove('open');
+    signOff();
+  });
 
   function openEditDisplayWindow(){
     var existing=openWindows.find(function(w){return w.type==='editdisplay';});
@@ -1403,35 +1485,35 @@ try {
     while(tcols.length<3)tcols.push(tcols.length===1?'#0058e6':'#1a63d8');
     var cal=(t.calDaysColors&&t.calDaysColors.length===7?t.calDaysColors:['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a']).slice();
     var swatches=BG_COLORS.map(function(c){return '<button class="display-swatch" data-bg-color="'+c+'" title="'+c+'" style="background:'+c+'"></button>';}).join('');
-    var gradients=BG_GRADIENTS.map(function(g){return '<button class="display-swatch" data-bg-from="'+g[0]+'" data-bg-to="'+g[1]+'" title="Gradient" style="width:58px;background:linear-gradient(135deg,'+g[0]+','+g[1]+')"></button>';}).join('');
+    var gradients=BG_GRADIENTS.map(function(g){return '<button class="display-swatch" data-bg-from="'+g[0]+'" data-bg-to="'+g[1]+'" title="Gradient" style="width:48px;background:linear-gradient(135deg,'+g[0]+','+g[1]+')"></button>';}).join('');
     var dayColors=DAYS.map(function(d,i){return '<label>'+d+'<input class="display-day-color" data-day="'+i+'" type="color" value="'+cal[i]+'"></label>';}).join('');
     var body='<div class="win-body"><div class="display-shell">'+
-      '<div class="display-preview-wrap"><div class="display-preview-label">LIVE PREVIEW</div><div class="display-preview"><div class="display-preview-window"><div class="display-preview-title">DesktopDiary</div><div class="display-preview-content">Your display changes appear here before you apply them.</div></div><div class="display-preview-taskbar"><div class="display-preview-start">Start</div></div></div></div>'+
-      '<div class="display-tabs"><button class="display-tab active" data-display-tab="desktop">Desktop</button><button class="display-tab" data-display-tab="theme">Theme</button></div>'+
+      '<div class="display-tabs"><button class="display-tab active" data-display-tab="desktop">Background<small>Wallpaper &amp; colors</small></button><button class="display-tab" data-display-tab="theme">Windows &amp; taskbar<small>Theme &amp; interface</small></button></div>'+
+      '<div class="display-main">'+
       '<div class="display-panels">'+
         '<div class="display-panel active" data-display-panel="desktop"><div class="display-grid">'+
-          '<div class="display-card wide"><div class="display-card-title">Background Style</div><div class="display-row"><button class="btn display-bg-mode" data-mode="solid">Solid Color</button><button class="btn display-bg-mode" data-mode="gradient">Gradient</button><button class="btn display-bg-mode" data-mode="photo">Photo</button></div></div>'+
-          '<div class="display-card" id="display-solid-card"><div class="display-card-title">Color</div><div class="display-swatches">'+swatches+'<input class="display-color" id="display-bg-custom" type="color" value="'+(bg.color||'#3a6ea5')+'"></div></div>'+
-          '<div class="display-card" id="display-gradient-card"><div class="display-card-title">Gradient</div><div class="display-swatches" style="margin-bottom:8px">'+gradients+'</div><div class="display-row"><label>First color</label><input class="display-color" id="display-grad-from" type="color" value="'+(bg.gradientFrom||'#ff9a56')+'"></div><div class="display-row"><label>Second color</label><input class="display-color" id="display-grad-to" type="color" value="'+(bg.gradientTo||'#ff6363')+'"></div><div class="display-row"><label>Direction</label><select id="display-bg-direction"><option value="135deg">Diagonal</option><option value="180deg">Vertical</option><option value="90deg">Horizontal</option></select></div></div>'+
-          '<div class="display-card wide"><div class="display-card-title">Wallpaper Photo</div><div class="display-row"><button class="btn" id="display-photo-upload">Choose Photo…</button><button class="btn" id="display-photo-clear">Remove Photo</button><span id="display-photo-status" style="color:#777">'+(bg.image?'Photo selected':'No photo selected')+'</span></div></div>'+
+          '<div class="display-card wide"><div class="display-card-title">Choose a background</div><div class="display-card-help">Start with a color, blend two colors, or use one of your photos.</div><div class="display-mode-picker"><button class="btn display-bg-mode" data-mode="solid">Solid color</button><button class="btn display-bg-mode" data-mode="gradient">Gradient</button><button class="btn display-bg-mode" data-mode="photo">Photo</button></div></div>'+
+          '<div class="display-card wide display-bg-settings" data-bg-settings="solid" id="display-solid-card"><div class="display-card-title">Pick a color</div><div class="display-swatches">'+swatches+'<input class="display-color" id="display-bg-custom" type="color" value="'+(bg.color||'#3a6ea5')+'" title="Custom background color"></div></div>'+
+          '<div class="display-card wide display-bg-settings" data-bg-settings="gradient" id="display-gradient-card"><div class="display-card-title">Build a gradient</div><div class="display-swatches" style="margin-bottom:7px">'+gradients+'</div><div class="display-row"><label>First color</label><input class="display-color" id="display-grad-from" type="color" value="'+(bg.gradientFrom||'#ff9a56')+'"></div><div class="display-row"><label>Second color</label><input class="display-color" id="display-grad-to" type="color" value="'+(bg.gradientTo||'#ff6363')+'"></div><div class="display-row"><label>Direction</label><select id="display-bg-direction"><option value="135deg">Diagonal</option><option value="180deg">Vertical</option><option value="90deg">Horizontal</option></select></div></div>'+
+          '<div class="display-card wide display-bg-settings" data-bg-settings="photo"><div class="display-card-title">Use a photo</div><div class="display-card-help">Photos are resized for DesktopDiary and stay with this device.</div><div class="display-row"><button class="btn" id="display-photo-upload">Choose Photo…</button><button class="btn" id="display-photo-clear">Remove</button><span id="display-photo-status" style="color:#777">'+(bg.image?'Photo selected':'No photo selected')+'</span></div></div>'+
         '</div></div>'+
-        '<div class="display-panel" data-display-panel="theme"><div class="display-grid">'+
-          '<div class="display-card wide"><div class="display-card-title">Theme Presets</div><div class="display-swatches" id="display-theme-presets"></div></div>'+
-          '<div class="display-card"><div class="display-card-title">Window &amp; Taskbar</div><div class="display-row"><label>Use 2 colors</label><input id="display-use2" type="checkbox" '+((t.customColors||[]).length>=2?'checked':'')+'></div><div class="display-row"><label>Use 3 colors</label><input id="display-use3" type="checkbox" '+((t.customColors||[]).length>=3?'checked':'')+'></div><div class="display-row"><label>Color 1</label><input class="display-color display-theme-color" data-key="c1" type="color" value="'+tcols[0]+'"></div><div class="display-row display-c2"><label>Color 2</label><input class="display-color display-theme-color" data-key="c2" type="color" value="'+tcols[1]+'"></div><div class="display-row display-c3"><label>Color 3</label><input class="display-color display-theme-color" data-key="c3" type="color" value="'+tcols[2]+'"></div><div class="display-row"><label>Gradient direction</label><select id="display-theme-direction"><option value="vertical">Vertical</option><option value="horizontal">Horizontal</option></select></div><label class="display-row"><span style="flex:1">Rainbow window chrome</span><input id="display-accent-rainbow" type="checkbox" '+(t.accentRainbow?'checked':'')+'></label></div>'+
-          '<div class="display-card"><div class="display-card-title">Interface Colors</div><div class="display-row"><label>Start button</label><input class="display-color display-theme-color" data-key="start" type="color" value="'+(t.startColor||'#7ed957')+'"></div><div class="display-row"><label>Clock</label><input class="display-color display-theme-color" data-key="clock" type="color" value="'+(t.clockColor||'#1a4fc4')+'"></div><div class="display-row"><label>Text</label><input class="display-color display-theme-color" data-key="font" type="color" value="'+(t.fontColor||'#ffffff')+'"></div><label class="display-row"><span style="flex:1">Rainbow Start button</span><input id="display-start-rainbow" type="checkbox" '+(t.startRainbow?'checked':'')+'></label><label class="display-row"><span style="flex:1">Rainbow clock</span><input id="display-clock-rainbow" type="checkbox" '+(t.clockRainbow?'checked':'')+'></label></div>'+
-          '<div class="display-card wide"><div class="display-card-title">Calendar Day Colors</div><div class="display-day-colors">'+dayColors+'</div><button class="btn" id="display-calendar-rainbow" style="margin-top:8px">Fill with Rainbow</button></div>'+
-          '<div class="display-card wide"><div class="display-card-title">Save Your Look</div><button class="btn" id="display-save-preset">Save Current Theme as Preset…</button></div>'+
-        '</div></div>'+
+        '<div class="display-panel" data-display-panel="theme">'+
+          '<div class="display-card wide"><div class="display-card-title">Start with a theme</div><div class="display-card-help">Choose a preset, then personalize any detail below.</div><div class="display-swatches" id="display-theme-presets"></div></div>'+
+          '<details class="display-disclosure" open><summary>Window colors</summary><div class="display-disclosure-body"><div class="display-mode-picker" style="grid-template-columns:1fr 1fr;margin-bottom:7px"><button class="btn display-color-mode" data-color-mode="solid">Solid</button><button class="btn display-color-mode" data-color-mode="gradient">Gradient</button></div><div class="display-row"><label>Primary color</label><input class="display-color display-theme-color" data-key="c1" type="color" value="'+tcols[0]+'"></div><div class="display-row display-gradient-option display-c2"><label>Secondary color</label><input class="display-color display-theme-color" data-key="c2" type="color" value="'+tcols[1]+'"></div><div class="display-row display-gradient-option display-direction"><label>Blend direction</label><select id="display-theme-direction"><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></div><label class="display-row"><span style="flex:1">Rainbow windows</span><input id="display-accent-rainbow" type="checkbox" '+(t.accentRainbow?'checked':'')+'></label></div></details>'+
+          '<details class="display-disclosure"><summary>Buttons, clock &amp; text</summary><div class="display-disclosure-body"><div class="display-row"><label>Button color</label><input class="display-color display-theme-color" data-key="button" type="color" value="'+(t.buttonColor||'#9cc6f0')+'"></div><div class="display-row"><label>Start button</label><input class="display-color display-theme-color" data-key="start" type="color" value="'+(t.startColor||'#7ed957')+'"></div><div class="display-row"><label>Clock</label><input class="display-color display-theme-color" data-key="clock" type="color" value="'+(t.clockColor||'#1a4fc4')+'"></div><div class="display-row"><label>Text</label><input class="display-color display-theme-color" data-key="font" type="color" value="'+(t.fontColor||'#ffffff')+'"></div><label class="display-row"><span style="flex:1">Rainbow buttons</span><input id="display-button-rainbow" type="checkbox" '+(t.buttonRainbow?'checked':'')+'></label><label class="display-row"><span style="flex:1">Rainbow Start button</span><input id="display-start-rainbow" type="checkbox" '+(t.startRainbow?'checked':'')+'></label><label class="display-row"><span style="flex:1">Rainbow clock</span><input id="display-clock-rainbow" type="checkbox" '+(t.clockRainbow?'checked':'')+'></label></div></details>'+
+          '<details class="display-disclosure"><summary>Calendar colors</summary><div class="display-disclosure-body"><div class="display-row"><label>All days</label><input class="display-color" id="display-all-days-color" type="color" value="'+cal[0]+'"></div><div class="display-day-colors">'+dayColors+'</div><button class="btn" id="display-calendar-rainbow" style="margin-top:7px">Make days rainbow</button></div></details>'+
+          '<div style="display:flex;justify-content:flex-end;margin-top:7px"><button class="btn" id="display-save-preset">Save current theme…</button></div>'+
+        '</div>'+
+      '</div>'+
       '</div>'+
       '<div class="display-actions"><button class="btn" id="display-defaults">Restore Defaults</button><div class="display-actions-right"><button class="btn" id="display-cancel">Cancel</button><button class="btn display-primary" id="display-apply">Apply</button></div></div>'+
     '</div></div>';
-    var created=createWindow({title:'Edit Display',extraClass:'displayedit-win',bodyHtml:body,type:'editdisplay',onClose:function(){if(!finished){state.background=original.background;state.theme=original.theme;state.customThemePresets=original.presets;applyBackground();applyTheme();}},onMount:function(el,id){
-      var preview=el.querySelector('.display-preview');
-      var vals={c1:tcols[0],c2:tcols[1],c3:tcols[2],start:t.startColor||'#7ed957',clock:t.clockColor||'#1a4fc4',font:t.fontColor||'#ffffff'};
-      function refreshPreview(){preview.style.background=document.getElementById('desktop').style.background||'#3a6ea5';}
+    var created=createWindow({title:'Personalize',extraClass:'displayedit-win',bodyHtml:body,type:'editdisplay',onClose:function(){if(!finished){state.background=original.background;state.theme=original.theme;state.customThemePresets=original.presets;applyBackground();applyTheme();}},onMount:function(el,id){
+      var vals={c1:tcols[0],c2:tcols[1],c3:tcols[2],button:t.buttonColor||'#9cc6f0',start:t.startColor||'#7ed957',clock:t.clockColor||'#1a4fc4',font:t.fontColor||'#ffffff'};
+      function refreshPreview(){}
       function showTab(name){el.querySelectorAll('.display-tab').forEach(function(b){b.classList.toggle('active',b.dataset.displayTab===name);});el.querySelectorAll('.display-panel').forEach(function(p){p.classList.toggle('active',p.dataset.displayPanel===name);});}
       el.querySelectorAll('.display-tab').forEach(function(b){b.onclick=function(){showTab(b.dataset.displayTab);};});
-      function setBgMode(mode){el.querySelectorAll('.display-bg-mode').forEach(function(b){b.classList.toggle('display-primary',b.dataset.mode===mode);});el.querySelector('#display-solid-card').style.opacity=mode==='solid'?'1':'.55';el.querySelector('#display-gradient-card').style.opacity=mode==='gradient'?'1':'.55';}
+      function setBgMode(mode){el.querySelectorAll('.display-bg-mode').forEach(function(b){b.classList.toggle('display-primary',b.dataset.mode===mode);});el.querySelectorAll('[data-bg-settings]').forEach(function(section){section.classList.toggle('active',section.dataset.bgSettings===mode);});}
       function solid(c){state.background={color:c,image:'',gradient:''};applyBackground();setBgMode('solid');refreshPreview();el.querySelector('#display-photo-status').textContent='No photo selected';}
       function gradient(){var a=el.querySelector('#display-grad-from').value,b=el.querySelector('#display-grad-to').value,d=el.querySelector('#display-bg-direction').value;state.background={color:'',image:'',gradient:'linear-gradient('+d+','+a+','+b+')',gradientFrom:a,gradientTo:b,gradientDirection:d};applyBackground();setBgMode('gradient');refreshPreview();el.querySelector('#display-photo-status').textContent='No photo selected';}
       el.querySelectorAll('[data-bg-color]').forEach(function(b){b.onclick=function(){el.querySelector('#display-bg-custom').value=b.dataset.bgColor;solid(b.dataset.bgColor);};});
@@ -1441,20 +1523,24 @@ try {
       el.querySelectorAll('.display-bg-mode').forEach(function(b){b.onclick=function(){if(b.dataset.mode==='solid')solid(el.querySelector('#display-bg-custom').value);if(b.dataset.mode==='gradient')gradient();if(b.dataset.mode==='photo'){if(state.background.image){applyBackground();setBgMode('photo');refreshPreview();}else el.querySelector('#display-photo-upload').click();}};});
       el.querySelector('#display-photo-upload').onclick=function(){var input=document.createElement('input');input.type='file';input.accept='image/*';input.onchange=function(){var file=input.files&&input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(ev){var img=new Image();img.onload=function(){var max=1600,w=img.width,h=img.height;if(w>max||h>max){if(w>=h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);state.background={color:'',gradient:'',image:c.toDataURL('image/jpeg',.82)};applyBackground();setBgMode('photo');refreshPreview();el.querySelector('#display-photo-status').textContent=file.name;};img.src=ev.target.result;};reader.readAsDataURL(file);};input.click();};
       el.querySelector('#display-photo-clear').onclick=function(){solid('#3a6ea5');};
-      function customTheme(){var use2=el.querySelector('#display-use2').checked,use3=use2&&el.querySelector('#display-use3').checked;var cols=[vals.c1];if(use2)cols.push(vals.c2);if(use3)cols.push(vals.c3);state.theme={preset:'custom',customColors:cols,startColor:vals.start,clockColor:vals.clock,calDaysColors:cal.slice(),fontColor:vals.font,accentRainbow:el.querySelector('#display-accent-rainbow').checked,startRainbow:el.querySelector('#display-start-rainbow').checked,clockRainbow:el.querySelector('#display-clock-rainbow').checked,gradientDirection:el.querySelector('#display-theme-direction').value};applyTheme();renderPresets();}
-      function updateColorRows(){var use2=el.querySelector('#display-use2').checked;el.querySelector('.display-c2').style.display=use2?'flex':'none';el.querySelector('#display-use3').disabled=!use2;if(!use2)el.querySelector('#display-use3').checked=false;el.querySelector('.display-c3').style.display=use2&&el.querySelector('#display-use3').checked?'flex':'none';}
-      el.querySelectorAll('.display-theme-color').forEach(function(i){i.oninput=function(){vals[i.dataset.key]=i.value;customTheme();};});
-      ['#display-use2','#display-use3','#display-theme-direction','#display-accent-rainbow','#display-start-rainbow','#display-clock-rainbow'].forEach(function(s){el.querySelector(s).onchange=function(){updateColorRows();customTheme();};});
-      el.querySelector('#display-theme-direction').value=t.gradientDirection||'vertical';
-      el.querySelectorAll('.display-day-color').forEach(function(i){i.oninput=function(){cal[+i.dataset.day]=i.value;customTheme();};});
-      el.querySelector('#display-calendar-rainbow').onclick=function(){cal=['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db','#5b2c9d','#9b59b6'];el.querySelectorAll('.display-day-color').forEach(function(i){i.value=cal[+i.dataset.day];});customTheme();};
+      var themeColorMode=(t.customColors||[]).length>=2?'gradient':'solid';
+      function customTheme(){var cols=themeColorMode==='gradient'?[vals.c1,vals.c2]:[vals.c1];state.theme={preset:'custom',customColors:cols,buttonColor:vals.button,startColor:vals.start,clockColor:vals.clock,calDaysColors:cal.slice(),fontColor:vals.font,accentRainbow:el.querySelector('#display-accent-rainbow').checked,buttonRainbow:el.querySelector('#display-button-rainbow').checked,startRainbow:el.querySelector('#display-start-rainbow').checked,clockRainbow:el.querySelector('#display-clock-rainbow').checked,gradientDirection:el.querySelector('#display-theme-direction').value};applyTheme();renderPresets();}
+      function setThemeColorMode(mode,apply){themeColorMode=mode;el.querySelectorAll('.display-color-mode').forEach(function(b){b.classList.toggle('display-primary',b.dataset.colorMode===mode);});var enabled=mode==='gradient';el.querySelectorAll('.display-gradient-option').forEach(function(row){row.classList.toggle('disabled',!enabled);row.querySelectorAll('input,select').forEach(function(control){control.disabled=!enabled;});});if(apply){if(mode==='gradient'&&state.theme.preset!=='custom'&&state.theme.preset.indexOf('custom-')!==0)el.querySelector('#display-theme-direction').value='horizontal';el.querySelector('#display-accent-rainbow').checked=false;customTheme();}}
+      el.querySelectorAll('.display-theme-color').forEach(function(i){i.oninput=function(){vals[i.dataset.key]=i.value;if(i.dataset.key==='c1'||i.dataset.key==='c2')el.querySelector('#display-accent-rainbow').checked=false;customTheme();};});
+      el.querySelectorAll('.display-color-mode').forEach(function(b){b.onclick=function(){setThemeColorMode(b.dataset.colorMode,true);};});
+      ['#display-theme-direction','#display-accent-rainbow','#display-button-rainbow','#display-start-rainbow','#display-clock-rainbow'].forEach(function(s){el.querySelector(s).onchange=customTheme;});
+      el.querySelector('#display-theme-direction').value=t.gradientDirection||'horizontal';
+      el.querySelector('#display-all-days-color').oninput=function(e){cal=[e.target.value,e.target.value,e.target.value,e.target.value,e.target.value,e.target.value,e.target.value];el.querySelectorAll('.display-day-color').forEach(function(i){i.value=e.target.value;});customTheme();};
+      el.querySelectorAll('.display-day-color').forEach(function(i){i.oninput=function(){cal[+i.dataset.day]=i.value;if(cal.every(function(c){return c===cal[0];}))el.querySelector('#display-all-days-color').value=cal[0];customTheme();};});
+      el.querySelector('#display-calendar-rainbow').onclick=function(){var currentPreset=state.theme.preset||'classic';if(currentPreset!=='custom'&&currentPreset.indexOf('custom-')!==0&&currentPreset!=='rainbow'){el.querySelector('#display-accent-rainbow').checked=false;el.querySelector('#display-button-rainbow').checked=false;el.querySelector('#display-start-rainbow').checked=false;el.querySelector('#display-clock-rainbow').checked=false;}cal=['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db','#5b2c9d','#9b59b6'];el.querySelectorAll('.display-day-color').forEach(function(i){i.value=cal[+i.dataset.day];});customTheme();};
       function presetSample(key){if(key==='classic')return CLASSIC_THEME.title2;if(key==='rainbow')return 'linear-gradient(135deg,#ff4d4d,#ff9d3d,#3ddc84,#3b82f6,#a855f7)';return THEME_PRESET_BASE[key];}
-      function renderPresets(){var box=el.querySelector('#display-theme-presets');var built=Object.keys(THEME_PRESET_LABELS).map(function(key){return '<div class="display-preset-wrap"><button class="display-theme-preset'+(state.theme.preset===key?' active':'')+'" data-built-preset="'+key+'" title="'+escapeHtml(THEME_PRESET_LABELS[key])+'" style="background:'+presetSample(key)+'"></button><span class="display-theme-name">'+escapeHtml(THEME_PRESET_LABELS[key])+'</span></div>';}).join('');var custom=(state.customThemePresets||[]).map(function(p){var cs=p.theme.customColors||['#3d95ff'];var sample=cs.length>1?'linear-gradient(135deg,'+cs.join(',')+')':cs[0];return '<div class="display-preset-wrap"><button class="display-theme-preset'+(state.theme.preset==='custom-'+p.id?' active':'')+'" data-custom-preset="'+p.id+'" title="'+escapeHtml(p.name)+'" style="background:'+sample+'"></button><button class="display-preset-delete" data-delete-preset="'+p.id+'" title="Delete">×</button><span class="display-theme-name">'+escapeHtml(p.name)+'</span></div>';}).join('');box.innerHTML=built+custom;box.querySelectorAll('[data-built-preset]').forEach(function(b){b.onclick=function(){state.theme=Object.assign({},state.theme,{preset:b.dataset.builtPreset});applyTheme();renderPresets();};});box.querySelectorAll('[data-custom-preset]').forEach(function(b){b.onclick=function(){var p=(state.customThemePresets||[]).find(function(x){return x.id===b.dataset.customPreset;});if(p){state.theme=Object.assign({},JSON.parse(JSON.stringify(p.theme)),{preset:'custom-'+p.id});applyTheme();renderPresets();}};});box.querySelectorAll('[data-delete-preset]').forEach(function(b){b.onclick=function(){state.customThemePresets=(state.customThemePresets||[]).filter(function(p){return p.id!==b.dataset.deletePreset;});renderPresets();};});}
+      function syncThemeControls(theme,presetKey){var colors=(theme.customColors||[]).slice();if(presetKey==='classic')colors=['#0058e6'];else if(THEME_PRESET_BASE[presetKey])colors=[THEME_PRESET_BASE[presetKey]];if(!colors.length)colors=['#3d95ff'];vals.c1=colors[0];vals.c2=colors[1]||lightenHex(colors[0],.3);var palette=presetKey&&presetKey!=='rainbow'?resolveThemePalette({preset:presetKey}):null;vals.button=presetKey==='classic'?'#9cc6f0':(presetKey==='rainbow'?sampleStops(RAINBOW_SPECTRUM,50):(palette?palette.start2:(theme.buttonColor||'#9cc6f0')));vals.start=presetKey==='rainbow'?sampleStops(RAINBOW_SPECTRUM,90):(palette?palette.start2:(theme.startColor||'#7ed957'));el.querySelector('[data-key="c1"]').value=vals.c1;el.querySelector('[data-key="c2"]').value=vals.c2;el.querySelector('[data-key="button"]').value=vals.button;el.querySelector('[data-key="start"]').value=vals.start;el.querySelector('#display-theme-direction').value=theme.gradientDirection||'horizontal';el.querySelector('#display-accent-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.accentRainbow);el.querySelector('#display-button-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.buttonRainbow);el.querySelector('#display-start-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.startRainbow);el.querySelector('#display-clock-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.clockRainbow);setThemeColorMode(colors.length>1?'gradient':'solid',false);}
+      function renderPresets(){var box=el.querySelector('#display-theme-presets');var built=Object.keys(THEME_PRESET_LABELS).map(function(key){return '<div class="display-preset-wrap"><button class="display-theme-preset'+(state.theme.preset===key?' active':'')+'" data-built-preset="'+key+'" title="'+escapeHtml(THEME_PRESET_LABELS[key])+'" style="background:'+presetSample(key)+'"></button><span class="display-theme-name">'+escapeHtml(THEME_PRESET_LABELS[key])+'</span></div>';}).join('');var custom=(state.customThemePresets||[]).map(function(p){var cs=p.theme.customColors||['#3d95ff'];var sample=cs.length>1?'linear-gradient(135deg,'+cs.join(',')+')':cs[0];return '<div class="display-preset-wrap"><button class="display-theme-preset'+(state.theme.preset==='custom-'+p.id?' active':'')+'" data-custom-preset="'+p.id+'" title="'+escapeHtml(p.name)+'" style="background:'+sample+'"></button><button class="display-preset-delete" data-delete-preset="'+p.id+'" title="Delete">×</button><span class="display-theme-name">'+escapeHtml(p.name)+'</span></div>';}).join('');box.innerHTML=built+custom;box.querySelectorAll('[data-built-preset]').forEach(function(b){b.onclick=function(){var key=b.dataset.builtPreset;state.theme=Object.assign({},state.theme,{preset:key,gradientDirection:'vertical',accentRainbow:key==='rainbow',buttonRainbow:key==='rainbow',startRainbow:key==='rainbow',clockRainbow:key==='rainbow'});syncThemeControls(state.theme,key);applyTheme();renderPresets();};});box.querySelectorAll('[data-custom-preset]').forEach(function(b){b.onclick=function(){var p=(state.customThemePresets||[]).find(function(x){return x.id===b.dataset.customPreset;});if(p){state.theme=Object.assign({},JSON.parse(JSON.stringify(p.theme)),{preset:'custom-'+p.id});syncThemeControls(state.theme);applyTheme();renderPresets();}};});box.querySelectorAll('[data-delete-preset]').forEach(function(b){b.onclick=function(){state.customThemePresets=(state.customThemePresets||[]).filter(function(p){return p.id!==b.dataset.deletePreset;});renderPresets();};});}
       el.querySelector('#display-save-preset').onclick=function(){appTextPrompt('Name this display theme:','',function(name){if(!name||!name.trim())return;var savedTheme=JSON.parse(JSON.stringify(state.theme));delete savedTheme.preset;state.customThemePresets=state.customThemePresets||[];state.customThemePresets.push({id:uid(),name:name.trim(),theme:savedTheme});renderPresets();});};
-      el.querySelector('#display-defaults').onclick=function(){state.background={color:'',image:'',gradient:''};state.theme={preset:'classic',customColors:['#3d95ff'],startColor:'#7ed957',clockColor:'#1a4fc4',calDaysColors:['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a'],fontColor:'#ffffff'};applyBackground();applyTheme();refreshPreview();renderPresets();setBgMode('photo');el.querySelector('#display-photo-status').textContent='Built-in wallpaper';};
+      el.querySelector('#display-defaults').onclick=function(){state.background={color:'',image:'',gradient:''};state.theme={preset:'classic',customColors:['#3d95ff'],buttonColor:'#9cc6f0',startColor:'#7ed957',buttonRainbow:false,startRainbow:false,clockColor:'#1a4fc4',clockRainbow:false,calDaysColors:['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a'],fontColor:'#ffffff',gradientDirection:'vertical'};syncThemeControls(state.theme,'classic');applyBackground();applyTheme();refreshPreview();renderPresets();setBgMode('photo');el.querySelector('#display-photo-status').textContent='Built-in wallpaper';};
       el.querySelector('#display-cancel').onclick=function(){state.background=original.background;state.theme=original.theme;state.customThemePresets=original.presets;applyBackground();applyTheme();finished=true;closeWindow(id);};
       el.querySelector('#display-apply').onclick=function(){finished=true;saveState();closeWindow(id);};
-      updateColorRows();renderPresets();setBgMode(bg.image?'photo':(bg.gradient?'gradient':'solid'));refreshPreview();
+      if(t.preset&&t.preset!=='custom'&&t.preset.indexOf('custom-')!==0)syncThemeControls(t,t.preset);else setThemeColorMode(themeColorMode,false);renderPresets();setBgMode(bg.image?'photo':(bg.gradient?'gradient':'solid'));refreshPreview();
     }});
   }
 
@@ -2749,6 +2835,8 @@ try {
   }
 
   function showSignon(){
+    setActiveSession(false);
+    document.body.classList.remove('signed-in');
     document.getElementById('buddylist-win').style.display = 'none';
     document.getElementById('connecting-wrap').style.display = 'none';
     document.getElementById('signon-icon').style.display = 'none';
@@ -2835,6 +2923,19 @@ try {
     }
   });
 
+  document.getElementById('in-screenname').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); document.getElementById('in-password').focus(); }
+  });
+  document.getElementById('in-password').addEventListener('keydown', function(e){
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    if(signonMode === 'create') document.getElementById('in-password2').focus();
+    else document.getElementById('signon-submit').click();
+  });
+  document.getElementById('in-password2').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); document.getElementById('signon-submit').click(); }
+  });
+
   document.getElementById('forgot-link').addEventListener('click', function(){
     if(!state.account){
       document.getElementById('signon-error').textContent = 'Create an account first.';
@@ -2848,6 +2949,8 @@ try {
   });
 
   function enterDesktop(){
+    setActiveSession(true);
+    document.body.classList.add('signed-in');
     document.getElementById('signon-wrap').style.display = 'none';
     document.getElementById('connecting-wrap').style.display = 'block';
     setTimeout(function(){
@@ -3079,6 +3182,7 @@ try {
   document.getElementById('bl-status-edit').addEventListener('click', openSetStatusWindow);
 
   function signOff(){
+    setActiveSession(false);
     playDoorSlam();
     openWindows.slice().forEach(function(w){ if(w.id !== 'buddylist-win') closeWindow(w.id); });
     if(buddyListWinRecord){
@@ -5649,7 +5753,7 @@ try {
       applyTheme();
       (state.customFonts || []).forEach(function(f){ registerCustomFont(f); });
       tickClock();
-      if(state.account && state.autoLogin){
+      if(state.account && (state.autoLogin || hasActiveSession())){
         enterDesktop();
       } else {
         showSignon();
