@@ -603,7 +603,7 @@
       </div>
       <div class="m-item">View
         <div class="m-drop">
-          <div id="menu-viewprofile">Blog</div>
+          <div id="menu-viewprofile">Diary</div>
           <div id="menu-logs">Log</div>
         </div>
       </div>
@@ -3343,7 +3343,7 @@ try {
       '<div class="im-log" id="log-'+buddyId+'"></div>' +
       '<div class="editing-banner" id="editbanner-'+buddyId+'" style="display:none;">Editing &mdash; <span class="edit-cancel">Cancel</span> &nbsp; <label class="lock-toggle"><input type="checkbox" id="edit-lock-'+buddyId+'"> 🔒 Private</label></div>' +
       '<div class="im-compose-row">' +
-        richComposeHtml(inputId, 'Type your entry...') +
+        richComposeHtml(inputId, 'Type your entry... (toolbar above: bold/italic/underline, fonts, text color & highlight — buttons below: add a photo or voice note)') +
       '</div>' +
       '<div class="im-action-row">' +
         '<button class="action-btn" title="Send a writing prompt" id="prompt-'+buddyId+'">'+iconSVG('bulb')+'<span>Prompt</span></button>' +
@@ -4407,7 +4407,7 @@ try {
     var body =
       '<div class="win-body nm-body">' +
         '<div class="nm-row"><label>Status:</label><input type="text" id="sl-edit-label" value="'+escapeHtml(entry.label||'')+'"></div>' +
-        richComposeHtml(composeId, 'Tell me more...') +
+        richComposeHtml(composeId, 'Tell me more... (toolbar above: bold/italic/underline, fonts, text color & highlight)') +
         '<div class="nm-send-row"><button class="btn" id="sl-edit-save">Save</button></div>' +
         '<div class="draft-links"><span class="draft-save-link">Save Draft</span> &nbsp;|&nbsp; <span class="draft-view-link">Drafts</span></div>' +
       '</div>';
@@ -4528,11 +4528,11 @@ try {
           '<li><span class="dot idle" style="margin-right:4px;"></span>Offline = Long time, no chat.</li>' +
         '</ul>' +
         '<p>✧ Update your vibe anytime by setting your Status. Whether you\'re "bored @ work," "obsessed with a new song," or "get get gettin some bread," it\'ll be saved in the Log.</p>' +
-        '<p>🌐 Got big thoughts? Head to your Blog and hit + New Post to write and save.</p>' +
+        '<p>🌐 Got big thoughts? Head to your Diary and hit + New Post to write and save.</p>' +
         '<p>🎀 Make your space yours. Customize your profile, edit the HTML, choose a background, add sticky notes, and turn your desktop into the ultimate personal homepage.</p>' +
         '<p>🔄 Wanna access it anywhere? Use File → Sync to keep everything updated across devices. (Google sign-in required.)</p>' +
-        '<p>💾 Local storage auto-saves, so your thoughts, lists, memories, and late-night blog posts are safe&hellip; until the cache is cleared.</p>' +
-        '<p style="margin-top:10px;"><i>Basically: It\'s like AIM, a diary, a notepad, a blog, and a personal homepage all rolled into one.</i></p>' +
+        '<p>💾 Local storage auto-saves, so your thoughts, lists, memories, and late-night diary posts are safe&hellip; until the cache is cleared.</p>' +
+        '<p style="margin-top:10px;"><i>Basically: It\'s like AIM, a diary, a notepad, and a personal homepage all rolled into one.</i></p>' +
       '</div>';
     createWindow({ title: 'Help & Install', extraClass: 'help-win', bodyHtml: body, type: 'help' });
   }
@@ -4634,6 +4634,65 @@ try {
     return container.innerHTML;
   }
 
+  var SAMPLE_PROFILE = {
+    header:
+      "<h1 style='text-align:center'>My Page</h1>\n" +
+      "<marquee>scroll for more &darr;</marquee>",
+    about:
+      "<p>Hi, I'm <font color='teal'>[Name]</font>. This is <span style='font-size:20px'>bigger text</span> and this is <span style='font-size:10px'>smaller text</span>.</p>\n" +
+      "<hr>\n" +
+      "<div style='background-color:#e0f7ff;padding:8px'>\n" +
+      "<b>About me</b>\n" +
+      "<ul><li>List item one</li><li>List item two</li></ul>\n" +
+      "</div>\n" +
+      "<br>\n" +
+      "<div style='text-align:center'><marquee direction='down' style='height:60px'>falling text example</marquee></div>\n" +
+      "<table border='1'><tr><td>Label</td><td>Value</td></tr><tr><td>Label</td><td>Value</td></tr></table>"
+  };
+
+  function openProfileHelpWindow(){
+    var body =
+      '<div class="win-body" style="font-size:12px; line-height:1.6; padding:10px;">' +
+
+        '<div class="help-section-title">&#127912; Customizing With HTML</div>' +
+        '<p>The Header and About Me boxes accept real HTML, so you can style your page however you want. Everything below works &mdash; just type it right into either box.</p>' +
+
+        '<div class="help-platform"><b>Text</b></div>' +
+        '<ul style="padding-left:18px; margin:4px 0 10px;">' +
+          '<li><code>&lt;b&gt;bold&lt;/b&gt;</code>, <code>&lt;i&gt;italic&lt;/i&gt;</code>, <code>&lt;u&gt;underline&lt;/u&gt;</code></li>' +
+          '<li><code>&lt;font color=&#39;blue&#39;&gt;text&lt;/font&gt;</code> or <code>&lt;span style=&#39;color:hotpink&#39;&gt;text&lt;/span&gt;</code> for color</li>' +
+          '<li><code>&lt;span style=&#39;font-size:28px&#39;&gt;text&lt;/span&gt;</code> for size &mdash; any pixel value works</li>' +
+          '<li><code>&lt;div style=&#39;text-align:center&#39;&gt;text&lt;/div&gt;</code> for position &mdash; use <code>center</code>, <code>right</code>, or <code>left</code></li>' +
+        '</ul>' +
+
+        '<div class="help-platform"><b>Layout</b></div>' +
+        '<ul style="padding-left:18px; margin:4px 0 10px;">' +
+          '<li><code>&lt;div style=&#39;background-color:#e0f7ff&#39;&gt;text&lt;/div&gt;</code> for a colored background block</li>' +
+          '<li><code>&lt;hr&gt;</code> draws a visible divider line (a page break)</li>' +
+          '<li><code>&lt;br&gt;</code> just drops to a new line, no visible line</li>' +
+        '</ul>' +
+
+        '<div class="help-platform"><b>Tables</b></div>' +
+        '<p style="margin:4px 0 10px;"><code>&lt;table border=&#39;1&#39;&gt;&lt;tr&gt;&lt;td&gt;Cell 1&lt;/td&gt;&lt;td&gt;Cell 2&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</code> &mdash; add more <code>&lt;tr&gt;</code> rows and <code>&lt;td&gt;</code> cells as needed.</p>' +
+
+        '<div class="help-platform"><b>Fun &amp; Scrolling Effects</b></div>' +
+        '<ul style="padding-left:18px; margin:4px 0 10px;">' +
+          '<li><code>&lt;marquee&gt;text&lt;/marquee&gt;</code> scrolls sideways</li>' +
+          '<li><code>&lt;marquee direction=&#39;down&#39; style=&#39;height:70px&#39;&gt;text&lt;/marquee&gt;</code> makes text fall like snow, looping inside that height</li>' +
+          '<li>Put an <code>&lt;img&gt;</code> inside a falling marquee instead of text to make an image fall</li>' +
+        '</ul>' +
+
+        '<div class="help-platform"><b>Pictures &amp; Links</b></div>' +
+        '<p style="margin:4px 0 10px;"><code>&lt;img src=&#39;https://...&#39;&gt;</code> and <code>&lt;a href=&#39;https://...&#39;&gt;link text&lt;/a&gt;</code></p>' +
+
+        '<div class="help-platform"><b>What&#39;s Blocked</b></div>' +
+        '<p style="margin:4px 0 0;">For safety, <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>, <code>&lt;object&gt;</code>, <code>&lt;embed&gt;</code>, <code>&lt;form&gt;</code>, and click/hover handlers (<code>onclick</code>, etc.) get stripped out automatically. Everything else is fair game.</p>' +
+
+        '<p style="margin-top:10px;"><i>Not sure where to start? Hit Load Sample on the Edit Profile screen to see a page using most of this at once, then tweak it.</i></p>' +
+      '</div>';
+    createWindow({ title: 'HTML Help', extraClass: 'help-win', bodyHtml: body, type: 'profilehelp' });
+  }
+
   function openEditProfileWindow(){
     var body =
       '<div class="win-body nm-body">' +
@@ -4644,11 +4703,16 @@ try {
           '<div><button class="btn" id="ep-pic-btn">Choose Picture</button>' +
           '<button class="btn" id="ep-pic-clear" style="margin-top:4px;">Remove</button></div>' +
         '</div>' +
+        '<div class="field-row" style="display:flex; align-items:center; justify-content:space-between;">' +
+          '<label style="margin:0;">Customize with HTML</label>' +
+          '<span class="icon-btn" id="ep-help-btn" title="HTML formatting help">?</span>' +
+        '</div>' +
         '<div class="field-row"><label>Header</label>' +
-          '<textarea id="ep-header" style="width:100%; height:70px; font-family:monospace; font-size:12px;" placeholder="&lt;h1&gt;My Page&lt;/h1&gt;&#10;&lt;marquee&gt;welcome&lt;/marquee&gt;"></textarea></div>' +
+          '<textarea id="ep-header" style="width:100%; height:70px; font-family:monospace; font-size:12px;" placeholder="&lt;h1&gt;My Page&lt;/h1&gt;&#10;&lt;marquee&gt;Scrolling welcome text&lt;/marquee&gt;&#10;&lt;div style=&#39;background-color:#ffe4e1;padding:6px&#39;&gt;Background color box&lt;/div&gt;"></textarea></div>' +
         '<div class="field-row"><label>About Me</label>' +
-          '<textarea id="ep-about" style="width:100%; height:100px; font-family:monospace; font-size:12px;" placeholder="&lt;p&gt;Hi! I love...&lt;/p&gt;"></textarea></div>' +
+          '<textarea id="ep-about" style="width:100%; height:230px; font-family:monospace; font-size:12px;" placeholder="&lt;p&gt;Hi! I love...&lt;/p&gt;&#10;&#10;&lt;font color=&#39;blue&#39;&gt;Colored text&lt;/font&gt; or &lt;span style=&#39;color:hotpink&#39;&gt;this&lt;/span&gt;&#10;&lt;span style=&#39;font-size:28px&#39;&gt;Big text&lt;/span&gt; &lt;span style=&#39;font-size:10px&#39;&gt;tiny text&lt;/span&gt;&#10;&#10;&lt;div style=&#39;background-color:#e0f7ff;padding:6px&#39;&gt;Background color block&lt;/div&gt;&#10;&lt;div style=&#39;text-align:center&#39;&gt;Centered text&lt;/div&gt; &lt;div style=&#39;text-align:right&#39;&gt;Right-aligned text&lt;/div&gt;&#10;&#10;&lt;hr&gt; &amp;larr; page break / divider line&#10;&lt;br&gt; &amp;larr; just a line break, no visible line&#10;&#10;&lt;marquee&gt;Scrolling marquee text&lt;/marquee&gt;&#10;&lt;marquee direction=&#39;down&#39; style=&#39;height:70px&#39;&gt;Falling text!&lt;/marquee&gt; &amp;larr; snow-style falling text&#10;&lt;marquee direction=&#39;down&#39; style=&#39;height:70px&#39;&gt;&lt;img src=&#39;https://...&#39; width=&#39;40&#39;&gt;&lt;/marquee&gt; &amp;larr; falling image&#10;&#10;&lt;table border=&#39;1&#39;&gt;&lt;tr&gt;&lt;td&gt;Cell 1&lt;/td&gt;&lt;td&gt;Cell 2&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&#10;&#10;&lt;b&gt;bold&lt;/b&gt; &lt;i&gt;italic&lt;/i&gt; &lt;u&gt;underline&lt;/u&gt;&#10;&lt;img src=&#39;https://...&#39;&gt; for pictures, &lt;a href=&#39;https://...&#39;&gt;links&lt;/a&gt;&#10;&#10;(no script/iframe/forms — those get stripped)"></textarea></div>' +
         '<div class="nm-send-row" style="gap:6px;">' +
+          '<button class="btn" id="ep-sample" title="Fill both boxes with an example page">Load Sample</button>' +
           '<button class="btn" id="ep-preview">Preview</button>' +
           '<button class="btn" id="ep-save">Save Profile</button>' +
         '</div>' +
@@ -4702,6 +4766,18 @@ try {
           input.click();
         });
         el.querySelector('#ep-pic-clear').addEventListener('click', function(){ picData = ''; showPic(); });
+
+        el.querySelector('#ep-help-btn').addEventListener('click', function(){
+          openProfileHelpWindow();
+        });
+
+        el.querySelector('#ep-sample').addEventListener('click', function(){
+          var hEl = el.querySelector('#ep-header'), aEl = el.querySelector('#ep-about');
+          var hasContent = hEl.value.trim() || aEl.value.trim();
+          if(hasContent && !window.confirm('Replace what\'s currently in Header and About Me with the sample page?')) return;
+          hEl.value = SAMPLE_PROFILE.header;
+          aEl.value = SAMPLE_PROFILE.about;
+        });
 
         el.querySelector('#ep-preview').addEventListener('click', function(){
           var h = sanitizeProfileHTML(el.querySelector('#ep-header').value);
@@ -4765,7 +4841,7 @@ try {
     }
 
     createWindow({
-      title: 'Blog',
+      title: 'Diary',
       extraClass: 'profile-win',
       bodyHtml: buildBlogBody(),
       type: 'viewprofile',
@@ -4821,7 +4897,7 @@ try {
     var body =
       '<div class="win-body nm-body">' +
         '<div class="field-row"><label>Title</label><input type="text" id="bp-title" placeholder="Post title..." value="'+escapeHtml(existingPost && existingPost.title ? existingPost.title : '')+'"></div>' +
-        richComposeHtml(composeId, 'Write your post...') +
+        richComposeHtml(composeId, 'Write your post... (toolbar above: bold/italic/underline, fonts, text color & highlight)') +
         '<div class="nm-send-row" style="margin-top:8px;">' +
           '<button class="btn" id="bp-save">'+(isEdit?'Save Changes':'Publish Post')+'</button>' +
         '</div>' +
@@ -4861,7 +4937,7 @@ try {
           openInfoWindow('Draft saved.');
         });
         el.querySelector('.draft-view-link').addEventListener('click', function(){
-          openDraftsListWindowFor('__blog__', 'Blog', function(html){
+          openDraftsListWindowFor('__blog__', 'Diary', function(html){
             composeEl.innerHTML = html;
             composeEl.focus();
           });
