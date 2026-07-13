@@ -394,7 +394,7 @@
   .arinet-nav-btn:disabled { opacity:.4; cursor:default; }
   .arinet-address { flex:1; min-width:0; padding:5px 8px; border:1px inset #9cb0cf; border-radius:3px; font-size:12px; background:#fff; }
   .arinet-go-btn { flex-shrink:0; padding:5px 10px; border:1px solid #8ea2c2; border-radius:4px; background:linear-gradient(180deg,#7fb8ff,#2f6fd8); color:#fff; font-weight:bold; font-size:11px; cursor:pointer; }
-  .arinet-bookmarks { display:flex; gap:5px; flex-wrap:wrap; padding:5px 7px; background:#f5f3ea; border-bottom:1px solid #d8d4c4; flex-shrink:0; }
+  .arinet-bookmarks { display:flex; gap:5px; flex-wrap:nowrap; overflow-x:auto; padding:5px 7px; background:#f5f3ea; border-bottom:1px solid #d8d4c4; flex-shrink:0; }
   .arinet-bookmark { display:flex; align-items:center; gap:4px; padding:3px 8px; border:1px solid #c8c2ad; border-radius:12px; background:#fff; font-size:11px; cursor:pointer; color:#333; }
   .arinet-bookmark:active, .arinet-bookmark.active { background:#dbe9ff; border-color:#7fb8ff; }
   .arinet-content { position:relative; flex:1; background:#fff; }
@@ -408,6 +408,28 @@
   .arinet-tile-icon { font-size:26px; }
   .arinet-tile-name { font-size:11px; font-weight:bold; color:#333; margin-top:5px; }
   .arinet-status { padding:3px 8px; font-size:10px; color:#777; background:#ece9d8; border-top:1px solid #cfcabb; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dtd-win { width:min(470px,95vw); height:min(520px,82vh); }
+  .dtd-win .win-body { padding:0; overflow:hidden; }
+  .dtd-shell { height:100%; display:grid; grid-template-columns:105px minmax(0,1fr); background:#fff; }
+  .dtd-sidebar { padding:8px; background:#ece9d8; border-right:1px solid #aaa; }
+  .dtd-sidebar .btn { width:100%; padding:6px 5px; margin-bottom:6px; font-size:11px; }
+  .dtd-folder.active { border-style:inset; filter:brightness(.92); }
+  .dtd-main { min-width:0; min-height:0; display:flex; flex-direction:column; }
+  .dtd-heading { padding:8px 10px; font-weight:bold; background:#f5f5f0; border-bottom:1px solid #ccc; }
+  .dtd-list { flex:1; min-height:0; overflow:auto; }
+  .dtd-row { display:grid; grid-template-columns:minmax(90px,.8fr) minmax(120px,1.3fr) auto; gap:8px; padding:9px 10px; border-bottom:1px solid #ddd; cursor:pointer; align-items:center; }
+  .dtd-row:hover { background:#eef4ff; }
+  .dtd-row.unread { font-weight:bold; background:#f6f9ff; }
+  .dtd-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dtd-row time { font-size:9px; color:#888; }
+  .dtd-empty { padding:28px 12px; text-align:center; color:#777; }
+  .dtd-message { padding:12px; overflow:auto; flex:1; white-space:pre-wrap; font:13px/1.5 Tahoma,Arial,sans-serif; user-select:text; }
+  .dtd-meta { padding:10px 12px; border-bottom:1px solid #ccc; background:#f7f7f3; font-size:11px; line-height:1.55; }
+  .dtd-compose { padding:10px; display:grid; gap:8px; overflow:auto; }
+  .dtd-compose label { display:grid; grid-template-columns:55px 1fr; align-items:center; gap:6px; }
+  .dtd-compose textarea { height:210px; resize:none; }
+  .dtd-compose-actions { display:flex; justify-content:flex-end; gap:6px; }
+  @media(max-width:500px){.dtd-win{height:min(520px,82vh)}.dtd-shell{grid-template-columns:82px minmax(0,1fr)}.dtd-row{grid-template-columns:1fr auto}.dtd-row .dtd-subject{grid-column:1/-1}.dtd-compose label{grid-template-columns:1fr}.dtd-compose textarea{height:190px}}
   .paint-win .win-body { padding:0; display:flex; flex-direction:column; min-height:0; color:var(--paint-ink); background:var(--paint-cream); }
   .paint-menubar { flex-shrink:0; background:linear-gradient(180deg,#ffeaf2,#efbfd1); border-bottom-color:#b86d89; }
   .paint-menubar .m-item { color:#53283a; }
@@ -627,8 +649,10 @@
   #start-menu.open { display:block; }
   body:not(.signed-in) #sm-stickynote,
   body:not(.signed-in) #sm-arinet,
+  body:not(.signed-in) #sm-txtmail,
   body:not(.signed-in) #sm-display,
   body:not(.signed-in) #sm-showdesktop,
+  body:not(.signed-in) #sm-scrapbook,
   body:not(.signed-in) #sm-signoff { display:none; }
   #start-menu .sm-item { padding:9px 14px; font-size:12px; cursor:pointer; color:#000; }
   #start-menu .sm-item:hover { background:#316ac5; color:#fff; }
@@ -768,7 +792,9 @@
       <div class="sm-item" id="sm-stickynote">New Sticky Note</div>
       <div class="sm-item" id="sm-paint">Paint</div>
       <div class="sm-item" id="sm-arinet">AriNet</div>
+      <div class="sm-item" id="sm-txtmail">DtD Postmail</div>
       <div class="sm-item" id="sm-display">Personalize</div>
+      <div class="sm-item" id="sm-scrapbook">Scrapbook</div>
       <div class="sm-item" id="sm-showdesktop">Show Desktop</div>
       <div class="sm-item" id="sm-signoff">Sign Out</div>
     </div>
@@ -842,7 +868,8 @@ try {
     groups: [ { id: 'default', name: 'Buddies' } ],
     buddies: [],            // { id, name, addedAt, groupId }
     entries: {},            // buddyId -> [ { id, html, ts, kind:'entry'|'prompt' } ]
-    drafts: {}              // buddyId -> [ { id, html, ts }, ... ] saved draft log
+    drafts: {},             // buddyId -> [ { id, html, ts }, ... ] saved draft log
+    mail: { inbox: [], sent: [] } // local-only DtD Postmail messages
   };
 
   function normalizeState(){
@@ -916,6 +943,14 @@ try {
       if(!Array.isArray(state.drafts[bid])) state.drafts[bid] = [];
       state.drafts[bid].forEach(function(entry){ if(!entry.id) entry.id = uid(); });
     });
+    if(!state.mail || typeof state.mail !== 'object') state.mail = { inbox: [], sent: [] };
+    if(!Array.isArray(state.mail.inbox)) state.mail.inbox = [];
+    if(!Array.isArray(state.mail.sent)) state.mail.sent = [];
+    state.mail.inbox.forEach(function(m){if(m.subject==='Welcome to DtD Mail'||m.subject==='Welcome to DtD Post'){m.subject='Welcome to DtD Postmail';m.from='postmaster@desktopdiary.local';m.body='DtD Postmail is a private, local-only mail simulator. Messages you write stay inside DesktopDiary and never leave your device.';}});
+    if(!state.mail.welcomed){
+      state.mail.inbox.push({id:uid(),from:'postmaster@desktopdiary.local',to:(state.account&&state.account.screenName||'you')+'@desktopdiary.local',subject:'Welcome to DtD Postmail',body:'DtD Postmail is a private, local-only mail simulator. Messages you write stay inside DesktopDiary and never leave your device.',ts:Date.now(),read:false});
+      state.mail.welcomed = true;
+    }
   }
 
   var openWindows = [];     // { id, type, buddyId, el, tbEl }
@@ -1460,10 +1495,20 @@ try {
     document.getElementById('start-menu').classList.remove('open');
     openAriNetWindow();
   });
+  document.getElementById('sm-txtmail').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('start-menu').classList.remove('open');
+    openDtdPostWindow();
+  });
   document.getElementById('sm-showdesktop').addEventListener('click', function(e){
     e.stopPropagation();
     document.getElementById('start-menu').classList.remove('open');
     showDesktop();
+  });
+  document.getElementById('sm-scrapbook').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('start-menu').classList.remove('open');
+    openScrapbookWindow();
   });
   document.getElementById('sm-signoff').addEventListener('click', function(e){
     e.stopPropagation();
@@ -4173,6 +4218,41 @@ try {
     return haystack.indexOf(query.toLowerCase()) !== -1;
   }
 
+  // ================= SCRAPBOOK =================
+  function scrapbookDate(ts){ return new Date(ts||Date.now()).toLocaleString(undefined,{year:'numeric',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+
+  function buildScrapbookHtml(snapshot){
+    var made=Date.now(), owner=(snapshot.account&&snapshot.account.screenName)||'DesktopDiary', cards=[];
+    (snapshot.buddies||[]).forEach(function(b){(snapshot.entries&&snapshot.entries[b.id]||[]).forEach(function(e){cards.push({type:e.kind==='prompt'?'Prompt':'Diary entry',title:b.name,html:sanitizeHTML(e.html||e.text||''),ts:e.ts||made});});});
+    (snapshot.blogPosts||[]).forEach(function(p){cards.push({type:'Diary post',title:p.title||'Untitled post',html:sanitizeHTML(p.html||''),ts:p.ts||made});});
+    cards.sort(function(a,b){return b.ts-a.ts;});
+    var cardHtml=cards.map(function(c){var search=(c.title+' '+stripHtmlTags(c.html)).toLowerCase();return '<article class="memory" data-search="'+escapeHtml(search)+'"><div class="memory-head"><div><small>'+escapeHtml(c.type)+'</small><h2>'+escapeHtml(c.title)+'</h2></div><time>'+escapeHtml(scrapbookDate(c.ts))+'</time></div><div class="memory-body">'+c.html+'</div></article>';}).join('')||'<div class="empty">Your scrapbook is ready for its first memory.</div>';
+    var moods=(snapshot.moodLog||[]).slice().sort(function(a,b){return b.ts-a.ts;}).map(function(m){return '<li><b>'+escapeHtml(m.mood||'Mood')+'</b><span>'+escapeHtml(scrapbookDate(m.ts))+'</span></li>';}).join('')||'<li>No moods yet.</li>';
+    var statuses=(snapshot.statusLog||[]).slice().sort(function(a,b){return b.ts-a.ts;}).map(function(s){return '<li><div><b>'+escapeHtml(s.label||'Status')+'</b><div>'+sanitizeHTML(s.html||'')+'</div></div><span>'+escapeHtml(scrapbookDate(s.ts))+'</span></li>';}).join('')||'<li>No statuses yet.</li>';
+    var portrait=snapshot.profile&&snapshot.profile.pic?'<img class="portrait" src="'+snapshot.profile.pic+'" alt="Profile picture">':'<div class="portrait flower">DD</div>';
+    var archive=JSON.stringify({format:'desktopdiary-scrapbook',version:1,createdAt:made,state:snapshot}).replace(/</g,'\\u003c');
+    var css='*{box-sizing:border-box}body{margin:0;color:#3c2f35;font:15px/1.55 Georgia,serif;background:#eadfd7;background-image:radial-gradient(#cdb8ad 1px,transparent 1px);background-size:18px 18px}header{text-align:center;padding:46px 18px 34px;background:linear-gradient(135deg,#fff9f2,#f4d7e3);border-bottom:1px solid #cdaab8}.portrait{width:105px;height:105px;object-fit:cover;border:7px solid #fff;border-radius:18px;box-shadow:0 4px 15px #7555}.flower{display:flex;align-items:center;justify-content:center;margin:auto;background:#e9b5c9;font-size:42px}h1{font-size:clamp(32px,7vw,56px);line-height:1;margin:13px 0 4px}.sub{color:#7c6971}.stats{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:16px}.stats span{padding:5px 11px;border:1px solid #ddbdc9;border-radius:99px;background:#fff9}.search{position:sticky;top:0;z-index:2;padding:9px;background:#fffaf5ee;border-bottom:1px solid #dacac3}.search input{display:block;width:min(680px,94%);margin:auto;padding:10px 14px;border:1px solid #bfaab2;border-radius:99px;font:14px Arial}.layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:20px;width:min(1050px,94%);margin:25px auto}.memory,.side section{background:#fffdf8;border:1px solid #ded0c8;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 4px 14px #60404010}.memory-head{display:flex;justify-content:space-between;gap:12px;padding-bottom:9px;margin-bottom:12px;border-bottom:1px dashed #ddcec7}.memory h2{margin:2px 0 0;font-size:20px}.memory small{font:700 10px Arial;text-transform:uppercase;letter-spacing:.12em;color:#b84f78}time,.side li span{font-size:11px;color:#806e76}.memory-body{overflow-wrap:anywhere}.memory-body img{max-width:100%;height:auto;border-radius:8px}.memory-body audio{width:100%}.side h2{font-size:17px;margin:0 0 7px}.side ul{list-style:none;margin:0;padding:0}.side li{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid #eadfd8}.side li:first-child{border-top:0}.empty,#none{text-align:center;padding:30px;color:#806e76}#none{display:none}footer{text-align:center;padding:28px;color:#78666e;font-size:12px}@media(max-width:720px){.layout{grid-template-columns:1fr}.memory-head{display:block}}@media print{body{background:#fff}.search{display:none}.layout{display:block;width:100%}.memory{box-shadow:none;break-inside:avoid}}';
+    css+='body{color:#20242a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#f1f3f5;background-image:none}header{padding:36px 18px 28px;background:#e9ecef;border-color:#c7ccd1}.portrait{width:88px;height:88px;border:1px solid #aeb5bc;border-radius:6px;box-shadow:none}.flower{background:#d8dde2;color:#39424c;font:700 22px Arial}.sub,time,.side li span{color:#68717b}.stats span{border:1px solid #c4cbd2;border-radius:4px;background:#f8f9fa}.search{background:#f8f9faee;border-color:#cbd1d6}.search input{border-color:#9da6af;border-radius:4px}.memory,.side section{background:#fff;border-color:#cbd1d6;border-radius:6px;box-shadow:0 1px 3px #00000010}.memory-head{border-bottom:1px solid #d7dce0}.memory small{color:#315c86}.memory-body img{border-radius:3px}.side li{border-color:#e0e4e7}.empty,#none,footer{color:#68717b}';
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escapeHtml(owner)+'’s Scrapbook</title><style>'+css+'</style></head><body><header>'+portrait+'<h1>'+escapeHtml(owner)+'’s Scrapbook</h1><div class="sub">DesktopDiary archive · '+escapeHtml(scrapbookDate(made))+'</div><div class="stats"><span>'+cards.length+' memories</span><span>'+(snapshot.buddies||[]).length+' buddies</span><span>'+(snapshot.moodLog||[]).length+' moods</span></div></header><div class="search"><input id="q" type="search" placeholder="Search your scrapbook…"></div><main class="layout"><div><div id="none">No memories match that search.</div><div id="memories">'+cardHtml+'</div></div><aside class="side"><section><h2>Mood history</h2><ul>'+moods+'</ul></section><section><h2>Status history</h2><ul>'+statuses+'</ul></section></aside></main><footer>This scrapbook includes a complete DesktopDiary restore copy. Keep it somewhere safe.</footer><script id="desktopdiary-scrapbook-data" type="application/json">'+archive+'<\\/script><script>(function(){var q=document.getElementById("q"),a=[].slice.call(document.querySelectorAll(".memory")),n=document.getElementById("none");q.oninput=function(){var s=q.value.toLowerCase().trim(),c=0;a.forEach(function(x){var ok=!s||x.getAttribute("data-search").indexOf(s)>-1;x.style.display=ok?"block":"none";if(ok)c++});n.style.display=c?"none":"block"}})();<\\/script></body></html>';
+  }
+
+  function downloadScrapbook(snapshot,suffix){
+    var blob=new Blob([buildScrapbookHtml(JSON.parse(JSON.stringify(snapshot)))],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='DesktopDiary-Scrapbook-'+new Date().toISOString().slice(0,10)+(suffix?'-'+suffix:'')+'.html';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},3000);
+  }
+
+  function restoreFromScrapbookFile(file){
+    if(!file)return;var reader=new FileReader();
+    reader.onload=function(e){try{var doc=new DOMParser().parseFromString(String(e.target.result),'text/html'),data=doc.getElementById('desktopdiary-scrapbook-data');if(!data)throw new Error('This file has no DesktopDiary restore data.');var book=JSON.parse(data.textContent||'');if(!book||book.format!=='desktopdiary-scrapbook'||book.version!==1||!book.state)throw new Error('This scrapbook format is not supported.');appConfirm('Restore this scrapbook? A safety scrapbook of your current diary will download first, then the scrapbook will replace the current contents.',function(ok){if(!ok)return;downloadScrapbook(state,'before-restore');state=book.state;normalizeState();saveState().then(function(){setTimeout(function(){location.reload();},350);});});}catch(err){openInfoWindow('Could not restore this scrapbook: '+(err&&err.message?err.message:String(err)));}};
+    reader.onerror=function(){openInfoWindow('DesktopDiary could not read that scrapbook.');};reader.readAsText(file);
+  }
+
+  function openScrapbookWindow(){
+    var existing=openWindows.find(function(w){return w.type==='scrapbook';});if(existing){focusWindow(existing.id);return;}
+    var body='<div class="win-body" style="padding:14px;background:#f2f2f2"><div style="font-size:16px;font-weight:bold;text-align:center;color:#333">DesktopDiary Scrapbook</div><p style="text-align:center;color:#666;line-height:1.45">Create one portable file you can open, search, print, and read on any computer. It also contains everything needed to restore your diary.</p><div style="display:grid;gap:9px;margin:15px 0"><button class="btn" id="scrapbook-create" style="padding:10px">Create Scrapbook</button><button class="btn" id="scrapbook-restore" style="padding:10px">Restore from Scrapbook…</button><input id="scrapbook-file" type="file" accept=".html,text/html" hidden></div><div style="font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px">Includes entries, posts, photos, drawings, voice notes, moods, statuses, drafts, buddies, themes, settings, and complete restore data.</div></div>';
+    createWindow({title:'Scrapbook',extraClass:'setup-win',bodyHtml:body,type:'scrapbook',onMount:function(el){var fi=el.querySelector('#scrapbook-file');el.querySelector('#scrapbook-create').onclick=function(){downloadScrapbook(state);};el.querySelector('#scrapbook-restore').onclick=function(){fi.click();};fi.onchange=function(){restoreFromScrapbookFile(fi.files&&fi.files[0]);fi.value='';};}});
+  }
+
   function exportConversation(buddyId, buddyName){
     var fullList = state.entries[buddyId] || [];
     var lockedCount = fullList.filter(function(e){ return e.locked; }).length;
@@ -4958,19 +5038,67 @@ try {
     });
   }
 
+  // ================= DtD MAIL (local-only text mail simulator) =================
+  function openDtdPostWindow(){
+    var existing=openWindows.find(function(w){return w.type==='dtdmail';});
+    if(existing){focusWindow(existing.id);return;}
+    var body='<div class="win-body"><div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button></div><div class="dtd-main"><div class="dtd-heading">Inbox</div><div class="dtd-list"></div></div></div></div>';
+    createWindow({title:'DtD Postmail',extraClass:'dtd-win',bodyHtml:body,type:'dtdmail',onMount:function(el){
+      var main=el.querySelector('.dtd-main'),folder='inbox';
+      function localAddress(){return ((state.account&&state.account.screenName)||'user').replace(/\s+/g,'.').toLowerCase()+'@desktopdiary.local';}
+      function setFolder(name){folder=name;el.querySelectorAll('.dtd-folder').forEach(function(b){b.classList.toggle('active',b.dataset.folder===name);});renderList();}
+      function renderList(){
+        var list=(state.mail&&state.mail[folder]||[]).slice().sort(function(a,b){return b.ts-a.ts;});
+        main.innerHTML='<div class="dtd-heading">'+(folder==='inbox'?'Inbox':'Sent')+(folder==='inbox'?' ('+list.filter(function(m){return !m.read;}).length+' unread)':'')+'</div><div class="dtd-list">'+(list.length?list.map(function(m){return '<div class="dtd-row'+(!m.read&&folder==='inbox'?' unread':'')+'" data-mail-id="'+escapeHtml(m.id)+'"><span>'+(folder==='inbox'?escapeHtml(m.from):escapeHtml(m.to))+'</span><span class="dtd-subject">'+escapeHtml(m.subject||'(no subject)')+'</span><time>'+escapeHtml(fmtDateShort(m.ts))+'</time></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
+        main.querySelectorAll('[data-mail-id]').forEach(function(row){row.onclick=function(){openMessage(row.dataset.mailId);};});
+      }
+      function openMessage(id){
+        var msg=(state.mail[folder]||[]).find(function(m){return m.id===id;});if(!msg)return;
+        if(folder==='inbox'&&!msg.read){msg.read=true;saveState();}
+        main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(msg.subject||'(no subject)')+'</b><br>From: '+escapeHtml(msg.from)+'<br>To: '+escapeHtml(msg.to)+'<br>'+escapeHtml(scrapbookDate(msg.ts))+'</div><div class="dtd-message">'+escapeHtml(msg.body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button><button class="btn dtd-reply">Reply</button></div>';
+        main.querySelector('.dtd-back').onclick=renderList;
+        main.querySelector('.dtd-reply').onclick=function(){showCompose(folder==='inbox'?msg.from:msg.to,'Re: '+(msg.subject||''));};
+      }
+      function showCompose(to,subject){
+        main.innerHTML='<div class="dtd-heading">New Message</div><div class="dtd-compose"><label><span>From</span><input type="text" value="'+escapeHtml(localAddress())+'" readonly></label><label><span>To</span><input id="dtd-to" type="text" value="'+escapeHtml(to||'')+'" placeholder="name@desktopdiary.local"></label><label><span>Subject</span><input id="dtd-subject" type="text" value="'+escapeHtml(subject||'')+'"></label><textarea id="dtd-body" placeholder="Plain text only…"></textarea><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-send">Send</button></div><div class="signon-error dtd-error"></div></div>';
+        var toEl=main.querySelector('#dtd-to'),subEl=main.querySelector('#dtd-subject'),bodyEl=main.querySelector('#dtd-body');
+        main.querySelector('.dtd-compose-cancel').onclick=renderList;
+        main.querySelector('.dtd-send').onclick=function(){
+          var recipient=toEl.value.trim(),text=bodyEl.value;if(!recipient){main.querySelector('.dtd-error').textContent='Enter a recipient.';return;}if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}
+          var msg={id:uid(),from:localAddress(),to:recipient,subject:subEl.value.trim(),body:text,ts:Date.now(),read:true};state.mail.sent.push(msg);
+          if(recipient.toLowerCase()===localAddress()||recipient.toLowerCase()==='self'){state.mail.inbox.push({id:uid(),from:msg.from,to:msg.to,subject:msg.subject,body:msg.body,ts:msg.ts,read:false});}
+          saveState();setFolder('sent');
+        };
+        setTimeout(function(){(to?bodyEl:toEl).focus();},20);
+      }
+      el.querySelector('#dtd-compose').onclick=function(){showCompose('','');};
+      el.querySelectorAll('.dtd-folder').forEach(function(b){b.onclick=function(){setFolder(b.dataset.folder);};});
+      renderList();
+    }});
+  }
+
   // ================= ARINET (fake in-app browser) =================
   // Extensible bookmark registry — add more entries here later.
   var ARINET_SITES = [
-    { name: 'Mass Track', url: 'https://ari-harakiri.github.io/Mass-Track/', icon: '⚖️' }
+    { name: 'Mass Track', url: 'https://ari-harakiri.github.io/Mass-Track/', icon: '⚖️' },
+    { name: 'Shufflr', url: 'https://www.shufflr.org', icon: '🔀' },
+    { name: 'The Useless Web', url: 'https://theuselessweb.com/', icon: '🌀' },
+    { name: 'Chrome Music Lab', url: 'https://musiclab.chromeexperiments.com/', icon: '🎹' },
+    { name: 'SoundTools', url: 'https://soundtools.io/music-visualizer/', icon: '🎛️' },
+    { name: 'Audioframe', url: 'https://www.audioframe.app/', icon: '📊' },
+    { name: 'Typatone', url: 'https://typatone.com/kd', icon: '⌨️' },
+    { name: 'Ariel’s Lab', url: 'https://www.arielslab.com/', icon: '⚗️' },
+    { name: 'FunOnWeb', url: 'https://funonweb.com/', icon: '🕹️' },
+    { name: 'Patatap', url: 'https://patatap.com/', icon: '🎵' },
+    { name: 'A Soft Murmur', url: 'https://asoftmurmur.com/', icon: '🌧️' },
+    { name: 'This Is Sand', url: 'https://thisissand.com/', icon: '⏳' },
+    { name: 'Cat Bounce', url: 'https://cat-bounce.com/', icon: '🐈' },
+    { name: 'Hacker Typer', url: 'https://hackertyper.com/', icon: '💻' }
   ];
 
   function openAriNetWindow(){
     var existing = openWindows.find(function(w){ return w.type === 'arinet'; });
     if(existing){ focusWindow(existing.id); return; }
-
-    var bookmarksHtml = ARINET_SITES.map(function(s, i){
-      return '<div class="arinet-bookmark" data-idx="' + i + '"><span>' + s.icon + '</span><span>' + escapeHtml(s.name) + '</span></div>';
-    }).join('');
 
     var tilesHtml = ARINET_SITES.map(function(s, i){
       return '<div class="arinet-tile" data-idx="' + i + '"><div class="arinet-tile-icon">' + s.icon + '</div><div class="arinet-tile-name">' + escapeHtml(s.name) + '</div></div>';
@@ -4986,11 +5114,10 @@ try {
           '<input class="arinet-address" id="an-address" type="text" placeholder="Type a site or pick a bookmark…">' +
           '<button class="arinet-go-btn" id="an-go">Go</button>' +
         '</div>' +
-        '<div class="arinet-bookmarks">' + bookmarksHtml + '</div>' +
         '<div class="arinet-content">' +
           '<div class="arinet-home" id="an-home-view">' +
             '<h2>AriNet</h2>' +
-            '<div class="arinet-tagline">lil\u2019 Ari's lil fake internet browser</div>' +
+            '<div class="arinet-tagline">Ari\u2019s lil\u2019 internet browser</div>' +
             '<div class="arinet-home-grid">' + tilesHtml + '</div>' +
           '</div>' +
           '<iframe class="arinet-frame" id="an-frame" title="AriNet browser"></iframe>' +
@@ -5036,11 +5163,6 @@ try {
           homeView.style.display = 'block';
           address.value = '';
           status.textContent = 'Home';
-        }
-        el.querySelectorAll('.arinet-bookmark').forEach(function(b){ b.classList.remove('active'); });
-        if(entry.siteIdx !== undefined){
-          var match = el.querySelector('.arinet-bookmark[data-idx="' + entry.siteIdx + '"]');
-          if(match) match.classList.add('active');
         }
         updateNavButtons();
       }
@@ -5090,9 +5212,6 @@ try {
         if(!site) return;
         navigateTo(site.url, site.name, idx);
       }
-      el.querySelectorAll('.arinet-bookmark').forEach(function(b){
-        b.addEventListener('click', function(){ openBookmark(parseInt(b.getAttribute('data-idx'), 10)); });
-      });
       el.querySelectorAll('.arinet-tile').forEach(function(t){
         t.addEventListener('click', function(){ openBookmark(parseInt(t.getAttribute('data-idx'), 10)); });
       });
