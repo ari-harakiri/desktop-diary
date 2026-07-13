@@ -409,8 +409,10 @@
   .arinet-tile-name { font-size:11px; font-weight:bold; color:#333; margin-top:5px; }
   .arinet-status { padding:3px 8px; font-size:10px; color:#777; background:#ece9d8; border-top:1px solid #cfcabb; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .dtd-win { width:min(470px,95vw); height:min(520px,82vh); }
-  .dtd-win .win-body { padding:0; overflow:hidden; }
-  .dtd-shell { height:100%; display:grid; grid-template-columns:105px minmax(0,1fr); background:#fff; }
+  .dtd-win .win-body { padding:0; overflow:hidden; display:flex; flex-direction:column; }
+  .dtd-construction { flex:0 0 auto; padding:5px 9px; border-bottom:2px solid #111; color:#111; background:repeating-linear-gradient(135deg,#ffd836 0,#ffd836 12px,#1d1d1d 12px,#1d1d1d 18px); font:700 9px/1.2 Arial,sans-serif; letter-spacing:.08em; text-align:center; }
+  .dtd-construction span { display:inline-block; padding:3px 9px; border:1px solid #111; background:#ffd836; }
+  .dtd-shell { flex:1 1 auto; min-height:0; display:grid; grid-template-columns:105px minmax(0,1fr); background:#fff; }
   .dtd-sidebar { padding:8px; background:#ece9d8; border-right:1px solid #aaa; }
   .dtd-sidebar .btn { width:100%; padding:6px 5px; margin-bottom:6px; font-size:11px; }
   .dtd-folder.active { border-style:inset; filter:brightness(.92); }
@@ -695,6 +697,7 @@
       <div class="signon-error" id="signon-error"></div>
 
       <div class="field-row"><label id="sn-label"><span class="ttl-icon" style="width:14px;height:14px;"></span>ScreenName</label><input type="text" id="in-screenname" autocomplete="off"></div>
+      <div class="field-row"><label>Email</label><input type="email" id="in-email" autocomplete="email"></div>
       <div class="field-row"><label>Password</label><input type="password" id="in-password"></div>
       <div class="field-row" id="confirm-row" style="display:none;"><label>Confirm Password</label><input type="password" id="in-password2"></div>
 
@@ -792,7 +795,7 @@
       <div class="sm-item" id="sm-stickynote">New Sticky Note</div>
       <div class="sm-item" id="sm-paint">Paint</div>
       <div class="sm-item" id="sm-arinet">AriNet</div>
-      <div class="sm-item" id="sm-txtmail">DtD Postmail</div>
+      <div class="sm-item" id="sm-txtmail">DtD Post Mail</div>
       <div class="sm-item" id="sm-display">Personalize</div>
       <div class="sm-item" id="sm-scrapbook">Scrapbook</div>
       <div class="sm-item" id="sm-showdesktop">Show Desktop</div>
@@ -836,6 +839,32 @@ try {
 
   var STORAGE_KEY = 'buddy-diary-data-v1';
   var SESSION_KEY = 'desktop-diary-signed-in';
+  var DESKTOPDIARY_APP_URL = 'https://ari-harakiri.github.io/desktop-diary/desktop-diary.html';
+  var SUPABASE_URL = 'https://iiclhmiuggvsjthdtxlb.supabase.co';
+  var SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_qpMvUMG5YWrDWcR1ERHVuA_Uog5A5rn';
+  var SUPABASE_SESSION_KEY = 'desktop-diary-supabase-session';
+
+  function getSupabaseSession(){try{return JSON.parse(localStorage.getItem(SUPABASE_SESSION_KEY)||'null');}catch(e){return null;}}
+  function setSupabaseSession(session){try{if(session)localStorage.setItem(SUPABASE_SESSION_KEY,JSON.stringify(session));else localStorage.removeItem(SUPABASE_SESSION_KEY);}catch(e){}}
+  function supabaseAuthRequest(path,body,accessToken){
+    return fetch(SUPABASE_URL+'/auth/v1'+path,{method:'POST',headers:{'apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+(accessToken||SUPABASE_PUBLISHABLE_KEY),'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(res){return res.json().catch(function(){return {};}).then(function(data){if(!res.ok)throw new Error(data.msg||data.message||data.error_description||data.error||'Account service error.');return data;});});
+  }
+  function ensureSupabaseSession(){
+    var session=getSupabaseSession();
+    if(!session||!session.access_token)return Promise.reject(new Error('Sign out and connect your DesktopDiary account online first.'));
+    if(!session.expires_at||session.expires_at>Date.now()/1000+60)return Promise.resolve(session);
+    if(!session.refresh_token)return Promise.reject(new Error('Your online session has expired. Please sign in again.'));
+    return supabaseAuthRequest('/token?grant_type=refresh_token',{refresh_token:session.refresh_token}).then(function(fresh){setSupabaseSession(fresh);return fresh;});
+  }
+  function supabaseRestRequest(path,options){
+    options=options||{};
+    return ensureSupabaseSession().then(function(session){
+      var headers={'apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
+      if(options.prefer)headers.Prefer=options.prefer;
+      return fetch(SUPABASE_URL+'/rest/v1/'+path,{method:options.method||'GET',headers:headers,body:options.body===undefined?undefined:JSON.stringify(options.body)}).then(function(res){return res.text().then(function(text){var data=null;try{data=text?JSON.parse(text):null;}catch(e){data=text;}if(!res.ok)throw new Error((data&&data.message)||String(data||'Mail service error.'));return data;});});
+    });
+  }
+  function supabaseRpc(name,args){return supabaseRestRequest('rpc/'+name,{method:'POST',body:args||{}});}
 
   function hasActiveSession(){
     try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch(e){ return false; }
@@ -869,7 +898,7 @@ try {
     buddies: [],            // { id, name, addedAt, groupId }
     entries: {},            // buddyId -> [ { id, html, ts, kind:'entry'|'prompt' } ]
     drafts: {},             // buddyId -> [ { id, html, ts }, ... ] saved draft log
-    mail: { inbox: [], sent: [] } // local-only DtD Postmail messages
+    mail: { address: '', inbox: [], sent: [], scheduled: [] } // local-only DtD Post Mail account and messages
   };
 
   function normalizeState(){
@@ -943,12 +972,14 @@ try {
       if(!Array.isArray(state.drafts[bid])) state.drafts[bid] = [];
       state.drafts[bid].forEach(function(entry){ if(!entry.id) entry.id = uid(); });
     });
-    if(!state.mail || typeof state.mail !== 'object') state.mail = { inbox: [], sent: [] };
+    if(!state.mail || typeof state.mail !== 'object') state.mail = { address: '', inbox: [], sent: [], scheduled: [] };
+    if(typeof state.mail.address !== 'string') state.mail.address = '';
     if(!Array.isArray(state.mail.inbox)) state.mail.inbox = [];
     if(!Array.isArray(state.mail.sent)) state.mail.sent = [];
-    state.mail.inbox.forEach(function(m){if(m.subject==='Welcome to DtD Mail'||m.subject==='Welcome to DtD Post'){m.subject='Welcome to DtD Postmail';m.from='postmaster@desktopdiary.local';m.body='DtD Postmail is a private, local-only mail simulator. Messages you write stay inside DesktopDiary and never leave your device.';}});
+    if(!Array.isArray(state.mail.scheduled)) state.mail.scheduled = [];
+    state.mail.inbox.forEach(function(m){if(m.subject==='Welcome to DtD Mail'||m.subject==='Welcome to DtD Post'||m.subject==='Welcome to DtD Postmail'){m.subject='Welcome to DtD Post Mail';m.from='postmaster@desktopdiary.local';m.body='DtD Post Mail is a private, local-only mail simulator. Messages you write stay inside DesktopDiary and never leave your device.';}});
     if(!state.mail.welcomed){
-      state.mail.inbox.push({id:uid(),from:'postmaster@desktopdiary.local',to:(state.account&&state.account.screenName||'you')+'@desktopdiary.local',subject:'Welcome to DtD Postmail',body:'DtD Postmail is a private, local-only mail simulator. Messages you write stay inside DesktopDiary and never leave your device.',ts:Date.now(),read:false});
+      state.mail.inbox.push({id:uid(),from:'postmaster@desktopdiary.local',to:(state.account&&state.account.screenName||'you')+'@desktopdiary.local',subject:'Welcome to DtD Post Mail',body:'DtD Post Mail is a private, local-only mail simulator. Messages you write stay inside DesktopDiary and never leave your device.',ts:Date.now(),read:false});
       state.mail.welcomed = true;
     }
   }
@@ -2816,7 +2847,7 @@ try {
   }
 
   // ================= SIGN ON =================
-  var signonMode = 'login'; // 'login' | 'create'
+  var signonMode = 'login'; // 'login' | 'create' | 'connect'
   var pwFieldIsSavedPlaceholder = false;
 
   // Fixed recovery hint/code (not per-account) — simple reset path since this
@@ -2888,18 +2919,21 @@ try {
     document.getElementById('signon-wrap').style.display = 'block';
     document.getElementById('signon-error').textContent = '';
     var pwInput = document.getElementById('in-password');
+    var emailInput = document.getElementById('in-email');
 
     if(state.account){
-      signonMode = 'login';
-      document.getElementById('confirm-row').style.display = 'none';
-      document.getElementById('forgot-row').style.display = 'block';
+      signonMode = state.account.email ? 'login' : 'connect';
+      document.getElementById('confirm-row').style.display = signonMode==='connect'?'flex':'none';
+      document.getElementById('forgot-row').style.display = signonMode==='login'?'block':'none';
       document.getElementById('in-screenname').value = state.account.screenName;
       document.getElementById('in-screenname').setAttribute('readonly','readonly');
+      emailInput.value = state.account.email||'';
+      emailInput.readOnly = signonMode==='login';
       document.getElementById('in-savepw').checked = !!state.savePassword;
       document.getElementById('in-autologin').checked = !!state.autoLogin;
-      document.getElementById('signon-go-label').textContent = 'Sign On';
+      document.getElementById('signon-go-label').textContent = signonMode==='connect'?'Connect Online Account':'Sign On';
 
-      if(state.savePassword){
+      if(signonMode==='login'&&state.savePassword){
         pwInput.value = 'Saved - click here to change';
         pwInput.type = 'text';
         pwInput.classList.add('pw-saved');
@@ -2911,6 +2945,7 @@ try {
         pwInput.classList.remove('pw-saved');
         pwInput.readOnly = false;
         pwFieldIsSavedPlaceholder = false;
+        if(signonMode==='connect')document.getElementById('in-password2').value='';
       }
     } else {
       signonMode = 'create';
@@ -2918,6 +2953,8 @@ try {
       document.getElementById('forgot-row').style.display = 'none';
       document.getElementById('in-screenname').value = '';
       document.getElementById('in-screenname').removeAttribute('readonly');
+      emailInput.value = '';
+      emailInput.readOnly = false;
       pwInput.value = ''; pwInput.type = 'password'; pwInput.classList.remove('pw-saved'); pwInput.readOnly = false;
       pwFieldIsSavedPlaceholder = false;
       document.getElementById('in-password2').value = '';
@@ -2943,38 +2980,40 @@ try {
     var errEl = document.getElementById('signon-error');
     errEl.textContent = '';
     var name = document.getElementById('in-screenname').value.trim();
+    var email = document.getElementById('in-email').value.trim().toLowerCase();
     var pass = document.getElementById('in-password').value;
     var savePw = document.getElementById('in-savepw').checked;
     var autoLog = document.getElementById('in-autologin').checked;
+    var submit=document.getElementById('signon-submit');
 
-    if(signonMode === 'create'){
+    if(signonMode === 'create'||signonMode === 'connect'){
       var pass2 = document.getElementById('in-password2').value;
       if(!name){ errEl.textContent = 'Please enter a screen name.'; return; }
-      if(!pass){ errEl.textContent = 'Please enter a password.'; return; }
+      if(!/^\S+@\S+\.\S+$/.test(email)){errEl.textContent='Please enter a valid private email address.';return;}
+      if(pass.length<6){ errEl.textContent = 'Password must be at least 6 characters.'; return; }
       if(pass !== pass2){ errEl.textContent = 'Passwords do not match.'; return; }
-      state.account = { screenName: name, password: pass };
-      state.savePassword = savePw;
-      state.autoLogin = autoLog;
-      saveState().then(enterDesktop);
+      submit.style.pointerEvents='none';errEl.style.color='#555';errEl.textContent='Creating secure account…';
+      supabaseAuthRequest('/signup?redirect_to='+encodeURIComponent(DESKTOPDIARY_APP_URL),{email:email,password:pass,data:{screen_name:name}}).then(function(auth){
+        state.account = state.account||{};state.account.screenName=name;state.account.password=pass;state.account.email=email;
+        state.savePassword=savePw;state.autoLogin=autoLog;if(auth.access_token)setSupabaseSession(auth);
+        return saveState().then(function(){if(auth.access_token){enterDesktop();}else{showSignon();errEl.style.color='#2a7d2a';errEl.textContent='Check your email to confirm the account, then sign on.';}});
+      }).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
     } else {
-      // if the field still shows the saved placeholder, the saved password is used as-is
-      if(!pwFieldIsSavedPlaceholder && pass !== state.account.password){
-        errEl.textContent = 'Incorrect password. Please try again.';
-        return;
-      }
-      state.savePassword = savePw;
-      state.autoLogin = autoLog;
-      saveState().then(enterDesktop);
+      var loginPassword=pwFieldIsSavedPlaceholder?state.account.password:pass;
+      if(!loginPassword){errEl.textContent='Please enter your password.';return;}
+      submit.style.pointerEvents='none';errEl.style.color='#555';errEl.textContent='Signing in securely…';
+      supabaseAuthRequest('/token?grant_type=password',{email:state.account.email,password:loginPassword}).then(function(auth){setSupabaseSession(auth);state.account.password=loginPassword;state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
     }
   });
 
   document.getElementById('in-screenname').addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){ e.preventDefault(); document.getElementById('in-password').focus(); }
+    if(e.key === 'Enter'){ e.preventDefault(); document.getElementById('in-email').focus(); }
   });
+  document.getElementById('in-email').addEventListener('keydown', function(e){if(e.key==='Enter'){e.preventDefault();document.getElementById('in-password').focus();}});
   document.getElementById('in-password').addEventListener('keydown', function(e){
     if(e.key !== 'Enter') return;
     e.preventDefault();
-    if(signonMode === 'create') document.getElementById('in-password2').focus();
+    if(signonMode === 'create'||signonMode === 'connect') document.getElementById('in-password2').focus();
     else document.getElementById('signon-submit').click();
   });
   document.getElementById('in-password2').addEventListener('keydown', function(e){
@@ -2986,7 +3025,10 @@ try {
       document.getElementById('signon-error').textContent = 'Create an account first.';
       return;
     }
-    openForgotPasswordWindow();
+    if(state.account.email){
+      var err=document.getElementById('signon-error');err.style.color='#555';err.textContent='Sending recovery email…';
+      supabaseAuthRequest('/recover?redirect_to='+encodeURIComponent(DESKTOPDIARY_APP_URL),{email:state.account.email}).then(function(){err.style.color='#2a7d2a';err.textContent='Password recovery email sent.';}).catch(function(e){err.style.color='';err.textContent=e.message;});
+    }else openForgotPasswordWindow();
   });
 
   document.getElementById('btn-help').addEventListener('click', function(){
@@ -3228,6 +3270,7 @@ try {
 
   function signOff(){
     setActiveSession(false);
+    setSupabaseSession(null);
     playDoorSlam();
     openWindows.slice().forEach(function(w){ if(w.id !== 'buddylist-win') closeWindow(w.id); });
     if(buddyListWinRecord){
@@ -3337,6 +3380,7 @@ try {
   function closeWindow(id){
     var rec = openWindows.find(function(w){ return w.id === id; });
     if(!rec) return;
+    if(rec.dtdDeliveryTimer) clearInterval(rec.dtdDeliveryTimer);
     if(rec.onClose){ try{ rec.onClose(); }catch(e){} }
     rec.el.remove();
     if(rec.tbEl) rec.tbEl.remove();
@@ -4241,6 +4285,12 @@ try {
     a.href=url;a.download='DesktopDiary-Scrapbook-'+new Date().toISOString().slice(0,10)+(suffix?'-'+suffix:'')+'.html';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},3000);
   }
 
+  function previewScrapbook(snapshot){
+    var blob=new Blob([buildScrapbookHtml(JSON.parse(JSON.stringify(snapshot)))],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),preview=window.open(url,'_blank');
+    if(!preview){URL.revokeObjectURL(url);openInfoWindow('DesktopDiary could not open the preview. Please allow pop-up windows and try again.');return;}
+    setTimeout(function(){URL.revokeObjectURL(url);},60000);
+  }
+
   function restoreFromScrapbookFile(file){
     if(!file)return;var reader=new FileReader();
     reader.onload=function(e){try{var doc=new DOMParser().parseFromString(String(e.target.result),'text/html'),data=doc.getElementById('desktopdiary-scrapbook-data');if(!data)throw new Error('This file has no DesktopDiary restore data.');var book=JSON.parse(data.textContent||'');if(!book||book.format!=='desktopdiary-scrapbook'||book.version!==1||!book.state)throw new Error('This scrapbook format is not supported.');appConfirm('Restore this scrapbook? A safety scrapbook of your current diary will download first, then the scrapbook will replace the current contents.',function(ok){if(!ok)return;downloadScrapbook(state,'before-restore');state=book.state;normalizeState();saveState().then(function(){setTimeout(function(){location.reload();},350);});});}catch(err){openInfoWindow('Could not restore this scrapbook: '+(err&&err.message?err.message:String(err)));}};
@@ -4249,8 +4299,8 @@ try {
 
   function openScrapbookWindow(){
     var existing=openWindows.find(function(w){return w.type==='scrapbook';});if(existing){focusWindow(existing.id);return;}
-    var body='<div class="win-body" style="padding:14px;background:#f2f2f2"><div style="font-size:16px;font-weight:bold;text-align:center;color:#333">DesktopDiary Scrapbook</div><p style="text-align:center;color:#666;line-height:1.45">Create one portable file you can open, search, print, and read on any computer. It also contains everything needed to restore your diary.</p><div style="display:grid;gap:9px;margin:15px 0"><button class="btn" id="scrapbook-create" style="padding:10px">Create Scrapbook</button><button class="btn" id="scrapbook-restore" style="padding:10px">Restore from Scrapbook…</button><input id="scrapbook-file" type="file" accept=".html,text/html" hidden></div><div style="font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px">Includes entries, posts, photos, drawings, voice notes, moods, statuses, drafts, buddies, themes, settings, and complete restore data.</div></div>';
-    createWindow({title:'Scrapbook',extraClass:'setup-win',bodyHtml:body,type:'scrapbook',onMount:function(el){var fi=el.querySelector('#scrapbook-file');el.querySelector('#scrapbook-create').onclick=function(){downloadScrapbook(state);};el.querySelector('#scrapbook-restore').onclick=function(){fi.click();};fi.onchange=function(){restoreFromScrapbookFile(fi.files&&fi.files[0]);fi.value='';};}});
+    var body='<div class="win-body" style="padding:14px;background:#f2f2f2"><div style="font-size:16px;font-weight:bold;text-align:center;color:#333">DesktopDiary Scrapbook</div><p style="text-align:center;color:#666;line-height:1.45">Preview your scrapbook first, then save one portable file you can open, search, print, and read on any computer. It also contains everything needed to restore your diary.</p><div style="display:grid;gap:9px;margin:15px 0"><button class="btn" id="scrapbook-preview" style="padding:10px">Preview Scrapbook</button><button class="btn" id="scrapbook-create" style="padding:10px">Save Scrapbook…</button><button class="btn" id="scrapbook-restore" style="padding:10px">Restore from Scrapbook…</button><input id="scrapbook-file" type="file" accept=".html,text/html" hidden></div><div style="font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:10px">The preview uses your diary as it looks right now and does not save a file. Includes entries, posts, photos, drawings, voice notes, moods, statuses, drafts, buddies, themes, settings, and complete restore data.</div></div>';
+    createWindow({title:'Scrapbook',extraClass:'setup-win',bodyHtml:body,type:'scrapbook',onMount:function(el){var fi=el.querySelector('#scrapbook-file');el.querySelector('#scrapbook-preview').onclick=function(){previewScrapbook(state);};el.querySelector('#scrapbook-create').onclick=function(){downloadScrapbook(state);};el.querySelector('#scrapbook-restore').onclick=function(){fi.click();};fi.onchange=function(){restoreFromScrapbookFile(fi.files&&fi.files[0]);fi.value='';};}});
   }
 
   function exportConversation(buddyId, buddyName){
@@ -5042,22 +5092,37 @@ try {
   function openDtdPostWindow(){
     var existing=openWindows.find(function(w){return w.type==='dtdmail';});
     if(existing){focusWindow(existing.id);return;}
-    var body='<div class="win-body"><div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button></div><div class="dtd-main"><div class="dtd-heading">Inbox</div><div class="dtd-list"></div></div></div></div>';
-    createWindow({title:'DtD Postmail',extraClass:'dtd-win',bodyHtml:body,type:'dtdmail',onMount:function(el){
+    if(getSupabaseSession()){openOnlineDtdPostWindow();return;}
+    function suggestedHandle(){return ((state.account&&state.account.screenName)||'user').toLowerCase().replace(/[^a-z0-9._-]+/g,'.').replace(/^[._-]+|[._-]+$/g,'').slice(0,20)||'user';}
+    function constructionBar(){return '<div class="dtd-construction"><span>UNDER CONSTRUCTION · LOCAL DELIVERY ONLY</span></div>';}
+    function mailboxBody(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Future Self…</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="scheduled">Scheduled</button></div><div class="dtd-main"><div class="dtd-heading">Inbox</div><div class="dtd-list"></div></div></div>';}
+    var setup='<div style="padding:18px;text-align:center"><div class="dtd-heading">Choose your Post Mail address</div><p style="font-size:11px;line-height:1.45;color:#555">Your address is separate from your screen name, so your screen name can change later without affecting your mail.</p><div style="display:flex;justify-content:center;align-items:center;gap:4px;margin:16px 0"><input id="dtd-handle" type="text" maxlength="20" value="'+escapeHtml(suggestedHandle())+'" style="width:130px;padding:6px;border:1px solid #888;text-align:right"><b style="font-size:11px">@desktopdiary.local</b></div><div id="dtd-address-status" style="min-height:28px;font-size:10px;color:#555">3–20 characters: letters, numbers, dots, dashes, or underscores.</div><button class="btn" id="dtd-reserve" style="padding:7px 16px">Reserve Address</button><div style="font-size:9px;color:#777;border-top:1px solid #ccc;margin-top:17px;padding-top:9px">This reserves the address in this copy of DesktopDiary. Worldwide availability will be added when DtD accounts connect online.</div></div>';
+    var body='<div class="win-body">'+constructionBar()+(state.mail.address?mailboxBody():setup)+'</div>';
+    createWindow({title:'DtD Post Mail',extraClass:'dtd-win',bodyHtml:body,type:'dtdmail',onMount:function(el){
+      function mountMailbox(){
+      el.querySelector('.win-body').innerHTML=constructionBar()+mailboxBody();
       var main=el.querySelector('.dtd-main'),folder='inbox';
-      function localAddress(){return ((state.account&&state.account.screenName)||'user').replace(/\s+/g,'.').toLowerCase()+'@desktopdiary.local';}
+      function localAddress(){return state.mail.address;}
+      function deliverDue(){
+        var now=Date.now(),due=state.mail.scheduled.filter(function(m){return m.deliverAt<=now;});
+        if(!due.length)return false;
+        due.forEach(function(m){state.mail.inbox.push({id:uid(),from:m.from,to:m.to,subject:m.subject,body:m.body,ts:m.deliverAt,read:false,futureSelf:true});});
+        state.mail.scheduled=state.mail.scheduled.filter(function(m){return m.deliverAt>now;});saveState();return true;
+      }
       function setFolder(name){folder=name;el.querySelectorAll('.dtd-folder').forEach(function(b){b.classList.toggle('active',b.dataset.folder===name);});renderList();}
       function renderList(){
+        deliverDue();
         var list=(state.mail&&state.mail[folder]||[]).slice().sort(function(a,b){return b.ts-a.ts;});
-        main.innerHTML='<div class="dtd-heading">'+(folder==='inbox'?'Inbox':'Sent')+(folder==='inbox'?' ('+list.filter(function(m){return !m.read;}).length+' unread)':'')+'</div><div class="dtd-list">'+(list.length?list.map(function(m){return '<div class="dtd-row'+(!m.read&&folder==='inbox'?' unread':'')+'" data-mail-id="'+escapeHtml(m.id)+'"><span>'+(folder==='inbox'?escapeHtml(m.from):escapeHtml(m.to))+'</span><span class="dtd-subject">'+escapeHtml(m.subject||'(no subject)')+'</span><time>'+escapeHtml(fmtDateShort(m.ts))+'</time></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
+        var heading=folder==='inbox'?'Inbox':(folder==='sent'?'Sent':'Scheduled');
+        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+list.filter(function(m){return !m.read;}).length+' unread)':'')+'</div><div class="dtd-list">'+(list.length?list.map(function(m){return '<div class="dtd-row'+(!m.read&&folder==='inbox'?' unread':'')+'" data-mail-id="'+escapeHtml(m.id)+'"><span>'+(folder==='inbox'?escapeHtml(m.from):escapeHtml(m.to))+'</span><span class="dtd-subject">'+escapeHtml(m.subject||'(no subject)')+'</span><time>'+escapeHtml(fmtDateShort(folder==='scheduled'?m.deliverAt:m.ts))+'</time></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
         main.querySelectorAll('[data-mail-id]').forEach(function(row){row.onclick=function(){openMessage(row.dataset.mailId);};});
       }
       function openMessage(id){
         var msg=(state.mail[folder]||[]).find(function(m){return m.id===id;});if(!msg)return;
         if(folder==='inbox'&&!msg.read){msg.read=true;saveState();}
-        main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(msg.subject||'(no subject)')+'</b><br>From: '+escapeHtml(msg.from)+'<br>To: '+escapeHtml(msg.to)+'<br>'+escapeHtml(scrapbookDate(msg.ts))+'</div><div class="dtd-message">'+escapeHtml(msg.body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button><button class="btn dtd-reply">Reply</button></div>';
+        main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(msg.subject||'(no subject)')+'</b><br>From: '+escapeHtml(msg.from)+'<br>To: '+escapeHtml(msg.to)+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(folder==='scheduled'?msg.deliverAt:msg.ts))+'</div><div class="dtd-message">'+escapeHtml(msg.body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button>'+(folder==='scheduled'?'':'<button class="btn dtd-reply">Reply</button>')+'</div>';
         main.querySelector('.dtd-back').onclick=renderList;
-        main.querySelector('.dtd-reply').onclick=function(){showCompose(folder==='inbox'?msg.from:msg.to,'Re: '+(msg.subject||''));};
+        if(main.querySelector('.dtd-reply'))main.querySelector('.dtd-reply').onclick=function(){showCompose(folder==='inbox'?msg.from:msg.to,'Re: '+(msg.subject||''));};
       }
       function showCompose(to,subject){
         main.innerHTML='<div class="dtd-heading">New Message</div><div class="dtd-compose"><label><span>From</span><input type="text" value="'+escapeHtml(localAddress())+'" readonly></label><label><span>To</span><input id="dtd-to" type="text" value="'+escapeHtml(to||'')+'" placeholder="name@desktopdiary.local"></label><label><span>Subject</span><input id="dtd-subject" type="text" value="'+escapeHtml(subject||'')+'"></label><textarea id="dtd-body" placeholder="Plain text only…"></textarea><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-send">Send</button></div><div class="signon-error dtd-error"></div></div>';
@@ -5071,9 +5136,86 @@ try {
         };
         setTimeout(function(){(to?bodyEl:toEl).focus();},20);
       }
+      function showFutureCompose(){
+        var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);var localMin=new Date(tomorrow.getTime()-tomorrow.getTimezoneOffset()*60000).toISOString().slice(0,10);
+        main.innerHTML='<div class="dtd-heading">Mail to Your Future Self</div><div class="dtd-compose"><label><span>To</span><input type="text" value="'+escapeHtml(localAddress())+'" readonly></label><label><span>Delivery date</span><input id="dtd-deliver-at" type="date" min="'+localMin+'" value="'+localMin+'"></label><label><span>Subject</span><input id="dtd-subject" type="text" placeholder="A note for later"></label><textarea id="dtd-body" placeholder="What would you like your future self to receive?"></textarea><div style="font-size:9px;color:#666">It will arrive the first time DesktopDiary is open on or after this date.</div><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-schedule">Schedule</button></div><div class="signon-error dtd-error"></div></div>';
+        main.querySelector('.dtd-compose-cancel').onclick=renderList;
+        main.querySelector('.dtd-schedule').onclick=function(){var dateValue=main.querySelector('#dtd-deliver-at').value,when=dateValue?new Date(dateValue+'T00:00:00').getTime():0,text=main.querySelector('#dtd-body').value;if(!when||dateValue<localMin){main.querySelector('.dtd-error').textContent='Choose a future date.';return;}if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}state.mail.scheduled.push({id:uid(),from:localAddress(),to:localAddress(),subject:main.querySelector('#dtd-subject').value.trim(),body:text,ts:Date.now(),deliverAt:when,read:true,futureSelf:true});saveState();setFolder('scheduled');};
+        setTimeout(function(){main.querySelector('#dtd-subject').focus();},20);
+      }
       el.querySelector('#dtd-compose').onclick=function(){showCompose('','');};
+      el.querySelector('#dtd-future').onclick=showFutureCompose;
       el.querySelectorAll('.dtd-folder').forEach(function(b){b.onclick=function(){setFolder(b.dataset.folder);};});
       renderList();
+      var deliveryTimer=setInterval(function(){if(deliverDue()&&folder==='inbox')renderList();},30000);
+      var winRecord=openWindows.find(function(w){return w.el===el;});if(winRecord)winRecord.dtdDeliveryTimer=deliveryTimer;
+      }
+      if(state.mail.address){mountMailbox();return;}
+      var handleEl=el.querySelector('#dtd-handle'),statusEl=el.querySelector('#dtd-address-status'),reserveEl=el.querySelector('#dtd-reserve');
+      function checkHandle(){
+        var h=handleEl.value.trim().toLowerCase(),valid=/^[a-z0-9][a-z0-9._-]{1,18}[a-z0-9]$/.test(h)&&h.indexOf('..')===-1;
+        statusEl.textContent=valid?'Available in this DesktopDiary: '+h+'@desktopdiary.local':'Use 3–20 characters, beginning and ending with a letter or number.';
+        statusEl.style.color=valid?'#18752c':'#b3261e';reserveEl.disabled=!valid;return valid?h:'';
+      }
+      handleEl.oninput=checkHandle;
+      handleEl.onkeydown=function(e){if(e.key==='Enter'&&!reserveEl.disabled){e.preventDefault();reserveEl.click();}};
+      reserveEl.onclick=function(){var h=checkHandle();if(!h)return;state.mail.address=h+'@desktopdiary.local';state.mail.inbox.forEach(function(m){if(m.from==='postmaster@desktopdiary.local')m.to=state.mail.address;});saveState();mountMailbox();};
+      checkHandle();
+    }});
+  }
+
+  function openOnlineDtdPostWindow(){
+    function bar(){return '<div class="dtd-construction"><span>ONLINE TEST PHASE · UNDER CONSTRUCTION</span></div>';}
+    function shell(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Future Self…</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="scheduled">Scheduled</button></div><div class="dtd-main"><div class="dtd-heading">Connecting…</div></div></div>';}
+    createWindow({title:'DtD Post Mail',extraClass:'dtd-win',bodyHtml:'<div class="win-body">'+bar()+'<div style="padding:28px;text-align:center">Connecting to DtD Post Mail…</div></div>',type:'dtdmail',onMount:function(el){
+      var profile=null,folder='inbox',main=null,currentRows=[];
+      function address(handle){return handle+'@desktopdiary.local';}
+      function todayString(){var d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
+      function showError(message){el.querySelector('.win-body').innerHTML=bar()+'<div style="padding:22px;text-align:center;color:#9b1c1c;line-height:1.5">'+escapeHtml(message)+'</div>';}
+      function loadProfile(){return ensureSupabaseSession().then(function(session){return supabaseRestRequest('dtd_profiles?select=handle,display_name&user_id=eq.'+encodeURIComponent(session.user.id)+'&limit=1');}).then(function(rows){return rows&&rows[0]||null;});}
+      function showAddressSetup(){
+        var suggestion=((state.mail.address||'').split('@')[0]||((state.account&&state.account.screenName)||'user')).toLowerCase().replace(/[^a-z0-9._-]+/g,'.').replace(/^[._-]+|[._-]+$/g,'').slice(0,20)||'user';
+        el.querySelector('.win-body').innerHTML=bar()+'<div style="padding:18px;text-align:center"><div class="dtd-heading">Reserve your online DtD address</div><p style="font-size:11px;color:#555;line-height:1.45">This address will be unique across every connected DesktopDiary.</p><div style="display:flex;justify-content:center;align-items:center;gap:4px;margin:16px 0"><input id="dtd-online-handle" maxlength="20" value="'+escapeHtml(suggestion)+'" style="width:130px;padding:6px;text-align:right"><b style="font-size:11px">@desktopdiary.local</b></div><div class="signon-error" id="dtd-online-status"></div><button class="btn" id="dtd-online-reserve" style="padding:7px 16px">Check &amp; Reserve</button><div style="font-size:9px;color:#777;border-top:1px solid #ccc;margin-top:17px;padding-top:9px">Your private login email is never shown with your DtD address.</div></div>';
+        var input=el.querySelector('#dtd-online-handle'),status=el.querySelector('#dtd-online-status'),button=el.querySelector('#dtd-online-reserve');
+        button.onclick=function(){var handle=input.value.trim().toLowerCase();status.style.color='#555';status.textContent='Checking availability…';button.disabled=true;supabaseRpc('dtd_handle_available',{requested_handle:handle}).then(function(available){if(!available)throw new Error('That address is unavailable or invalid.');return supabaseRpc('reserve_dtd_address',{requested_handle:handle,requested_display_name:(state.account&&state.account.screenName)||''});}).then(function(){profile={handle:handle,display_name:(state.account&&state.account.screenName)||''};state.mail.onlineAddress=address(handle);saveState();mountMailbox();}).catch(function(err){status.style.color='';status.textContent=err.message;button.disabled=false;});};
+        input.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();button.click();}};
+      }
+      function mountMailbox(){
+        el.querySelector('.win-body').innerHTML=bar()+shell();main=el.querySelector('.dtd-main');state.mail.onlineAddress=address(profile.handle);saveState();
+        el.querySelector('#dtd-compose').onclick=function(){showCompose('','');};
+        el.querySelector('#dtd-future').onclick=showFuture;
+        el.querySelectorAll('.dtd-folder').forEach(function(b){b.onclick=function(){setFolder(b.dataset.folder);};});
+        loadFolder();
+        var timer=setInterval(function(){if(folder==='inbox')loadFolder(true);},30000),rec=openWindows.find(function(w){return w.el===el;});if(rec)rec.dtdDeliveryTimer=timer;
+      }
+      function setFolder(name){folder=name;el.querySelectorAll('.dtd-folder').forEach(function(b){b.classList.toggle('active',b.dataset.folder===name);});loadFolder();}
+      function loadFolder(quiet){
+        if(!quiet)main.innerHTML='<div class="dtd-heading">Loading '+escapeHtml(folder)+'…</div>';
+        var serverBox=folder==='inbox'?'inbox':'sent';
+        supabaseRpc('get_dtd_mailbox',{box_name:serverBox}).then(function(rows){var today=todayString();rows=rows||[];if(folder==='scheduled')rows=rows.filter(function(m){return m.from_handle===profile.handle&&m.to_handle===profile.handle&&m.deliver_on>today;});else if(folder==='sent')rows=rows.filter(function(m){return !(m.from_handle===profile.handle&&m.to_handle===profile.handle&&m.deliver_on>today);});currentRows=rows;renderRows();}).catch(function(err){main.innerHTML='<div class="dtd-empty">'+escapeHtml(err.message)+'</div>';});
+      }
+      function renderRows(){
+        var heading=folder==='inbox'?'Inbox':folder==='sent'?'Sent':'Scheduled',unread=folder==='inbox'?currentRows.filter(function(m){return !m.read_at;}).length:0;
+        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+unread+' unread)':'')+' <span style="float:right;font-weight:normal;font-size:9px">'+escapeHtml(address(profile.handle))+'</span></div><div class="dtd-list">'+(currentRows.length?currentRows.map(function(m){var who=folder==='inbox'?m.from_handle:m.to_handle,date=folder==='scheduled'?m.deliver_on:m.created_at;return '<div class="dtd-row'+(folder==='inbox'&&!m.read_at?' unread':'')+'" data-mail-id="'+escapeHtml(m.message_id)+'"><span>'+escapeHtml(address(who))+'</span><span class="dtd-subject">'+escapeHtml(m.message_subject||'(no subject)')+'</span><time>'+escapeHtml(fmtDateShort(new Date(date).getTime()))+'</time></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
+        main.querySelectorAll('[data-mail-id]').forEach(function(row){row.onclick=function(){openMessage(row.dataset.mailId);};});
+      }
+      function openMessage(id){
+        var m=currentRows.find(function(x){return x.message_id===id;});if(!m)return;
+        if(folder==='inbox'&&!m.read_at){supabaseRpc('mark_dtd_message_read',{message_id:m.message_id}).catch(function(){});m.read_at=new Date().toISOString();}
+        main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(m.message_subject||'(no subject)')+'</b><br>From: '+escapeHtml(address(m.from_handle))+'<br>To: '+escapeHtml(address(m.to_handle))+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(new Date(folder==='scheduled'?m.deliver_on:m.created_at).getTime()))+'</div><div class="dtd-message">'+escapeHtml(m.message_body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button>'+(folder==='scheduled'?'':'<button class="btn dtd-reply">Reply</button>')+'</div>';
+        main.querySelector('.dtd-back').onclick=renderRows;var reply=main.querySelector('.dtd-reply');if(reply)reply.onclick=function(){showCompose(folder==='inbox'?address(m.from_handle):address(m.to_handle),'Re: '+(m.message_subject||''));};
+      }
+      function recipientHandle(value){return value.trim().toLowerCase().split('@')[0];}
+      function showCompose(to,subject){
+        main.innerHTML='<div class="dtd-heading">New Online Message</div><div class="dtd-compose"><label><span>From</span><input value="'+escapeHtml(address(profile.handle))+'" readonly></label><label><span>To</span><input id="dtd-to" value="'+escapeHtml(to||'')+'" placeholder="friend@desktopdiary.local"></label><label><span>Subject</span><input id="dtd-subject" value="'+escapeHtml(subject||'')+'"></label><textarea id="dtd-body" placeholder="Plain text only…"></textarea><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-send">Send</button></div><div class="signon-error dtd-error"></div></div>';
+        var toEl=main.querySelector('#dtd-to'),bodyEl=main.querySelector('#dtd-body'),send=main.querySelector('.dtd-send');main.querySelector('.dtd-compose-cancel').onclick=loadFolder;send.onclick=function(){var recipient=recipientHandle(toEl.value),text=bodyEl.value;if(!recipient){main.querySelector('.dtd-error').textContent='Enter a DtD address.';return;}if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}send.disabled=true;supabaseRpc('send_dtd_message',{recipient_handle:recipient,message_subject:main.querySelector('#dtd-subject').value.trim(),message_body:text,delivery_date:todayString()}).then(function(){setFolder('sent');}).catch(function(err){main.querySelector('.dtd-error').textContent=err.message;send.disabled=false;});};setTimeout(function(){(to?bodyEl:toEl).focus();},20);
+      }
+      function showFuture(){
+        var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);var min=new Date(tomorrow.getTime()-tomorrow.getTimezoneOffset()*60000).toISOString().slice(0,10);
+        main.innerHTML='<div class="dtd-heading">Mail to Your Future Self</div><div class="dtd-compose"><label><span>To</span><input value="'+escapeHtml(address(profile.handle))+'" readonly></label><label><span>Delivery date</span><input id="dtd-deliver-at" type="date" min="'+min+'" value="'+min+'"></label><label><span>Subject</span><input id="dtd-subject" placeholder="A note for later"></label><textarea id="dtd-body" placeholder="What would you like your future self to receive?"></textarea><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-schedule">Schedule</button></div><div class="signon-error dtd-error"></div></div>';
+        main.querySelector('.dtd-compose-cancel').onclick=loadFolder;var send=main.querySelector('.dtd-schedule');send.onclick=function(){var date=main.querySelector('#dtd-deliver-at').value,text=main.querySelector('#dtd-body').value;if(date<min){main.querySelector('.dtd-error').textContent='Choose a future date.';return;}if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}send.disabled=true;supabaseRpc('send_dtd_message',{recipient_handle:profile.handle,message_subject:main.querySelector('#dtd-subject').value.trim(),message_body:text,delivery_date:date}).then(function(){setFolder('scheduled');}).catch(function(err){main.querySelector('.dtd-error').textContent=err.message;send.disabled=false;});};
+      }
+      loadProfile().then(function(found){profile=found;if(profile)mountMailbox();else showAddressSetup();}).catch(function(err){showError(err.message);});
     }});
   }
 
