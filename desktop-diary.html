@@ -4966,7 +4966,7 @@ try {
 
   function openOnlineDtdPostWindow(){
     function bar(){return '<div class="dtd-construction"><span>ONLINE TEST PHASE · UNDER CONSTRUCTION</span></div>';}
-    function shell(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Future Self…</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><div class="dtd-delivery-note"><b>Daily delivery · 8:00 AM</b><br>If DesktopDiary is closed, delivery arrives the next time you open it after 8.</div></div><div class="dtd-main"><div class="dtd-heading">Connecting…</div></div></div>';}
+    function shell(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Future Self…</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><div class="dtd-delivery-note"><b>Daily delivery · 8:00 AM</b></div></div><div class="dtd-main"><div class="dtd-heading">Connecting…</div></div></div>';}
     createWindow({title:'DtD Post Mail',extraClass:'dtd-win',bodyHtml:'<div class="win-body">'+bar()+'<div style="padding:28px;text-align:center">Connecting to DtD Post Mail…</div></div>',type:'dtdmail',onMount:function(el){
       var profile=null,folder='inbox',main=null,currentRows=[];
       function address(handle){return handle+'@desktopdiary.local';}
