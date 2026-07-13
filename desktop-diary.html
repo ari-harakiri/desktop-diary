@@ -217,7 +217,8 @@
   .bl-me-pic-placeholder { width:38px; height:38px; border-radius:4px; border:1px solid #b0aca0; background:#dce8f7; color:#7a97c2; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold; cursor:pointer; flex-shrink:0; }
   .bl-me-info { display:flex; flex-direction:column; min-width:0; }
   .bl-me b { display:block; font-size:11.5px; }
-  .bl-status-edit { font-size:9px; color:#0850d0; text-decoration:underline; cursor:pointer; display:block; margin-top:2px; }
+  .bl-status-actions { display:flex; gap:7px; margin-top:2px; }
+  .bl-status-edit { font-size:9px; color:#0850d0; text-decoration:underline; cursor:pointer; }
   .draft-links { text-align:center; font-size:10px; margin-top:4px; color:#888; }
   .draft-links span { color:#0850d0; text-decoration:underline; cursor:pointer; }
   .draft-recipient { font-size:10px; color:#0850d0; margin-top:1px; }
@@ -248,7 +249,8 @@
   .status-log-row .slr-ts { color:#888; font-size:10px; }
   .status-log-row .slr-text { margin-top:2px; }
   .nm-row select { flex:1; font-family:Tahoma,Arial,sans-serif; font-size:12px; border:1px solid #7f9db9; border-radius:3px; padding:5px 6px; background:#fff; }
-  .bl-group-header { font-size:10.5px; font-weight:bold; padding:3px 6px; color:#0850d0; cursor:pointer; background:#dce8f7; }
+  .bl-group-header { display:flex; justify-content:space-between; align-items:center; font-size:10.5px; font-weight:bold; padding:3px 6px; color:#0850d0; background:#dce8f7; }
+  .bl-group-rename { color:#555; font-size:9px; font-weight:normal; text-decoration:underline; cursor:pointer; }
   .bl-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling: touch; }
   .bl-row { display:flex; align-items:center; gap:5px; padding:5px 6px; cursor:pointer; font-size:11px; min-height:30px; }
   .bl-row:active, .bl-row:hover { background:#d3e4f5; }
@@ -429,6 +431,8 @@
   .dtd-empty { padding:28px 12px; text-align:center; color:#777; }
   .dtd-message { padding:12px; overflow:auto; flex:1; white-space:pre-wrap; font:13px/1.5 Tahoma,Arial,sans-serif; user-select:text; }
   .dtd-meta { padding:10px 12px; border-bottom:1px solid #ccc; background:#f7f7f3; font-size:11px; line-height:1.55; }
+  .dtd-profile-link { float:left; width:44px; height:44px; padding:0; margin:0 9px 2px 0; overflow:hidden; border:1px solid #888; border-radius:3px; background:#dce7f5; color:#164f91; font-weight:bold; cursor:pointer; }
+  .dtd-profile-link img { width:100%; height:100%; object-fit:cover; display:block; }
   .dtd-compose { padding:10px; display:grid; gap:8px; overflow:auto; }
   .dtd-compose label { display:grid; grid-template-columns:55px 1fr; align-items:center; gap:6px; }
   .dtd-compose textarea { height:210px; resize:none; }
@@ -493,16 +497,20 @@
   .help-win p { margin:8px 0; }
   .profile-win { width: min(340px, 94vw); height: min(500px, 82vh); }
   .blog-win { width: min(340px, 94vw); height: min(520px, 84vh); }
+  .blog-win .rich-compose { min-height:150px; max-height:38vh; }
   .blog-posts-list { padding:8px 0; }
   .blog-post { border-top:2px solid #e0ddd5; padding:12px; }
   .blog-post-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
-  .blog-post-title { font-size:14px; font-weight:bold; color:#0850d0; }
+  .blog-post-title { font-size:14px; font-weight:bold; color:#202020; }
   .blog-post-date { font-size:10px; color:#999; margin-top:2px; }
   .blog-post-actions { display:flex; gap:10px; flex-shrink:0; }
   .bp-edit { cursor:pointer; color:#0850d0; font-size:14px; }
   .bp-del { cursor:pointer; color:#c0392b; font-size:14px; }
   .blog-post-body { font-size:13px; line-height:1.5; overflow-wrap:break-word; }
   .blog-post-body img { max-width:100%; border-radius:4px; }
+  .vp-status { margin:10px 12px 2px; padding:8px 10px; border:1px solid #c9d4e2; background:#f3f7fb; font-size:11px; color:#333; }
+  .vp-status b { color:#202020; }
+  .vp-header .vp-status { width:100%; margin:0; text-align:center; }
   #desktop-search { position:absolute; top:12px; left:12px; z-index:40; width:min(310px,calc(100vw - 32px)); display:none; font-size:11px; }
   .desktop-search-bar { display:flex; gap:4px; padding:5px; background:linear-gradient(var(--th-title-angle,180deg),var(--th-title-1) 0%,var(--th-title-2) 16%,var(--th-title-3) 33%,var(--th-title-4) 50%,var(--th-title-5) 66%,var(--th-title-6) 83%,var(--th-title-7) 100%); border:1px solid var(--th-taskbar-border); border-radius:7px; box-shadow:0 2px 8px rgba(0,0,0,.35); color:var(--th-font-color,#fff); }
   #desktop-search-input { flex:1; min-width:0; padding:5px 7px; border:1px inset #c8a2b1; border-radius:4px; font-size:12px; outline:none; }
@@ -527,7 +535,8 @@
   .vp-body { padding:0; }
   .vp-header { display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px; background:linear-gradient(180deg,#dce8f7,#f5f5f0); border-bottom:1px solid #ccc; }
   .vp-pic { width:90px; height:90px; border-radius:6px; object-fit:cover; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.3); }
-  .vp-name { font-size:16px; font-weight:bold; color:#0850d0; }
+  .vp-name { font-size:16px; font-weight:bold; color:#202020; }
+  .vp-mood { color:#333; font-weight:normal; }
   .vp-custom { padding:12px; overflow-wrap:break-word; }
   .vp-section { padding:10px 12px; overflow-wrap:break-word; border-top:1px solid #e0ddd5; }
   .vp-section:first-of-type { border-top:none; }
@@ -747,7 +756,8 @@
       </div>
       <div class="m-item">View
         <div class="m-drop">
-          <div id="menu-viewprofile">Diary</div>
+          <div id="menu-viewprofile">Profile</div>
+          <div id="menu-viewdiary">Diary</div>
           <div id="menu-logs">Log</div>
         </div>
       </div>
@@ -755,6 +765,7 @@
         <div class="m-drop">
           <div id="menu-editprofile">Profile</div>
           <div id="menu-buddies">Buddies</div>
+          <div id="menu-categories">Categories</div>
           <div id="menu-alldrafts">Drafts</div>
         </div>
       </div>
@@ -767,7 +778,7 @@
           <div class="bl-me-info">
             <b id="bl-me-name">Screen Name</b>
             <span><span class="dot online" id="bl-me-dot"></span> <span id="bl-me-sub">Online</span></span>
-            <span class="bl-status-edit" id="bl-status-edit">Set Status</span>
+            <span class="bl-status-actions"><span class="bl-status-edit" id="bl-status-edit">Set Status</span><span class="bl-status-edit" id="bl-status-clear">Clear Status</span></span>
           </div>
         </div>
       </div>
@@ -852,6 +863,16 @@ try {
   function supabaseAuthRequest(path,body,accessToken){
     return fetch(SUPABASE_URL+'/auth/v1'+path,{method:'POST',headers:{'apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+(accessToken||SUPABASE_PUBLISHABLE_KEY),'Content-Type':'application/json'},body:JSON.stringify(body||{})}).then(function(res){return res.json().catch(function(){return {};}).then(function(data){if(!res.ok)throw new Error(data.msg||data.message||data.error_description||data.error||'Account service error.');return data;});});
   }
+  function supabaseUserRequest(method,body,accessToken){
+    return fetch(SUPABASE_URL+'/auth/v1/user',{method:method,headers:{'apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)}).then(function(res){return res.json().catch(function(){return {};}).then(function(data){if(!res.ok)throw new Error(data.msg||data.message||data.error_description||data.error||'Account service error.');return data;});});
+  }
+  function readSupabaseRecoveryRedirect(){
+    var params=new URLSearchParams(location.hash.replace(/^#/,''));
+    if(params.get('type')!=='recovery'||!params.get('access_token'))return null;
+    var session={access_token:params.get('access_token'),refresh_token:params.get('refresh_token')||'',expires_at:Math.floor(Date.now()/1000)+Number(params.get('expires_in')||3600),token_type:params.get('token_type')||'bearer'};
+    try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+    return session;
+  }
   function ensureSupabaseSession(){
     var session=getSupabaseSession();
     if(!session||!session.access_token)return Promise.reject(new Error('Sign out and connect your DesktopDiary account online first.'));
@@ -868,6 +889,19 @@ try {
     });
   }
   function supabaseRpc(name,args){return supabaseRestRequest('rpc/'+name,{method:'POST',body:args||{}});}
+  function syncDtdPublicProfile(){
+    if(!getSupabaseSession()||!state.account)return Promise.resolve();
+    var currentMood=(state.status&&state.status.mood)||'',statusText=JSON.stringify({label:(state.status&&state.status.label)||'',mood:currentMood,color:currentMood?moodColor(currentMood):''});
+    return supabaseRpc('update_dtd_public_profile',{new_display_name:state.account.screenName||'',new_profile_picture:(state.profile&&state.profile.pic)||'',new_profile_header:(state.profile&&state.profile.header)||'',new_profile_about:(state.profile&&state.profile.aboutMe)||'',new_profile_status:statusText,new_profile_status_time:state.status&&state.status.ts?new Date(state.status.ts).toISOString():null});
+  }
+  function syncDtdPublicEntry(entry){
+    if(!getSupabaseSession()||!entry)return Promise.resolve();
+    return entry.shared?supabaseRpc('sync_dtd_public_entry',{entry_local_id:entry.id,entry_title:entry.title||'',entry_html:entry.html||'',entry_time:new Date(entry.ts||Date.now()).toISOString()}):supabaseRpc('remove_dtd_public_entry',{entry_local_id:entry.id});
+  }
+  function syncAllDtdPublicContent(){
+    if(!getSupabaseSession())return Promise.resolve();
+    return syncDtdPublicProfile().then(function(){return Promise.all((state.blogPosts||[]).map(syncDtdPublicEntry));});
+  }
 
   function hasActiveSession(){
     try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch(e){ return false; }
@@ -924,6 +958,7 @@ try {
     if(state.profile.header === undefined) state.profile.header = '';
     if(state.profile.aboutMe === undefined) state.profile.aboutMe = '';
     if(!Array.isArray(state.blogPosts)) state.blogPosts = [];
+    state.blogPosts.forEach(function(post){if(post.shared===undefined)post.shared=true;});
     if(!state.background) state.background = { color: '', image: '', gradient: '' };
     if(state.background.gradient === undefined) state.background.gradient = '';
     if(!Array.isArray(state.paintRecentColors)) state.paintRecentColors = [];
@@ -2228,7 +2263,7 @@ try {
       function saveToDiary(){
         var image=diaryImageData();
         var initialHtml='<div><img src="'+image+'" style="max-width:100%;border-radius:4px;"></div>';
-        openBlogPostEditor(null,function(){var profileWindow=openWindows.find(function(w){return w.type==='viewprofile';});if(profileWindow){closeWindow(profileWindow.id);openViewProfileWindow();}msg.textContent='Published drawing to your profile diary';playDing();},initialHtml);
+        openBlogPostEditor(null,function(){var profileWindow=openWindows.find(function(w){return w.type==='viewprofile';});if(profileWindow&&profileWindow.el&&profileWindow.el._refreshProfile)profileWindow.el._refreshProfile();msg.textContent='Saved drawing as a private diary entry';playDing();},initialHtml);
         msg.textContent='Drawing added to a new profile diary post';
       }
       canvasHandles.forEach(function(handle){handle.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();var edge=handle.dataset.edge,before=snap(),ow=cv.width,oh=cv.height,sx=cv.offsetWidth/cv.width,sy=cv.offsetHeight/cv.height,startX=e.clientX,startY=e.clientY,changed=false;function drag(ev){var w=edge==='bottom'?ow:Math.max(1,Math.min(4096,Math.round(ow+(ev.clientX-startX)/sx))),h=edge==='right'?oh:Math.max(1,Math.min(4096,Math.round(oh+(ev.clientY-startY)/sy)));if(w===cv.width&&h===cv.height)return;changed=true;blank(w,h);cx.putImageData(before.d,0,0);msg.textContent='Canvas size: '+w+' × '+h;}function finish(){document.removeEventListener('pointermove',drag);document.removeEventListener('pointerup',finish);if(changed){commit(before);msg.textContent='Canvas resized without scaling artwork';}updateCanvasHandles();}document.addEventListener('pointermove',drag);document.addEventListener('pointerup',finish);});});
@@ -2822,8 +2857,8 @@ try {
     var ts = lastEntryTs(buddyId);
     if(ts === null) return 'idle';
     var days = (Date.now()-ts)/86400000;
-    if(sameDay(ts, Date.now())) return 'online';
-    if(days < 7) return 'away';
+    if(days <= 7) return 'online';
+    if(days <= 30) return 'away';
     return 'idle';
   }
   function findBuddyByName(name){
@@ -2857,6 +2892,12 @@ try {
   // app is only ever used by one person and isn't a public-facing service.
   var RECOVERY_HINT = "What's the alarm?";
   var RECOVERY_CODE = '4176';
+
+  function openOnlinePasswordResetWindow(recoverySession){
+    setSupabaseSession(recoverySession);
+    var body='<div class="win-body nm-body"><p style="font-size:11px;line-height:1.45;margin-top:0">Choose a new password for your DesktopDiary account.</p><div class="field-row"><label>New Password</label><input type="password" id="online-reset-password" autocomplete="new-password"></div><div class="field-row"><label>Confirm Password</label><input type="password" id="online-reset-confirm" autocomplete="new-password"></div><div class="signon-error" id="online-reset-error"></div><div class="nm-send-row"><button class="btn" id="online-reset-save">Reset Password</button></div></div>';
+    createWindow({title:'Reset Password',extraClass:'setup-win',bodyHtml:body,type:'onlinepasswordreset',onMount:function(el,id){var pw=el.querySelector('#online-reset-password'),confirm=el.querySelector('#online-reset-confirm'),error=el.querySelector('#online-reset-error'),button=el.querySelector('#online-reset-save');pw.focus();button.onclick=function(){if(pw.value.length<6){error.textContent='Password must be at least 6 characters.';return;}if(pw.value!==confirm.value){error.textContent='Passwords do not match.';return;}button.disabled=true;error.style.color='#555';error.textContent='Updating password…';supabaseUserRequest('PUT',{password:pw.value},recoverySession.access_token).then(function(user){state.account=state.account||{};state.account.email=user.email||state.account.email||'';state.account.screenName=(user.user_metadata&&user.user_metadata.screen_name)||state.account.screenName||(user.email?user.email.split('@')[0]:'DesktopDiary');state.account.password=pw.value;state.savePassword=false;return saveState();}).then(function(){closeWindow(id);showSignon();var signonError=document.getElementById('signon-error');signonError.style.color='#2a7d2a';signonError.textContent='Password reset. Sign in with your new password.';}).catch(function(err){error.style.color='';error.textContent=err.message;button.disabled=false;});};confirm.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();button.click();}};}});
+  }
 
   function openForgotPasswordWindow(){
     var body =
@@ -2926,12 +2967,12 @@ try {
     var pwInput = document.getElementById('in-password');
     var emailInput = document.getElementById('in-email');
     var switchRow=document.getElementById('account-switch-row');
-    document.getElementById('screenname-row').style.display='flex';
+    document.getElementById('screenname-row').style.display='block';
 
     if(state.account){
       switchRow.style.display='none';
       signonMode = state.account.email ? 'login' : 'connect';
-      document.getElementById('confirm-row').style.display = signonMode==='connect'?'flex':'none';
+      document.getElementById('confirm-row').style.display = signonMode==='connect'?'block':'none';
       document.getElementById('forgot-row').style.display = signonMode==='login'?'block':'none';
       document.getElementById('in-screenname').value = state.account.screenName;
       document.getElementById('in-screenname').setAttribute('readonly','readonly');
@@ -2977,8 +3018,8 @@ try {
   document.getElementById('account-switch').addEventListener('click',function(){
     var pwInput=document.getElementById('in-password'),creating=signonMode==='create';
     signonMode=creating?'login':'create';
-    document.getElementById('screenname-row').style.display=creating?'none':'flex';
-    document.getElementById('confirm-row').style.display=creating?'none':'flex';
+    document.getElementById('screenname-row').style.display=creating?'none':'block';
+    document.getElementById('confirm-row').style.display=creating?'none':'block';
     document.getElementById('forgot-row').style.display=creating?'block':'none';
     document.getElementById('signon-go-label').textContent=creating?'Sign On':'Create Account';
     document.getElementById('account-switch').textContent=creating?'Need an account? Create One':'Already have an account? Sign On';
@@ -3173,7 +3214,8 @@ try {
 
       var header = document.createElement('div');
       header.className = 'bl-group-header';
-      header.textContent = g.name + ' (' + onlineCount + '/' + groupBuddies.length + ')';
+      header.innerHTML = '<span>'+escapeHtml(g.name)+' ('+onlineCount+'/'+groupBuddies.length+')</span><span class="bl-group-rename">Rename</span>';
+      header.querySelector('.bl-group-rename').addEventListener('click',function(e){e.stopPropagation();appTextPrompt('Rename category',g.name,function(newName){if(newName===null)return;newName=newName.trim();if(!newName)return;g.name=newName;saveState();renderBuddyList();});});
       listEl.appendChild(header);
 
       if(!groupBuddies.length){
@@ -3283,6 +3325,7 @@ try {
   document.getElementById('menu-signoff').addEventListener('click', signOff);
   document.getElementById('bl-addbuddy-btn').addEventListener('click', openBuddiesWindow);
   document.getElementById('menu-buddies').addEventListener('click', openBuddiesWindow);
+  document.getElementById('menu-categories').addEventListener('click', openCategoriesWindow);
   document.getElementById('menu-alldrafts').addEventListener('click', openAllDraftsWindow);
   document.getElementById('bl-sendim-btn').addEventListener('click', function(){ openNewMessageWindow(); });
   document.getElementById('menu-logs').addEventListener('click', function(){ openLogsWindow('status'); });
@@ -3290,7 +3333,13 @@ try {
   document.getElementById('menu-account').addEventListener('click', openAccountSettingsWindow);
   document.getElementById('menu-editprofile').addEventListener('click', openEditProfileWindow);
   document.getElementById('menu-viewprofile').addEventListener('click', openViewProfileWindow);
+  document.getElementById('menu-viewdiary').addEventListener('click', openDiaryEntriesWindow);
   document.getElementById('bl-status-edit').addEventListener('click', openSetStatusWindow);
+  document.getElementById('bl-status-clear').addEventListener('click', function(){
+    if(!state.status||( !state.status.label && !state.status.mood))return;
+    state.status={label:'',html:'',ts:Date.now(),mood:''};saveState();syncDtdPublicProfile().catch(function(){});refreshMyStatus();
+    var profileWindow=openWindows.find(function(w){return w.type==='viewprofile';});if(profileWindow&&profileWindow.el&&profileWindow.el._refreshProfile)profileWindow.el._refreshProfile();
+  });
 
   function signOff(){
     setActiveSession(false);
@@ -4098,7 +4147,7 @@ try {
     function excerpt(text,tokens){var clean=(text||'').replace(/\s+/g,' ').trim();if(!clean)return '';var lower=clean.toLowerCase(),at=-1;tokens.forEach(function(t){var i=lower.indexOf(t);if(i!==-1&&(at===-1||i<at))at=i;});var start=Math.max(0,(at<0?0:at)-55),end=Math.min(clean.length,start+180);if(end-start<180)start=Math.max(0,end-180);return(start?'…':'')+clean.slice(start,end)+(end<clean.length?'…':'');}
     function collect(q){
       var tokens=tokensFor(q),found=[];if(!tokens.length)return found;
-      (state.blogPosts||[]).forEach(function(post){var body=stripHtmlTags(post.html||''),all=(post.title||'')+' '+body;if(matches(all,tokens))found.push({type:'profile',id:post.id,title:post.title||'Untitled',location:'Profile Diary',ts:post.ts||0,text:body||post.title||''});});
+      (state.blogPosts||[]).forEach(function(post){var body=stripHtmlTags(post.html||''),all=(post.title||'')+' '+body;if(matches(all,tokens))found.push({type:post.shared?'profile':'diaryentry',id:post.id,title:post.title||'Untitled',location:post.shared?'Profile':'Private Diary Entries',ts:post.ts||0,text:body||post.title||''});});
       Object.keys(state.entries||{}).forEach(function(buddyId){var buddy=state.buddies.find(function(b){return b.id===buddyId;}),name=buddy?buddy.name:'Diary';(state.entries[buddyId]||[]).forEach(function(entry){if(entry.locked)return;var body=stripHtmlTags(entry.html!==undefined?entry.html:(entry.text||''));if(matches(body,tokens))found.push({type:'buddy',id:entry.id,buddyId:buddyId,title:name,location:name+' diary entry',ts:entry.ts||0,text:body});});});
       return found.sort(function(a,b){return b.ts-a.ts;}).slice(0,50);
     }
@@ -4109,7 +4158,7 @@ try {
       resultsBox.innerHTML='<div class="search-summary">'+found.length+(found.length===1?' result':' results')+' for <b>'+escapeHtml(q)+'</b></div>'+found.map(function(r){var text=excerpt(r.text,tokens);return '<div class="search-result" tabindex="0" data-search-type="'+r.type+'" data-search-id="'+escapeHtml(r.id)+'" data-search-buddy="'+escapeHtml(r.buddyId||'')+'"><div class="search-result-title">'+highlighted(r.title,tokens)+'</div><div class="search-result-meta">'+escapeHtml(r.location)+' · '+fmtDayDivider(r.ts)+'</div><div class="search-result-snippet">'+highlighted(text,tokens)+'</div></div>';}).join('');
     }
     function flashTarget(selector){setTimeout(function(){var target=document.querySelector(selector);if(!target)return;target.scrollIntoView({behavior:'smooth',block:'center'});target.classList.remove('search-target-flash');void target.offsetWidth;target.classList.add('search-target-flash');setTimeout(function(){target.classList.remove('search-target-flash');},1900);},120);}
-    function openResult(row){var type=row.dataset.searchType,id=row.dataset.searchId,buddyId=row.dataset.searchBuddy;resultsBox.style.display='none';if(type==='profile'){var w=openWindows.find(function(x){return x.type==='viewprofile';});if(w)focusWindow(w.id);else openViewProfileWindow();flashTarget('.blog-post[data-post-id="'+id+'"]');}else{openIMWindow(buddyId);flashTarget('.im-entry[data-entry-id="'+id+'"]');}}
+    function openResult(row){var type=row.dataset.searchType,id=row.dataset.searchId,buddyId=row.dataset.searchBuddy;resultsBox.style.display='none';if(type==='profile'){var w=openWindows.find(function(x){return x.type==='viewprofile';});if(w)focusWindow(w.id);else openViewProfileWindow();flashTarget('.blog-post[data-post-id="'+id+'"]');}else if(type==='diaryentry'){openDiaryEntriesWindow();flashTarget('[data-entry-id="'+id+'"]');}else{openIMWindow(buddyId);flashTarget('.im-entry[data-entry-id="'+id+'"]');}}
     button.addEventListener('click',renderSearch);
     input.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();renderSearch();}if(e.key==='Escape')resultsBox.style.display='none';});
     input.addEventListener('input',function(){if(input.value.trim().length>=2)renderSearch();else resultsBox.style.display='none';});
@@ -4549,6 +4598,19 @@ try {
     });
   }
 
+  function openCategoriesWindow(){
+    var existing=openWindows.find(function(w){return w.type==='categories';});if(existing){focusWindow(existing.id);return;}
+    function bodyHtml(){return '<div class="win-body nm-body"><div style="font-size:11px;color:#666;margin-bottom:9px">Organize your Buddy List categories.</div><div id="category-list">'+state.groups.map(function(g){var count=state.buddies.filter(function(b){return (b.groupId||'default')===g.id;}).length;return '<div data-category-id="'+escapeHtml(g.id)+'" style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #ddd"><b style="flex:1">'+escapeHtml(g.name)+'</b><span style="font-size:9px;color:#777">'+count+' buddies</span><button class="btn category-rename">Rename</button>'+(g.id==='default'?'':'<button class="btn category-delete" style="color:#b3261e">Delete</button>')+'</div>';}).join('')+'</div><div class="nm-send-row" style="margin-top:10px"><button class="btn" id="category-add">+ New Category</button></div></div>';}
+    createWindow({title:'Categories',extraClass:'setup-win',bodyHtml:bodyHtml(),type:'categories',onMount:function(el){
+      function render(){var body=el.querySelector('.win-body');if(body)body.outerHTML=bodyHtml();wire();}
+      function wire(){
+        el.querySelector('#category-add').onclick=function(){appTextPrompt('New category','',function(name){if(name===null)return;name=name.trim();if(!name)return;state.groups.push({id:uid(),name:name});saveState();renderBuddyList();render();});};
+        el.querySelectorAll('[data-category-id]').forEach(function(row){var group=state.groups.find(function(g){return g.id===row.dataset.categoryId;});if(!group)return;row.querySelector('.category-rename').onclick=function(){appTextPrompt('Rename category',group.name,function(name){if(name===null)return;name=name.trim();if(!name)return;group.name=name;saveState();renderBuddyList();render();});};var del=row.querySelector('.category-delete');if(del)del.onclick=function(){var fallback=state.groups.find(function(g){return g.id==='default';});appConfirm('Delete category "'+group.name+'"? Its buddies will move to "'+(fallback?fallback.name:'Buddies')+'".',function(ok){if(!ok)return;state.buddies.forEach(function(b){if(b.groupId===group.id)b.groupId='default';});state.groups=state.groups.filter(function(g){return g.id!==group.id;});saveState();renderBuddyList();render();});};});
+      }
+      wire();
+    }});
+  }
+
   // ================= BUDDIES WINDOW (add + edit combined) =================
   function openBuddiesWindow(){
     var buddyOptions = state.buddies.map(function(b){ return '<option value="'+escapeHtml(b.id)+'">'+escapeHtml(b.name)+'</option>'; }).join('');
@@ -4821,8 +4883,10 @@ try {
             renderStats(taggedBuddy.id);
           }
           saveState();
+          syncDtdPublicProfile().catch(function(){});
           refreshMyStatus();
           renderBuddyList();
+          var profileWindow=openWindows.find(function(w){return w.type==='viewprofile';});if(profileWindow&&profileWindow.el&&profileWindow.el._refreshProfile)profileWindow.el._refreshProfile();
           if(closeAfter) closeWindow(id);
         }
 
@@ -4832,8 +4896,10 @@ try {
           // clearing is not "setting a mood" — wipe the status directly without touching Mood Log/Status Log
           state.status = { label: '', html: '', ts: Date.now(), mood: '' };
           saveState();
+          syncDtdPublicProfile().catch(function(){});
           refreshMyStatus();
           renderBuddyList();
+          var profileWindow=openWindows.find(function(w){return w.type==='viewprofile';});if(profileWindow&&profileWindow.el&&profileWindow.el._refreshProfile)profileWindow.el._refreshProfile();
           labelInput.value = ''; moodText.value = ''; moodColorInput.value = '#5a8fd6';
           updateIndicator('', '#ddd'); moodPreset.value = '';
           buddySelect.value = ''; newRow.style.display = 'none';
@@ -5205,7 +5271,7 @@ try {
         input.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();button.click();}};
       }
       function mountMailbox(){
-        el.querySelector('.win-body').innerHTML=bar()+shell();main=el.querySelector('.dtd-main');state.mail.onlineAddress=address(profile.handle);saveState();
+        el.querySelector('.win-body').innerHTML=bar()+shell();main=el.querySelector('.dtd-main');state.mail.onlineAddress=address(profile.handle);saveState();syncAllDtdPublicContent().catch(function(){});
         el.querySelector('#dtd-compose').onclick=function(){showCompose('','');};
         el.querySelector('#dtd-future').onclick=showFuture;
         el.querySelectorAll('.dtd-folder').forEach(function(b){b.onclick=function(){setFolder(b.dataset.folder);};});
@@ -5230,7 +5296,10 @@ try {
       function openMessage(id){
         var m=currentRows.find(function(x){return x.message_id===id;});if(!m)return;
         if(folder==='inbox'&&!m.read_at){supabaseRpc('mark_dtd_message_read',{message_id:m.message_id}).catch(function(){});m.read_at=new Date().toISOString();saveState();}
-        main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(m.message_subject||'(no subject)')+'</b><br>From: '+escapeHtml(address(m.from_handle))+'<br>To: '+escapeHtml(address(m.to_handle))+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(new Date(folder==='scheduled'?m.deliver_on:m.created_at).getTime()))+'</div><div class="dtd-message">'+escapeHtml(m.message_body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button>'+(folder==='scheduled'?'':'<button class="btn dtd-reply">Reply</button>')+'</div>';
+        var profileHandle=folder==='inbox'?m.from_handle:m.to_handle,initials=(profileHandle||'?').slice(0,2).toUpperCase();
+        main.innerHTML='<div class="dtd-meta"><button class="dtd-profile-link" title="View '+escapeHtml(profileHandle)+'\'s profile">'+escapeHtml(initials)+'</button><b>'+escapeHtml(m.message_subject||'(no subject)')+'</b><br>From: '+escapeHtml(address(m.from_handle))+'<br>To: '+escapeHtml(address(m.to_handle))+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(new Date(folder==='scheduled'?m.deliver_on:m.created_at).getTime()))+'</div><div class="dtd-message">'+escapeHtml(m.message_body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button>'+(folder==='scheduled'?'':'<button class="btn dtd-reply">Reply</button>')+'</div>';
+        var profileButton=main.querySelector('.dtd-profile-link');profileButton.onclick=function(){if(profileHandle===profile.handle)openViewProfileWindow();else openDtdPublicProfileWindow(profileHandle);};
+        supabaseRpc('get_dtd_public_profile',{requested_handle:profileHandle}).then(function(p){if(p&&p.profile_picture)profileButton.innerHTML='<img src="'+escapeHtml(p.profile_picture)+'" alt="">';}).catch(function(){});
         main.querySelector('.dtd-back').onclick=renderRows;var reply=main.querySelector('.dtd-reply');if(reply)reply.onclick=function(){showCompose(folder==='inbox'?address(m.from_handle):address(m.to_handle),'Re: '+(m.message_subject||''));};
       }
       function recipientHandle(value){return value.trim().toLowerCase().split('@')[0];}
@@ -5421,9 +5490,9 @@ try {
         '<p>💬 Click a buddy to open an IM window and leave them a note. Keep a running history of thoughts, plans, and memories all in one place.</p>' +
         '<p>🟢 Your buddy icons show when you last updated:</p>' +
         '<ul style="padding-left:18px; margin:4px 0 10px;">' +
-          '<li><span class="dot online" style="margin-right:4px;"></span>Online = Today</li>' +
-          '<li><span class="dot away" style="margin-right:4px;"></span>Away = This Week</li>' +
-          '<li><span class="dot idle" style="margin-right:4px;"></span>Offline = Long time, no chat.</li>' +
+          '<li><span class="dot online" style="margin-right:4px;"></span>Green = Updated within 7 days</li>' +
+          '<li><span class="dot away" style="margin-right:4px;"></span>Yellow = Updated 8–30 days ago</li>' +
+          '<li><span class="dot idle" style="margin-right:4px;"></span>Gray = More than 30 days ago</li>' +
         '</ul>' +
         '<p>✧ Update your vibe anytime by setting your Status. Whether you\'re "bored @ work," "obsessed with a new song," or "get get gettin some bread," it\'ll be saved in the Log.</p>' +
         '<p>🌐 Got big thoughts? Head to your Diary and hit + New Post to write and save.</p>' +
@@ -5702,6 +5771,7 @@ try {
             html: '' // kept for backward compat but no longer used
           };
           saveState();
+          syncDtdPublicProfile().catch(function(){});
           refreshProfilePic();
           closeWindow(id);
         });
@@ -5718,7 +5788,8 @@ try {
     var name = escapeHtml(state.account.screenName);
 
     function buildBlogBody(){
-      var posts = (state.blogPosts || []).slice().sort(function(a,b){ return b.ts - a.ts; });
+      var profileStatus=(state.status&&state.status.label)||'',profileMood=(state.status&&state.status.mood)||'',profileMoodColor=profileMood?moodColor(profileMood):'#333333';
+      var posts = (state.blogPosts || []).filter(function(p){return p.shared;}).slice().sort(function(a,b){ return b.ts - a.ts; });
       var postsHtml = posts.length ? posts.map(function(post){
         return '<div class="blog-post" data-post-id="'+escapeHtml(post.id)+'">' +
           '<div class="blog-post-header">' +
@@ -5726,72 +5797,73 @@ try {
               '<div class="blog-post-title">' + escapeHtml(post.title||'Untitled') + '</div>' +
               '<div class="blog-post-date">' + fmtDayDivider(post.ts) + (post.editedAt ? ' <span style="color:#aaa;font-style:italic;">(edited)</span>' : '') + '</div>' +
             '</div>' +
-            '<span class="blog-post-actions">' +
-              '<span class="bp-edit" title="Edit post">✎</span>' +
-              '<span class="bp-del" title="Delete post">✕</span>' +
-            '</span>' +
           '</div>' +
           '<div class="blog-post-body">' + (post.html || '') + '</div>' +
         '</div>';
-      }).join('') : '<div class="vp-empty">No posts yet. Tap + New Post above to write your first one!</div>';
+      }).join('') : '<div class="vp-empty">No diary entries have been shared to your profile yet.</div>';
 
       return '<div class="win-body vp-body" id="blog-view-body">' +
-        '<div class="vp-header">' + picHtml + '<div class="vp-name">' + name + '</div></div>' +
+        '<div class="vp-header">' + picHtml + '<div class="vp-name">' + name +(profileMood?' <span class="vp-mood">is <span style="color:'+profileMoodColor+'">'+escapeHtml(profileMood)+'</span></span>':'')+'</div>' +(profileStatus ? '<div class="vp-status"><b>Status:</b> '+escapeHtml(profileStatus)+(state.status&&state.status.ts?' <span style="color:#888">· '+escapeHtml(relTime(state.status.ts))+'</span>':'')+'</div>' : '')+'</div>' +
         (header ? '<div class="vp-section">' + header + '</div>' : '') +
         (aboutMe ? '<div class="vp-section">' + aboutMe + '</div>' : '') +
-        '<div class="vp-newpost-row" style="padding:16px 4px 12px;text-align:center;"><button class="btn" id="vp-newpost-btn">+ New Post</button></div>' +
+        '<div class="vp-newpost-row" style="padding:16px 4px 4px;text-align:center;"><button class="btn" id="vp-newpost-btn">+ New Post</button></div>' +
+        '<div style="text-align:center;padding:2px 4px 12px"><span class="forgot-link" id="vp-view-entries">View Entries</span></div>' +
         '<div class="blog-posts-list">' + postsHtml + '</div>' +
       '</div>';
     }
 
     createWindow({
-      title: 'Diary',
+      title: 'Profile',
       extraClass: 'profile-win',
       bodyHtml: buildBlogBody(),
       type: 'viewprofile',
       onMount: function(el, id){
         function wireActions(){
+          el._refreshProfile=function(){var wb=el.querySelector('.win-body');if(wb)wb.outerHTML=buildBlogBody();wireActions();};
           var newPostBtn = el.querySelector('#vp-newpost-btn');
           if(newPostBtn){
             newPostBtn.onclick = function(){
               openBlogPostEditor(null, function(){
-                var wb = el.querySelector('.win-body');
-                if(wb) wb.outerHTML = buildBlogBody();
-                wireActions();
+                el._refreshProfile();
+                openInfoWindow('Entry saved privately. Use View Entries when you want to read it or share it to your profile.');
               });
             };
           }
-          el.querySelectorAll('.bp-edit').forEach(function(btn){
-            btn.onclick = function(){
-              var postEl = btn.closest('.blog-post');
-              var postId = postEl && postEl.getAttribute('data-post-id');
-              var post = (state.blogPosts||[]).find(function(p){ return p.id === postId; });
-              if(!post) return;
-              openBlogPostEditor(post, function(){
-                var wb = el.querySelector('.win-body');
-                if(wb) wb.outerHTML = buildBlogBody();
-                wireActions();
-              });
-            };
-          });
-          el.querySelectorAll('.bp-del').forEach(function(btn){
-            btn.onclick = function(){
-              var postEl = btn.closest('.blog-post');
-              var postId = postEl && postEl.getAttribute('data-post-id');
-              appConfirm('Delete this post? This can\'t be undone.', function(ok){
-                if(!ok) return;
-                state.blogPosts = (state.blogPosts||[]).filter(function(p){ return p.id !== postId; });
-                saveState();
-                var wb = el.querySelector('.win-body');
-                if(wb) wb.outerHTML = buildBlogBody();
-                wireActions();
-              });
-            };
-          });
+          var viewEntries=el.querySelector('#vp-view-entries');if(viewEntries)viewEntries.onclick=openDiaryEntriesWindow;
         }
         wireActions();
       }
     });
+  }
+
+  function openDtdPublicProfileWindow(handle){
+    var existing=openWindows.find(function(w){return w.type==='dtdpublicprofile'&&w.dtdHandle===handle;});if(existing){focusWindow(existing.id);return;}
+    createWindow({title:handle+'\'s Profile',extraClass:'profile-win',bodyHtml:'<div class="win-body vp-body"><div class="vp-empty">Loading profile…</div></div>',type:'dtdpublicprofile',onMount:function(el){var rec=openWindows.find(function(w){return w.el===el;});if(rec)rec.dtdHandle=handle;
+      supabaseRpc('get_dtd_public_profile',{requested_handle:handle}).then(function(p){if(!p)throw new Error('This profile is unavailable.');var pic=p.profile_picture?'<img src="'+escapeHtml(p.profile_picture)+'" class="vp-pic">':'',header=sanitizeProfileHTML(p.profile_header||''),about=sanitizeProfileHTML(p.profile_about||''),statusRaw=String(p.profile_status||''),statusLabel='',statusMood='',statusMoodColor='#333333';try{var parsedStatus=JSON.parse(statusRaw);statusLabel=parsedStatus.label||'';statusMood=parsedStatus.mood||'';if(/^#[0-9a-f]{6}$/i.test(parsedStatus.color||''))statusMoodColor=parsedStatus.color;}catch(e){statusLabel=statusRaw;}var entries=Array.isArray(p.entries)?p.entries:[],posts=entries.length?entries.map(function(entry){return '<div class="blog-post"><div class="blog-post-header"><div><div class="blog-post-title">'+escapeHtml(entry.title||'Untitled')+'</div><div class="blog-post-date">'+fmtDayDivider(Number(entry.ts)||Date.now())+'</div></div></div><div class="blog-post-body">'+sanitizeHTML(entry.html||'')+'</div></div>';}).join(''):'<div class="vp-empty">No diary entries have been shared.</div>';
+        el.querySelector('.win-body').outerHTML='<div class="win-body vp-body"><div class="vp-header">'+pic+'<div class="vp-name">'+escapeHtml(p.display_name||p.handle)+(statusMood?' <span class="vp-mood">is <span style="color:'+statusMoodColor+'">'+escapeHtml(statusMood)+'</span></span>':'')+'</div>'+(statusLabel?'<div class="vp-status"><b>Status:</b> '+escapeHtml(statusLabel)+'</div>':'')+'<div style="font-size:10px;color:#777">'+escapeHtml(p.handle)+'@desktopdiary.local</div></div>'+(header?'<div class="vp-section">'+header+'</div>':'')+(about?'<div class="vp-section">'+about+'</div>':'')+'<div class="blog-posts-list">'+posts+'</div></div>';
+      }).catch(function(err){el.querySelector('.win-body').innerHTML='<div class="vp-empty">'+escapeHtml(err.message)+'</div>';});
+    }});
+  }
+
+  function openDiaryEntriesWindow(){
+    var existing=openWindows.find(function(w){return w.type==='diaryentries';});if(existing){focusWindow(existing.id);return;}
+    function refreshProfile(){var p=openWindows.find(function(w){return w.type==='viewprofile';});if(p&&p.el&&p.el._refreshProfile)p.el._refreshProfile();}
+    function buildEntriesBody(){
+      var entries=(state.blogPosts||[]).slice().sort(function(a,b){return b.ts-a.ts;});
+      var rows=entries.length?entries.map(function(entry){return '<article class="blog-post" data-entry-id="'+escapeHtml(entry.id)+'"><div class="blog-post-header"><div><div class="blog-post-title">'+escapeHtml(entry.title||'Untitled')+'</div><div class="blog-post-date">'+fmtDayDivider(entry.ts)+(entry.editedAt?' <span style="font-style:italic">(edited)</span>':'')+' · <b style="color:'+(entry.shared?'#257a35':'#777')+'">'+(entry.shared?'Shared on Profile':'Private')+'</b></div></div></div><div class="blog-post-body">'+(entry.html||'')+'</div><div style="display:flex;justify-content:flex-end;gap:6px;margin-top:10px"><button class="btn de-share">'+(entry.shared?'Remove from Profile':'Share to Profile')+'</button><button class="btn de-edit">Edit</button><button class="btn de-delete">Delete</button></div></article>';}).join(''):'<div class="vp-empty">No private diary entries yet. Use New Post on your profile to write one.</div>';
+      return '<div class="win-body vp-body"><div style="padding:12px;border-bottom:1px solid #ccc;background:#f5f5f5"><b>Private Diary Entries</b><div style="font-size:10px;color:#666;margin-top:3px">Entries remain private unless you choose Share to Profile.</div></div><div class="blog-posts-list">'+rows+'</div></div>';
+    }
+    createWindow({title:'Diary Entries',extraClass:'profile-win',bodyHtml:buildEntriesBody(),type:'diaryentries',onMount:function(el){
+      function render(){var body=el.querySelector('.win-body');if(body)body.outerHTML=buildEntriesBody();wire();}
+      function wire(){
+        el.querySelectorAll('[data-entry-id]').forEach(function(row){var entry=(state.blogPosts||[]).find(function(p){return p.id===row.dataset.entryId;});if(!entry)return;
+          row.querySelector('.de-share').onclick=function(){entry.shared=!entry.shared;saveState();syncDtdPublicEntry(entry).catch(function(){});refreshProfile();render();};
+          row.querySelector('.de-edit').onclick=function(){openBlogPostEditor(entry,function(){saveState();syncDtdPublicEntry(entry).catch(function(){});refreshProfile();render();});};
+          row.querySelector('.de-delete').onclick=function(){appConfirm('Delete this diary entry? This can\'t be undone.',function(ok){if(!ok)return;var removed=entry;state.blogPosts=(state.blogPosts||[]).filter(function(p){return p.id!==entry.id;});removed.shared=false;saveState();syncDtdPublicEntry(removed).catch(function(){});refreshProfile();render();});};
+        });
+      }
+      wire();
+    }});
   }
 
   // ================= BLOG POST EDITOR =================
@@ -5803,12 +5875,12 @@ try {
         '<div class="field-row"><label>Title</label><input type="text" id="bp-title" placeholder="Post title..." value="'+escapeHtml(existingPost && existingPost.title ? existingPost.title : '')+'"></div>' +
         richComposeHtml(composeId, 'Write your post... (toolbar above: bold/italic/underline, fonts, text color & highlight)') +
         '<div class="nm-send-row" style="margin-top:8px;">' +
-          '<button class="btn" id="bp-save">'+(isEdit?'Save Changes':'Publish Post')+'</button>' +
+          '<button class="btn" id="bp-save">'+(isEdit?'Save Changes':'Save Private Entry')+'</button>' +
         '</div>' +
         '<div class="draft-links"><span class="draft-save-link">Save Draft</span> &nbsp;|&nbsp; <span class="draft-view-link">Drafts</span></div>' +
       '</div>';
     createWindow({
-      title: isEdit ? 'Edit Post' : 'New Post',
+      title: isEdit ? 'Edit Diary Entry' : 'New Diary Entry',
       extraClass: 'blog-win',
       bodyHtml: body,
       type: 'blogpost',
@@ -5829,7 +5901,7 @@ try {
             existingPost.editedAt = Date.now();
           } else {
             state.blogPosts = state.blogPosts || [];
-            state.blogPosts.push({ id: uid(), title: title, html: html, ts: Date.now() });
+            state.blogPosts.push({ id: uid(), title: title, html: html, ts: Date.now(), shared:false });
           }
           saveState();
           if(onSave) onSave();
@@ -6042,11 +6114,13 @@ try {
       applyTheme();
       (state.customFonts || []).forEach(function(f){ registerCustomFont(f); });
       tickClock();
+      var recoverySession=readSupabaseRecoveryRedirect();
       if(state.account && (state.autoLogin || hasActiveSession())){
         enterDesktop();
       } else {
         showSignon();
       }
+      if(recoverySession)openOnlinePasswordResetWindow(recoverySession);
     } catch(bootErr){
       // show the real error on screen so it's visible on iPhone without dev tools
       var errDiv = document.createElement('div');
