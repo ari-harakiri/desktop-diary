@@ -698,7 +698,7 @@
       
       <div class="signon-error" id="signon-error"></div>
 
-      <div class="field-row"><label id="sn-label"><span class="ttl-icon" style="width:14px;height:14px;"></span>ScreenName</label><input type="text" id="in-screenname" autocomplete="off"></div>
+      <div class="field-row" id="screenname-row"><label id="sn-label"><span class="ttl-icon" style="width:14px;height:14px;"></span>ScreenName</label><input type="text" id="in-screenname" autocomplete="off"></div>
       <div class="field-row"><label>Email</label><input type="email" id="in-email" autocomplete="email"></div>
       <div class="field-row"><label>Password</label><input type="password" id="in-password"></div>
       <div class="field-row" id="confirm-row" style="display:none;"><label>Confirm Password</label><input type="password" id="in-password2"></div>
@@ -709,6 +709,7 @@
       </div>
 
       <div class="forgot-row" id="forgot-row"><span class="forgot-link" id="forgot-link">Forgot Password?</span></div>
+      <div class="forgot-row" id="account-switch-row"><span class="forgot-link" id="account-switch">Already have an account? Sign On</span></div>
 
       <div class="signon-bottom">
         <span style="display:flex; gap:6px;">
@@ -2924,8 +2925,11 @@ try {
     document.getElementById('signon-error').textContent = '';
     var pwInput = document.getElementById('in-password');
     var emailInput = document.getElementById('in-email');
+    var switchRow=document.getElementById('account-switch-row');
+    document.getElementById('screenname-row').style.display='flex';
 
     if(state.account){
+      switchRow.style.display='none';
       signonMode = state.account.email ? 'login' : 'connect';
       document.getElementById('confirm-row').style.display = signonMode==='connect'?'flex':'none';
       document.getElementById('forgot-row').style.display = signonMode==='login'?'block':'none';
@@ -2953,6 +2957,8 @@ try {
       }
     } else {
       signonMode = 'create';
+      switchRow.style.display='block';
+      document.getElementById('account-switch').textContent='Already have an account? Sign On';
       document.getElementById('confirm-row').style.display = 'block';
       document.getElementById('forgot-row').style.display = 'none';
       document.getElementById('in-screenname').value = '';
@@ -2967,6 +2973,21 @@ try {
       document.getElementById('signon-go-label').textContent = 'Create Account';
     }
   }
+
+  document.getElementById('account-switch').addEventListener('click',function(){
+    var pwInput=document.getElementById('in-password'),creating=signonMode==='create';
+    signonMode=creating?'login':'create';
+    document.getElementById('screenname-row').style.display=creating?'none':'flex';
+    document.getElementById('confirm-row').style.display=creating?'none':'flex';
+    document.getElementById('forgot-row').style.display=creating?'block':'none';
+    document.getElementById('signon-go-label').textContent=creating?'Sign On':'Create Account';
+    document.getElementById('account-switch').textContent=creating?'Need an account? Create One':'Already have an account? Sign On';
+    document.getElementById('signon-error').textContent='';
+    document.getElementById('in-email').value='';document.getElementById('in-email').readOnly=false;
+    pwInput.value='';pwInput.type='password';pwInput.readOnly=false;pwInput.classList.remove('pw-saved');pwFieldIsSavedPlaceholder=false;
+    document.getElementById('in-password2').value='';
+    (creating?document.getElementById('in-email'):document.getElementById('in-screenname')).focus();
+  });
 
   document.getElementById('in-password').addEventListener('click', function(){
     if(pwFieldIsSavedPlaceholder){
@@ -3004,9 +3025,11 @@ try {
       }).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
     } else {
       var loginPassword=pwFieldIsSavedPlaceholder?state.account.password:pass;
+      var loginEmail=(state.account&&state.account.email)||email;
+      if(!/^\S+@\S+\.\S+$/.test(loginEmail)){errEl.textContent='Please enter your account email.';return;}
       if(!loginPassword){errEl.textContent='Please enter your password.';return;}
       submit.style.pointerEvents='none';errEl.style.color='#555';errEl.textContent='Signing in securely…';
-      supabaseAuthRequest('/token?grant_type=password',{email:state.account.email,password:loginPassword}).then(function(auth){setSupabaseSession(auth);state.account.password=loginPassword;state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
+      supabaseAuthRequest('/token?grant_type=password',{email:loginEmail,password:loginPassword}).then(function(auth){setSupabaseSession(auth);if(!state.account){var meta=auth.user&&auth.user.user_metadata||{};state.account={screenName:meta.screen_name||loginEmail.split('@')[0],email:loginEmail,password:loginPassword};}else{state.account.email=loginEmail;state.account.password=loginPassword;}state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
     }
   });
 
@@ -3025,14 +3048,11 @@ try {
   });
 
   document.getElementById('forgot-link').addEventListener('click', function(){
-    if(!state.account){
-      document.getElementById('signon-error').textContent = 'Create an account first.';
-      return;
-    }
-    if(state.account.email){
+    var recoveryEmail=(state.account&&state.account.email)||document.getElementById('in-email').value.trim().toLowerCase();
+    if(recoveryEmail){
       var err=document.getElementById('signon-error');err.style.color='#555';err.textContent='Sending recovery email…';
-      supabaseAuthRequest('/recover?redirect_to='+encodeURIComponent(DESKTOPDIARY_APP_URL),{email:state.account.email}).then(function(){err.style.color='#2a7d2a';err.textContent='Password recovery email sent.';}).catch(function(e){err.style.color='';err.textContent=e.message;});
-    }else openForgotPasswordWindow();
+      supabaseAuthRequest('/recover?redirect_to='+encodeURIComponent(DESKTOPDIARY_APP_URL),{email:recoveryEmail}).then(function(){err.style.color='#2a7d2a';err.textContent='Password recovery email sent.';}).catch(function(e){err.style.color='';err.textContent=e.message;});
+    }else document.getElementById('signon-error').textContent='Enter your account email first.';
   });
 
   document.getElementById('btn-help').addEventListener('click', function(){
