@@ -928,6 +928,14 @@ window.onerror = function(msg, src, line, col, err){
 try {
 (function(){
 
+  // DESKTOPDIARY SOURCE MAP
+  // 1. Online services and saved-state migrations
+  // 2. Desktop, notes, display themes, and Paint
+  // 3. Persistence, cloud sync, sound, and shared helpers
+  // 4. Sign on, Buddy List, windows, IMs, search, and drafts
+  // 5. Scrapbook, buddies, status, logs, DtD Post Mail, and AriNet
+  // 6. Help, profiles, Diary entries, taskbar clock, calendar, and boot
+
   var STORAGE_KEY = 'buddy-diary-data-v1';
   var activeStorageKey = STORAGE_KEY;
   function accountStorageKey(email){return STORAGE_KEY+'-account-'+encodeURIComponent(String(email||'').trim().toLowerCase());}
@@ -1135,7 +1143,7 @@ try {
     return window.matchMedia('(max-width: 700px)').matches;
   }
 
-  // ---------------- desktop background (Start menu options) ----------------
+  // ---------------- display settings: desktop background ----------------
   // ---------------- custom fonts (uploaded by the user) ----------------
   function registerCustomFont(fontEntry){
     try{
@@ -1400,7 +1408,7 @@ try {
     }
   }
 
-  // ---------------- window chrome theme (titlebar / taskbar / Start button) ----------------
+  // ---------------- display settings: windows, taskbar, and buttons ----------------
   var CLASSIC_THEME = {
     title1:'#3d95ff', title2:'#0058e6', title3:'#0850d0', title4:'#1a63d8',
     taskbar1:'#2f7ee0', taskbar2:'#1a4fc4', taskbar3:'#0d3aa8', taskbarBorder:'#5ba3f5',
@@ -1640,6 +1648,16 @@ try {
     if(calPopup && calPopup.classList.contains('open')) renderCalendarPopup();
   }
 
+  // Gives non-button controls the same click, Enter, and Space behavior.
+  function bindAccessibleAction(element, action){
+    element.addEventListener('click', action);
+    element.addEventListener('keydown', function(e){
+      if(e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      action(e);
+    });
+  }
+
   document.getElementById('tb-start').addEventListener('click', function(e){
     e.stopPropagation();
     document.getElementById('start-menu').classList.toggle('open');
@@ -1676,15 +1694,11 @@ try {
     document.getElementById('start-menu').classList.remove('open');
     openDtdPostWindow();
   });
-  document.getElementById('dtd-mailbox-icon').addEventListener('click', function(e){
+  bindAccessibleAction(document.getElementById('dtd-mailbox-icon'), function(e){
     e.stopPropagation();
     openDtdPostWindow();
   });
-  document.getElementById('dtd-mailbox-icon').addEventListener('keydown', function(e){
-    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openDtdPostWindow(); }
-  });
-  document.getElementById('trash-desktop-icon').addEventListener('click', function(e){e.stopPropagation();openTrashWindow();});
-  document.getElementById('trash-desktop-icon').addEventListener('keydown', function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();openTrashWindow();}});
+  bindAccessibleAction(document.getElementById('trash-desktop-icon'), function(e){e.stopPropagation();openTrashWindow();});
   document.getElementById('sm-showdesktop').addEventListener('click', function(e){
     e.stopPropagation();
     document.getElementById('start-menu').classList.remove('open');
@@ -1774,479 +1788,7 @@ try {
     }});
   }
 
-  function openEditBackgroundWindow(){
-    var COLORS = [
-      '#3a6ea5','#1a3a5c','#2d7dd2','#0d3aa8','#5c3d99','#8e24aa',
-      '#ff1493','#e57373','#f06292','#e91e63','#ff7043','#f4a261',
-      '#fdd835','#aed581','#43a047','#1b5e20','#00838f','#00acc1',
-      '#ffffff','#e0e0e0','#9e9e9e','#616161','#333333','#000000'
-    ];
-    var GRADIENTS = [
-      ['#ff9a56','#ff6363'], ['#2193b0','#6dd5ed'], ['#654ea3','#eaafc8'],
-      ['#134e5e','#71b280'], ['#0f2027','#2c5364'], ['#ff9a9e','#a18cd1']
-    ];
-    var bg = state.background || {};
-    var startMode = bg.gradient ? 'gradient' : 'solid';
-
-    var swatchesHtml = COLORS.map(function(c){
-      var sel = bg.color === c;
-      return '<div class="bg-swatch" data-color="'+c+'" title="'+c+'" style="width:28px;height:28px;border-radius:5px;background:'+c+';border:2px solid '+(sel?'#0054e3':'rgba(0,0,0,.2)')+';cursor:pointer;box-sizing:border-box;"></div>';
-    }).join('');
-
-    var gradFrom = bg.gradientFrom || GRADIENTS[0][0];
-    var gradTo = bg.gradientTo || GRADIENTS[0][1];
-    var gradientSwatchesHtml = GRADIENTS.map(function(pair){
-      return '<div class="bg-grad-swatch" data-from="'+pair[0]+'" data-to="'+pair[1]+'" title="Gradient" style="height:38px;border-radius:5px;background:linear-gradient(135deg,'+pair[0]+','+pair[1]+');border:2px solid rgba(0,0,0,.2);cursor:pointer;box-sizing:border-box;"></div>';
-    }).join('');
-
-    var body =
-      '<div class="win-body" style="padding:10px;">' +
-        '<div style="display:flex;gap:4px;margin-bottom:8px;">' +
-          '<button class="btn bg-mode-btn" data-mode="solid" style="flex:1;">Solid</button>' +
-          '<button class="btn bg-mode-btn" data-mode="gradient" style="flex:1;">Gradient</button>' +
-        '</div>' +
-        '<div id="bg-mode-solid" style="display:grid;grid-template-columns:repeat(5,28px);gap:6px;justify-content:center;">' +
-          swatchesHtml +
-          '<input type="color" id="eb-custom-color" value="'+(bg.color||'#3a6ea5')+'" title="Custom color" style="width:28px;height:28px;border-radius:5px;border:2px solid rgba(0,0,0,.2);cursor:pointer;padding:0;">' +
-        '</div>' +
-        '<div id="bg-mode-gradient" style="display:none;">' +
-          '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;">' + gradientSwatchesHtml + '</div>' +
-          '<div style="display:flex;height:38px;border-radius:5px;overflow:hidden;border:2px solid rgba(0,0,0,.2);">' +
-            '<input type="color" id="eb-grad-from" value="'+gradFrom+'" title="From" style="flex:1;border:none;padding:0;cursor:pointer;">' +
-            '<input type="color" id="eb-grad-to" value="'+gradTo+'" title="To" style="flex:1;border:none;padding:0;cursor:pointer;">' +
-          '</div>' +
-        '</div>' +
-        '<div style="display:flex;gap:6px;margin-top:10px;">' +
-          '<button class="btn" id="eb-upload-photo" style="flex:1;">Photo&hellip;</button>' +
-          '<button class="btn" id="eb-restore" style="flex:1;color:#c0392b;border-color:#c0392b;">Restore</button>' +
-        '</div>' +
-      '</div>';
-
-    createWindow({
-      title: 'Edit Background',
-      extraClass: 'bgedit-win',
-      bodyHtml: body,
-      type: 'editbackground',
-      onMount: function(el, id){
-        var solidSection = el.querySelector('#bg-mode-solid');
-        var gradientSection = el.querySelector('#bg-mode-gradient');
-        function setMode(mode){
-          el.querySelectorAll('.bg-mode-btn').forEach(function(b){
-            var active = b.getAttribute('data-mode') === mode;
-            b.style.background = active ? '#316ac5' : '';
-            b.style.color = active ? '#fff' : '';
-          });
-          solidSection.style.display = mode === 'solid' ? 'grid' : 'none';
-          gradientSection.style.display = mode === 'gradient' ? 'block' : 'none';
-        }
-        el.querySelectorAll('.bg-mode-btn').forEach(function(b){
-          b.addEventListener('click', function(){ setMode(b.getAttribute('data-mode')); });
-        });
-        setMode(startMode);
-
-        el.querySelectorAll('.bg-swatch').forEach(function(sw){
-          sw.addEventListener('click', function(){
-            state.background = { color: sw.getAttribute('data-color'), image: '', gradient: '' };
-            applyBackground(); saveState();
-            el.querySelectorAll('.bg-swatch').forEach(function(s){ s.style.borderColor = 'rgba(0,0,0,.2)'; });
-            sw.style.borderColor = '#0054e3';
-          });
-        });
-        el.querySelector('#eb-custom-color').addEventListener('input', function(e2){
-          state.background = { color: e2.target.value, image: '', gradient: '' };
-          applyBackground(); saveState();
-        });
-
-        function applyCustomGradient(){
-          var from = el.querySelector('#eb-grad-from').value;
-          var to = el.querySelector('#eb-grad-to').value;
-          state.background = { color: '', image: '', gradient: 'linear-gradient(135deg,' + from + ',' + to + ')', gradientFrom: from, gradientTo: to };
-          applyBackground(); saveState();
-        }
-        el.querySelectorAll('.bg-grad-swatch').forEach(function(sw){
-          sw.addEventListener('click', function(){
-            var from = sw.getAttribute('data-from'), to = sw.getAttribute('data-to');
-            el.querySelector('#eb-grad-from').value = from;
-            el.querySelector('#eb-grad-to').value = to;
-            applyCustomGradient();
-          });
-        });
-        el.querySelector('#eb-grad-from').addEventListener('input', applyCustomGradient);
-        el.querySelector('#eb-grad-to').addEventListener('input', applyCustomGradient);
-
-        el.querySelector('#eb-upload-photo').addEventListener('click', function(){
-          var input = document.createElement('input');
-          input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
-          document.body.appendChild(input);
-          input.addEventListener('change', function(){
-            var file = input.files && input.files[0];
-            if(file){
-              var reader = new FileReader();
-              reader.onload = function(e3){
-                var img = new Image();
-                img.onload = function(){
-                  var maxDim = 1600;
-                  var w = img.width, h = img.height;
-                  if(w > maxDim || h > maxDim){
-                    if(w >= h){ h = Math.round(h * maxDim / w); w = maxDim; }
-                    else { w = Math.round(w * maxDim / h); h = maxDim; }
-                  }
-                  var canvas = document.createElement('canvas');
-                  canvas.width = w; canvas.height = h;
-                  canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                  state.background = { color: '', image: canvas.toDataURL('image/jpeg', 0.8), gradient: '' };
-                  applyBackground();
-                  saveState();
-                };
-                img.src = e3.target.result;
-              };
-              reader.readAsDataURL(file);
-            }
-            input.remove();
-          });
-          input.click();
-        });
-        el.querySelector('#eb-restore').addEventListener('click', function(){
-          state.background = { color: '', image: '', gradient: '' };
-          applyBackground(); saveState();
-          closeWindow(id);
-        });
-      }
-    });
-  }
-
-  function openEditThemeWindow(){
-    var t = state.theme || {};
-    var colors = (t.customColors && t.customColors.length) ? t.customColors : ['#3d95ff'];
-    var use2Init = colors.length >= 2;
-    var use3Init = colors.length >= 3;
-
-    var body =
-      '<div class="win-body" style="padding:10px;">' +
-        '<select id="th-lineitem" style="width:100%;padding:5px;margin-bottom:8px;font-size:12px;border:1px solid #aaa;border-radius:4px;"></select>' +
-        '<div id="th-caldays-row" style="display:none;margin-bottom:8px;">' +
-          '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px;">' +
-            ['S','M','T','W','T','F','S'].map(function(w, i){
-              return '<button class="btn th-day-btn" data-day="' + i + '" style="padding:4px 0;font-size:10px;"><span class="th-day-letter">' + w + '</span><span class="th-day-swatch" style="display:block;width:100%;height:10px;border-radius:2px;margin-top:2px;"></span></button>';
-            }).join('') +
-          '</div>' +
-          '<button class="btn" id="th-caldays-fill-rainbow" style="width:100%;font-size:11px;">Fill All with Rainbow</button>' +
-        '</div>' +
-        '<div class="th-recent-label">Recently Used</div>' +
-        '<div id="th-recent-colors" class="th-recent-colors"></div>' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">' +
-          '<span id="th-dropper-icon" style="flex-shrink:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:#ece9d8;border:1px solid #aaa;border-radius:4px;"></span>' +
-          '<input type="color" id="th-swatch" style="flex:1;height:48px;border-radius:6px;border:2px solid rgba(0,0,0,.2);cursor:pointer;padding:0;">' +
-        '</div>' +
-        '<button class="btn" id="th-item-rainbow" style="width:100%;font-size:11px;margin-bottom:4px;">🌈 Set to Rainbow</button>' +
-        '<div id="th-item-rainbow-hint" style="font-size:10px;color:#777;margin-bottom:12px;">Pick a color above to switch this back to a solid color.</div>' +
-        '<div style="font-size:11px;color:#555;font-weight:bold;margin-bottom:4px;">Gradient</div>' +
-        '<div style="display:flex;gap:10px;margin-bottom:8px;font-size:11px;color:#555;">' +
-          '<label><input type="checkbox" id="th-use2" ' + (use2Init ? 'checked' : '') + '> 2 colors</label>' +
-          '<label><input type="checkbox" id="th-use3" ' + (use3Init ? 'checked' : '') + ' ' + (use2Init ? '' : 'disabled') + '> 3 colors</label>' +
-        '</div>' +
-        '<div style="display:flex;gap:4px;margin-bottom:12px;">' +
-          '<button class="btn th-dir-btn" data-dir="vertical" style="flex:1;">Vertical</button>' +
-          '<button class="btn th-dir-btn" data-dir="horizontal" style="flex:1;">Horizontal</button>' +
-        '</div>' +
-        '<button class="btn" id="th-save-preset" style="width:100%;margin-bottom:12px;">Save as Preset</button>' +
-        '<div style="font-size:11px;color:#555;font-weight:bold;border-top:1px solid #ccc;padding-top:8px;margin-bottom:4px;">Presets</div>' +
-        '<div id="th-presets-container" style="display:flex;gap:6px;flex-wrap:wrap;"></div>' +
-      '</div>';
-
-    createWindow({
-      title: 'Edit Theme',
-      extraClass: 'themeedit-win',
-      bodyHtml: body,
-      type: 'edittheme',
-      onMount: function(el, id){
-        el.querySelector('#th-dropper-icon').innerHTML = iconSVG('dropper');
-        var DEFAULT_CALDAYS = ['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a'];
-        var RAINBOW_FILL = ['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db','#5b2c9d','#9b59b6'];
-        var values = {
-          c1: colors[0] || '#3d95ff',
-          c2: colors[1] || '#0058e6',
-          c3: colors[2] || '#1a63d8',
-          start: t.startColor || '#7ed957',
-          clock: t.clockColor || '#1a4fc4',
-          caldaysColors: (t.calDaysColors && t.calDaysColors.length === 7) ? t.calDaysColors.slice() : DEFAULT_CALDAYS.slice(),
-          font: t.fontColor || '#ffffff',
-          rainbow: { accent: !!t.accentRainbow, start: !!t.startRainbow, clock: !!t.clockRainbow }
-        };
-        var selectedDay = 0;
-        var select = el.querySelector('#th-lineitem');
-        var swatch = el.querySelector('#th-swatch');
-        var caldaysRow = el.querySelector('#th-caldays-row');
-        var dayBtns = el.querySelectorAll('.th-day-btn');
-        var use2Box = el.querySelector('#th-use2');
-        var use3Box = el.querySelector('#th-use3');
-        var presetsContainer = el.querySelector('#th-presets-container');
-
-        function builtInSwatchHtml(key){
-          var sample = key === 'classic' ? CLASSIC_THEME.title2
-            : key === 'rainbow' ? 'linear-gradient(135deg,#ff4d4d,#ff9d3d,#3ddc84,#3b82f6,#a855f7)'
-            : THEME_PRESET_BASE[key];
-          var sel = (state.theme && state.theme.preset) === key;
-          return '<div class="theme-swatch" data-preset="' + key + '" title="' + THEME_PRESET_LABELS[key] + '" ' +
-            'style="width:34px;height:34px;border-radius:4px;background:' + sample + ';border:2px solid ' + (sel ? '#0054e3' : 'rgba(0,0,0,.2)') + ';cursor:pointer;box-sizing:border-box;"></div>';
-        }
-        function customSwatchHtml(p){
-          var cols = (p.theme.customColors && p.theme.customColors.length) ? p.theme.customColors : ['#3d95ff'];
-          var sample = cols.length > 1 ? 'linear-gradient(135deg,' + cols.join(',') + ')' : cols[0];
-          var sel = state.theme.preset === 'custom-' + p.id;
-          return '<div class="theme-swatch-wrap" style="position:relative;">' +
-            '<div class="custom-theme-swatch" data-custom-id="' + p.id + '" title="' + escapeHtml(p.name) + '" ' +
-              'style="width:34px;height:34px;border-radius:4px;background:' + sample + ';border:2px solid ' + (sel ? '#0054e3' : 'rgba(0,0,0,.2)') + ';cursor:pointer;box-sizing:border-box;"></div>' +
-            '<span class="custom-theme-del" data-custom-id="' + p.id + '" style="position:absolute;top:-6px;right:-6px;width:16px;height:16px;background:#c0392b;color:#fff;border-radius:50%;font-size:10px;line-height:16px;text-align:center;cursor:pointer;">&times;</span>' +
-          '</div>';
-        }
-
-        function refreshSelection(){
-          el.querySelectorAll('.theme-swatch').forEach(function(sw){
-            var isSel = sw.getAttribute('data-preset') === state.theme.preset;
-            sw.style.borderColor = isSel ? '#0054e3' : 'rgba(0,0,0,.2)';
-          });
-          el.querySelectorAll('.custom-theme-swatch').forEach(function(sw){
-            var isSel = state.theme.preset === 'custom-' + sw.getAttribute('data-custom-id');
-            sw.style.borderColor = isSel ? '#0054e3' : 'rgba(0,0,0,.2)';
-          });
-          el.querySelectorAll('.th-dir-btn').forEach(function(b){
-            var active = b.getAttribute('data-dir') === (state.theme.gradientDirection || 'vertical');
-            b.style.background = active ? '#316ac5' : '';
-            b.style.color = active ? '#fff' : '';
-          });
-        }
-
-        function renderPresets(){
-          var builtIn = Object.keys(THEME_PRESET_LABELS).map(builtInSwatchHtml).join('');
-          var custom = (state.customThemePresets || []).map(customSwatchHtml).join('');
-          presetsContainer.innerHTML = builtIn + custom;
-          wirePresetClicks();
-          refreshSelection();
-        }
-
-        function wirePresetClicks(){
-          el.querySelectorAll('.theme-swatch').forEach(function(sw){
-            sw.addEventListener('click', function(){
-              var preset = sw.getAttribute('data-preset');
-              state.theme = Object.assign({}, state.theme, { preset: preset });
-              applyTheme(); saveState(); refreshSelection();
-            });
-          });
-          el.querySelectorAll('.custom-theme-swatch').forEach(function(sw){
-            sw.addEventListener('click', function(){
-              var pid = sw.getAttribute('data-custom-id');
-              var saved = (state.customThemePresets || []).find(function(p){ return p.id === pid; });
-              if(!saved) return;
-              state.theme = Object.assign({ preset: 'custom-' + pid }, JSON.parse(JSON.stringify(saved.theme)));
-              applyTheme(); saveState(); refreshSelection();
-            });
-          });
-          el.querySelectorAll('.custom-theme-del').forEach(function(delBtn){
-            delBtn.addEventListener('click', function(e){
-              e.stopPropagation();
-              var pid = delBtn.getAttribute('data-custom-id');
-              appConfirm('Delete this saved theme?', function(ok){
-                if(!ok) return;
-                state.customThemePresets = (state.customThemePresets || []).filter(function(p){ return p.id !== pid; });
-                saveState();
-                renderPresets();
-              });
-            });
-          });
-        }
-
-        el.querySelectorAll('.th-dir-btn').forEach(function(b){
-          b.addEventListener('click', function(){
-            state.theme = Object.assign({}, state.theme, { gradientDirection: b.getAttribute('data-dir') });
-            applyTheme(); saveState(); refreshSelection();
-          });
-        });
-
-        el.querySelector('#th-save-preset').addEventListener('click', function(){
-          appTextPrompt('Name this theme:', '', function(name){
-            if(!name || !name.trim()) return;
-            var newColors = [values.c1];
-            if(use2Box.checked) newColors.push(values.c2);
-            if(use2Box.checked && use3Box.checked) newColors.push(values.c3);
-            state.customThemePresets = state.customThemePresets || [];
-            state.customThemePresets.push({
-              id: uid(),
-              name: name.trim(),
-              theme: {
-                customColors: newColors,
-                startColor: values.start,
-                clockColor: values.clock,
-                calDaysColors: values.caldaysColors,
-                fontColor: values.font,
-                accentRainbow: values.rainbow.accent,
-                startRainbow: values.rainbow.start,
-                clockRainbow: values.rainbow.clock,
-                gradientDirection: state.theme.gradientDirection || 'vertical'
-              }
-            });
-            saveState();
-            renderPresets();
-          });
-        });
-
-        function flagKeyFor(itemKey){
-          if(itemKey === 'c1' || itemKey === 'c2' || itemKey === 'c3') return 'accent';
-          if(itemKey === 'start') return 'start';
-          if(itemKey === 'clock') return 'clock';
-          return null; // caldays has its own fill button; font color can't be a gradient
-        }
-        var rainbowBtn = el.querySelector('#th-item-rainbow');
-        var rainbowHint = el.querySelector('#th-item-rainbow-hint');
-        var recentBox = el.querySelector('#th-recent-colors');
-        function applyColorToCurrent(hex){
-          swatch.value = hex;
-          if(select.value === 'caldays'){
-            values.caldaysColors[selectedDay] = hex;
-            refreshDayBtns();
-          } else {
-            values[select.value] = hex;
-            var fk = flagKeyFor(select.value);
-            if(fk && values.rainbow[fk]){ values.rainbow[fk] = false; updateItemRainbowUI(); }
-          }
-          commit();
-        }
-        function renderRecentColors(){
-          recentBox.innerHTML = state.themeRecentColors.map(function(c){
-            return '<button class="th-recent-swatch" data-color="' + c + '" title="' + c + '" style="background:' + c + '"></button>';
-          }).join('');
-          recentBox.querySelectorAll('.th-recent-swatch').forEach(function(sw){
-            sw.addEventListener('click', function(){ applyColorToCurrent(sw.getAttribute('data-color')); });
-          });
-        }
-        function rememberThemeColor(hex){
-          hex = hex.toLowerCase();
-          state.themeRecentColors = state.themeRecentColors.filter(function(c){ return c.toLowerCase() !== hex; });
-          state.themeRecentColors.unshift(hex);
-          if(state.themeRecentColors.length > 16) state.themeRecentColors.length = 16;
-          renderRecentColors();
-          saveState();
-        }
-        renderRecentColors();
-        function updateItemRainbowUI(){
-          var fk = flagKeyFor(select.value);
-          if(!fk){ rainbowBtn.style.display = 'none'; rainbowHint.style.display = 'none'; return; }
-          rainbowBtn.style.display = 'block';
-          rainbowHint.style.display = 'block';
-          rainbowBtn.textContent = values.rainbow[fk] ? '🌈 Rainbow (on)' : '🌈 Set to Rainbow';
-        }
-        rainbowBtn.addEventListener('click', function(){
-          var fk = flagKeyFor(select.value);
-          if(!fk) return;
-          values.rainbow[fk] = true;
-          updateItemRainbowUI();
-          commit();
-        });
-        function lineItems(){
-          var items = [{ key:'c1', label:'Color' }];
-          if(use2Box.checked) items.push({ key:'c2', label:'Color 2' });
-          if(use2Box.checked && use3Box.checked) items.push({ key:'c3', label:'Color 3' });
-          items.push({ key:'start', label:'Start Button' });
-          items.push({ key:'clock', label:'Clock' });
-          items.push({ key:'caldays', label:'Calendar Days' });
-          items.push({ key:'font', label:'Font Color' });
-          return items;
-        }
-        function refreshDayBtns(){
-          dayBtns.forEach(function(b){
-            var i = parseInt(b.getAttribute('data-day'), 10);
-            b.querySelector('.th-day-swatch').style.background = values.caldaysColors[i];
-            b.style.borderColor = (i === selectedDay) ? '#0054e3' : '';
-            b.style.borderWidth = (i === selectedDay) ? '2px' : '';
-          });
-        }
-        dayBtns.forEach(function(b){
-          b.addEventListener('click', function(){
-            selectedDay = parseInt(b.getAttribute('data-day'), 10);
-            refreshDayBtns();
-            if(select.value === 'caldays') swatch.value = values.caldaysColors[selectedDay];
-          });
-        });
-        el.querySelector('#th-caldays-fill-rainbow').addEventListener('click', function(){
-          values.caldaysColors = RAINBOW_FILL.slice();
-          refreshDayBtns();
-          if(select.value === 'caldays') swatch.value = values.caldaysColors[selectedDay];
-          commit();
-        });
-        function updateCaldaysRow(){
-          caldaysRow.style.display = select.value === 'caldays' ? 'block' : 'none';
-          if(select.value === 'caldays') refreshDayBtns();
-        }
-        function rebuildOptions(){
-          var items = lineItems();
-          var prevVal = select.value;
-          select.innerHTML = items.map(function(it){ return '<option value="' + it.key + '">' + it.label + '</option>'; }).join('');
-          select.value = items.some(function(it){ return it.key === prevVal; }) ? prevVal : items[0].key;
-          swatch.value = select.value === 'caldays' ? values.caldaysColors[selectedDay] : values[select.value];
-          updateCaldaysRow();
-          updateItemRainbowUI();
-        }
-        function commit(){
-          var newColors = [values.c1];
-          if(use2Box.checked) newColors.push(values.c2);
-          if(use2Box.checked && use3Box.checked) newColors.push(values.c3);
-          state.theme = {
-            preset: 'custom',
-            customColors: newColors,
-            startColor: values.start,
-            clockColor: values.clock,
-            calDaysColors: values.caldaysColors,
-            fontColor: values.font,
-            accentRainbow: values.rainbow.accent,
-            startRainbow: values.rainbow.start,
-            clockRainbow: values.rainbow.clock,
-            gradientDirection: state.theme.gradientDirection || 'vertical'
-          };
-          applyTheme(); saveState(); refreshSelection();
-        }
-
-        select.addEventListener('change', function(){
-          swatch.value = select.value === 'caldays' ? values.caldaysColors[selectedDay] : values[select.value];
-          updateCaldaysRow();
-          updateItemRainbowUI();
-        });
-        var recentColorDebounce = null;
-        swatch.addEventListener('input', function(){
-          if(select.value === 'caldays'){
-            values.caldaysColors[selectedDay] = swatch.value;
-            refreshDayBtns();
-          } else {
-            values[select.value] = swatch.value;
-            var fk = flagKeyFor(select.value);
-            if(fk && values.rainbow[fk]){ values.rainbow[fk] = false; updateItemRainbowUI(); }
-          }
-          commit();
-          // Some mobile/PWA webviews don't reliably fire 'change' when the
-          // native color sheet is dismissed (e.g. tapping the X). Fall back
-          // to remembering the color a moment after the user stops moving
-          // the picker, so the "Recently Used" row still gets updated.
-          var pickedHex = swatch.value;
-          clearTimeout(recentColorDebounce);
-          recentColorDebounce = setTimeout(function(){ rememberThemeColor(pickedHex); }, 500);
-        });
-        swatch.addEventListener('change', function(){
-          clearTimeout(recentColorDebounce);
-          rememberThemeColor(swatch.value);
-        });
-        use2Box.addEventListener('change', function(){
-          use3Box.disabled = !use2Box.checked;
-          if(!use2Box.checked) use3Box.checked = false;
-          rebuildOptions();
-          commit();
-        });
-        use3Box.addEventListener('change', function(){ rebuildOptions(); commit(); });
-
-        rebuildOptions();
-        renderPresets();
-      }
-    });
-  }
-
+  // Personalize combines the former separate background and theme editors.
   // ---------------- DesktopDiary Paint ----------------
 // DesktopDiary Paint v0.1 — self-contained application object.
   var DesktopDiaryPaint = {
@@ -2802,7 +2344,7 @@ try {
     document.getElementById('signon-wrap').style.display = 'none';
     document.getElementById('signon-icon').style.display = 'flex';
   });
-  document.getElementById('signon-icon').addEventListener('click', function(){
+  bindAccessibleAction(document.getElementById('signon-icon'), function(){
     document.getElementById('signon-icon').style.display = 'none';
     showSignon();
   });
@@ -3073,7 +2615,7 @@ try {
   }
 
   // ================= SIGN ON =================
-  var signonMode = 'login'; // 'login' | 'create' | 'connect'
+  var signonMode = 'login'; // 'login' | 'create' | 'connect' | 'createfresh'
   var pwFieldIsSavedPlaceholder = false;
 
   function openOnlinePasswordResetWindow(recoverySession){
@@ -3218,7 +2760,7 @@ try {
   document.getElementById('in-password').addEventListener('keydown', function(e){
     if(e.key !== 'Enter') return;
     e.preventDefault();
-    if(signonMode === 'create'||signonMode === 'connect') document.getElementById('in-password2').focus();
+    if(signonMode === 'create'||signonMode === 'connect'||signonMode === 'createfresh') document.getElementById('in-password2').focus();
     else document.getElementById('signon-submit').click();
   });
   document.getElementById('in-password2').addEventListener('keydown', function(e){
@@ -3233,7 +2775,7 @@ try {
     }else document.getElementById('signon-error').textContent='Enter your account email first.';
   });
 
-  document.getElementById('btn-help').addEventListener('click', function(){
+  bindAccessibleAction(document.getElementById('btn-help'), function(){
     openHelpWindow();
   });
 
@@ -5343,7 +4885,7 @@ try {
     dtdDesktopDeliveryTimer=setInterval(checkDesktopMailDelivery,60000);
   }
 
-  // ================= DtD MAIL (local-only text mail simulator) =================
+  // ================= DtD POST MAIL (offline fallback + online delivery) =================
   function openDtdPostWindow(){
     var existing=openWindows.find(function(w){return w.type==='dtdmail';});
     if(existing){focusWindow(existing.id);return;}
@@ -6039,7 +5581,7 @@ try {
     }});
   }
 
-  // ================= BLOG POST EDITOR =================
+  // ================= DIARY ENTRY EDITOR =================
   function openBlogPostEditor(existingPost, onSave, initialHtml){
     var composeId = 'blog-compose-' + uid();
     var isEdit = !!existingPost;
