@@ -408,7 +408,8 @@
   .arinet-home-grid { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
   .arinet-tile { width:96px; padding:12px 8px; border:1px solid #c8d6ee; border-radius:8px; background:#fff; cursor:pointer; box-shadow:1px 2px 4px rgba(0,0,0,.08); }
   .arinet-tile:active { background:#eef4ff; }
-  .arinet-tile-icon { font-size:26px; }
+  .arinet-tile-icon { height:34px; display:flex; align-items:center; justify-content:center; font-size:26px; }
+  .arinet-tile-icon img { width:34px; height:34px; object-fit:contain; border-radius:8px; image-rendering:pixelated; }
   .arinet-tile-name { font-size:11px; font-weight:bold; color:#333; margin-top:5px; }
   .arinet-status { padding:3px 8px; font-size:10px; color:#777; background:#ece9d8; border-top:1px solid #cfcabb; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .dtd-win { width:min(470px,95vw); height:min(520px,82vh); }
@@ -719,6 +720,7 @@
 
       <div class="forgot-row" id="forgot-row"><span class="forgot-link" id="forgot-link">Forgot Password?</span></div>
       <div class="forgot-row" id="account-switch-row"><span class="forgot-link" id="account-switch">Already have an account? Sign On</span></div>
+      <div id="account-mode-note" style="display:none;margin:-2px 0 8px;padding:6px;border:1px solid #b9c7d8;background:#f3f7fb;color:#46576a;font-size:9.5px;line-height:1.35;text-align:left">This creates a separate fresh diary. Existing diaries on this device will remain saved.</div>
 
       <div class="signon-bottom">
         <span style="display:flex; gap:6px;">
@@ -852,6 +854,8 @@ try {
 (function(){
 
   var STORAGE_KEY = 'buddy-diary-data-v1';
+  var activeStorageKey = STORAGE_KEY;
+  function accountStorageKey(email){return STORAGE_KEY+'-account-'+encodeURIComponent(String(email||'').trim().toLowerCase());}
   var SESSION_KEY = 'desktop-diary-signed-in';
   var DESKTOPDIARY_APP_URL = 'https://ari-harakiri.github.io/desktop-diary/desktop-diary.html';
   var SUPABASE_URL = 'https://iiclhmiuggvsjthdtxlb.supabase.co';
@@ -937,6 +941,8 @@ try {
     drafts: {},             // buddyId -> [ { id, html, ts }, ... ] saved draft log
     mail: { address: '', inbox: [], sent: [], scheduled: [] } // local-only DtD Post Mail account and messages
   };
+  var EMPTY_STATE_TEMPLATE=JSON.stringify(state);
+  function makeFreshState(){return JSON.parse(EMPTY_STATE_TEMPLATE);}
 
   function normalizeState(){
     if(!Array.isArray(state.groups) || !state.groups.length){
@@ -1440,7 +1446,9 @@ try {
       item1 = sampleStops(RAINBOW_SPECTRUM, 25); item2 = sampleStops(RAINBOW_SPECTRUM, 45); itemBorder = darkenHex(item2, 0.3);
       itemActive1 = sampleStops(RAINBOW_SPECTRUM, 45); itemActive2 = sampleStops(RAINBOW_SPECTRUM, 65);
       clock1 = sampleStops(RAINBOW_SPECTRUM, 60); clock2 = sampleStops(RAINBOW_SPECTRUM, 78); clockBorder = darkenHex(clock2, 0.3);
-      start1 = sampleStops(RAINBOW_SPECTRUM, 70); start2 = sampleStops(RAINBOW_SPECTRUM, 90); start3 = darkenHex(start2, 0.15); startBorder = darkenHex(start2, 0.35);
+      // Keep the rainbow desktop playful without making every control rainbow.
+      // Its regular buttons are pinkish-purple, while Start stays classic green.
+      start1 = '#7ed957'; start2 = '#3a9d23'; start3 = '#237014'; startBorder = '#1f5e10';
       calDays = '#888888'; // overridden per-cell inline in JS anyway (rainbow theme forces gray weekday cells)
       fontColor = '#ffffff';
     } else if(isCustom){
@@ -1512,18 +1520,20 @@ try {
     root.setProperty('--th-start-2', start2);
     root.setProperty('--th-start-3', start3);
     root.setProperty('--th-start-border', startBorder);
-    var buttonBase = isCustom ? (state.theme.buttonColor||state.theme.startColor||'#9cc6f0') : start2;
+    var buttonBase = isRainbow ? '#b007ab' : (isCustom ? (state.theme.buttonColor||state.theme.startColor||'#9cc6f0') : start2);
     var button1 = lightenHex(buttonBase,.35), button2 = buttonBase, button3 = darkenHex(buttonBase,.15), buttonBorder = darkenHex(buttonBase,.35);
     root.setProperty('--th-button-1', button1);
     root.setProperty('--th-button-2', button2);
     root.setProperty('--th-button-3', button3);
     root.setProperty('--th-button-border', buttonBorder);
     root.setProperty('--th-button-text', readableTextColor(button2));
-    var rainbowButtons = isRainbow || (isCustom && state.theme && state.theme.buttonRainbow);
-    var rainbowStart = isRainbow || (isCustom && state.theme && state.theme.startRainbow);
+    var rainbowButtons = isCustom && state.theme && state.theme.buttonRainbow;
+    var rainbowStart = isCustom && state.theme && state.theme.startRainbow;
     var classicButtons = preset === 'classic' && !isCustom;
-    root.setProperty('--th-button-bg', rainbowButtons ? 'linear-gradient(90deg,#ff4d4d,#ff9d3d,#ffe13d,#3ddc84,#3b82f6,#a855f7)' : (classicButtons ? 'linear-gradient(180deg,#fefefe,#e5f0fb 45%,#bcd8f6 55%,#9cc6f0)' : 'linear-gradient(180deg,'+button1+','+button2+' 55%,'+button3+')'));
-    root.setProperty('--th-button-active-bg', rainbowButtons ? 'linear-gradient(90deg,#d93b3b,#d9822f,#d9bd2f,#2fb86b,#306bd0,#8744c5)' : (classicButtons ? 'linear-gradient(180deg,#9cc6f0,#bcd8f6)' : 'linear-gradient(180deg,'+button3+','+button2+')'));
+    var presetButtonBg = 'linear-gradient(180deg,'+button1+','+button2+' 55%,'+button3+')';
+    var presetButtonActiveBg = 'linear-gradient(180deg,'+button3+','+button2+')';
+    root.setProperty('--th-button-bg', rainbowButtons ? 'linear-gradient(180deg,#ff4d4d,#ff9d3d,#ffe13d,#3ddc84,#3b82f6,#a855f7)' : (classicButtons ? 'linear-gradient(180deg,#fefefe,#e5f0fb 45%,#bcd8f6 55%,#9cc6f0)' : presetButtonBg));
+    root.setProperty('--th-button-active-bg', rainbowButtons ? 'linear-gradient(180deg,#d93b3b,#d9822f,#d9bd2f,#2fb86b,#306bd0,#8744c5)' : (classicButtons ? 'linear-gradient(180deg,#9cc6f0,#bcd8f6)' : presetButtonActiveBg));
     if(classicButtons){root.setProperty('--th-button-border','#003c9c');root.setProperty('--th-button-text','#12336b');}
     root.setProperty('--th-start-bg', rainbowStart ? 'linear-gradient(90deg,#ff4d4d,#ff9d3d,#ffe13d,#3ddc84,#3b82f6,#a855f7)' : 'linear-gradient(180deg,'+start1+','+start2+' 55%,'+start3+')');
     root.setProperty('--th-start-text', rainbowStart ? '#ffffff' : readableTextColor(start2));
@@ -1648,8 +1658,8 @@ try {
       el.querySelectorAll('.display-day-color').forEach(function(i){i.oninput=function(){cal[+i.dataset.day]=i.value;if(cal.every(function(c){return c===cal[0];}))el.querySelector('#display-all-days-color').value=cal[0];customTheme();};});
       el.querySelector('#display-calendar-rainbow').onclick=function(){var currentPreset=state.theme.preset||'classic';if(currentPreset!=='custom'&&currentPreset.indexOf('custom-')!==0&&currentPreset!=='rainbow'){el.querySelector('#display-accent-rainbow').checked=false;el.querySelector('#display-button-rainbow').checked=false;el.querySelector('#display-start-rainbow').checked=false;el.querySelector('#display-clock-rainbow').checked=false;}cal=['#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db','#5b2c9d','#9b59b6'];el.querySelectorAll('.display-day-color').forEach(function(i){i.value=cal[+i.dataset.day];});customTheme();};
       function presetSample(key){if(key==='classic')return CLASSIC_THEME.title2;if(key==='rainbow')return 'linear-gradient(135deg,#ff4d4d,#ff9d3d,#3ddc84,#3b82f6,#a855f7)';return THEME_PRESET_BASE[key];}
-      function syncThemeControls(theme,presetKey){var colors=(theme.customColors||[]).slice();if(presetKey==='classic')colors=['#0058e6'];else if(THEME_PRESET_BASE[presetKey])colors=[THEME_PRESET_BASE[presetKey]];if(!colors.length)colors=['#3d95ff'];vals.c1=colors[0];vals.c2=colors[1]||lightenHex(colors[0],.3);var palette=presetKey&&presetKey!=='rainbow'?resolveThemePalette({preset:presetKey}):null;vals.button=presetKey==='classic'?'#9cc6f0':(presetKey==='rainbow'?sampleStops(RAINBOW_SPECTRUM,50):(palette?palette.start2:(theme.buttonColor||'#9cc6f0')));vals.start=presetKey==='rainbow'?sampleStops(RAINBOW_SPECTRUM,90):(palette?palette.start2:(theme.startColor||'#7ed957'));el.querySelector('[data-key="c1"]').value=vals.c1;el.querySelector('[data-key="c2"]').value=vals.c2;el.querySelector('[data-key="button"]').value=vals.button;el.querySelector('[data-key="start"]').value=vals.start;el.querySelector('#display-theme-direction').value=theme.gradientDirection||'horizontal';el.querySelector('#display-accent-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.accentRainbow);el.querySelector('#display-button-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.buttonRainbow);el.querySelector('#display-start-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.startRainbow);el.querySelector('#display-clock-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.clockRainbow);setThemeColorMode(colors.length>1?'gradient':'solid',false);}
-      function renderPresets(){var box=el.querySelector('#display-theme-presets');var built=Object.keys(THEME_PRESET_LABELS).map(function(key){return '<div class="display-preset-wrap"><button class="display-theme-preset'+(state.theme.preset===key?' active':'')+'" data-built-preset="'+key+'" title="'+escapeHtml(THEME_PRESET_LABELS[key])+'" style="background:'+presetSample(key)+'"></button><span class="display-theme-name">'+escapeHtml(THEME_PRESET_LABELS[key])+'</span></div>';}).join('');var custom=(state.customThemePresets||[]).map(function(p){var cs=p.theme.customColors||['#3d95ff'];var sample=cs.length>1?'linear-gradient(135deg,'+cs.join(',')+')':cs[0];return '<div class="display-preset-wrap"><button class="display-theme-preset'+(state.theme.preset==='custom-'+p.id?' active':'')+'" data-custom-preset="'+p.id+'" title="'+escapeHtml(p.name)+'" style="background:'+sample+'"></button><button class="display-preset-delete" data-delete-preset="'+p.id+'" title="Delete">×</button><span class="display-theme-name">'+escapeHtml(p.name)+'</span></div>';}).join('');box.innerHTML=built+custom;box.querySelectorAll('[data-built-preset]').forEach(function(b){b.onclick=function(){var key=b.dataset.builtPreset;state.theme=Object.assign({},state.theme,{preset:key,gradientDirection:'vertical',accentRainbow:key==='rainbow',buttonRainbow:key==='rainbow',startRainbow:key==='rainbow',clockRainbow:key==='rainbow'});syncThemeControls(state.theme,key);applyTheme();renderPresets();};});box.querySelectorAll('[data-custom-preset]').forEach(function(b){b.onclick=function(){var p=(state.customThemePresets||[]).find(function(x){return x.id===b.dataset.customPreset;});if(p){state.theme=Object.assign({},JSON.parse(JSON.stringify(p.theme)),{preset:'custom-'+p.id});syncThemeControls(state.theme);applyTheme();renderPresets();}};});box.querySelectorAll('[data-delete-preset]').forEach(function(b){b.onclick=function(){state.customThemePresets=(state.customThemePresets||[]).filter(function(p){return p.id!==b.dataset.deletePreset;});renderPresets();};});}
+      function syncThemeControls(theme,presetKey){var colors=(theme.customColors||[]).slice();if(presetKey==='classic')colors=['#0058e6'];else if(THEME_PRESET_BASE[presetKey])colors=[THEME_PRESET_BASE[presetKey]];if(!colors.length)colors=['#3d95ff'];vals.c1=colors[0];vals.c2=colors[1]||lightenHex(colors[0],.3);var palette=presetKey&&presetKey!=='rainbow'?resolveThemePalette({preset:presetKey}):null;vals.button=presetKey==='classic'?'#9cc6f0':(presetKey==='rainbow'?'#b007ab':(palette?palette.start2:(theme.buttonColor||'#9cc6f0')));vals.start=presetKey==='rainbow'?'#3a9d23':(palette?palette.start2:(theme.startColor||'#7ed957'));el.querySelector('[data-key="c1"]').value=vals.c1;el.querySelector('[data-key="c2"]').value=vals.c2;el.querySelector('[data-key="button"]').value=vals.button;el.querySelector('[data-key="start"]').value=vals.start;el.querySelector('#display-theme-direction').value=theme.gradientDirection||'horizontal';el.querySelector('#display-accent-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.accentRainbow);el.querySelector('#display-button-rainbow').checked=!presetKey&&!!theme.buttonRainbow;el.querySelector('#display-start-rainbow').checked=!presetKey&&!!theme.startRainbow;el.querySelector('#display-clock-rainbow').checked=presetKey==='rainbow'||(!presetKey&&!!theme.clockRainbow);setThemeColorMode(colors.length>1?'gradient':'solid',false);}
+      function renderPresets(){var box=el.querySelector('#display-theme-presets');var built=Object.keys(THEME_PRESET_LABELS).map(function(key){return '<div class="display-preset-wrap"><button class="display-theme-preset'+(state.theme.preset===key?' active':'')+'" data-built-preset="'+key+'" title="'+escapeHtml(THEME_PRESET_LABELS[key])+'" style="background:'+presetSample(key)+'"></button><span class="display-theme-name">'+escapeHtml(THEME_PRESET_LABELS[key])+'</span></div>';}).join('');var custom=(state.customThemePresets||[]).map(function(p){var cs=p.theme.customColors||['#3d95ff'];var sample=cs.length>1?'linear-gradient(135deg,'+cs.join(',')+')':cs[0];return '<div class="display-preset-wrap"><button class="display-theme-preset'+(state.theme.preset==='custom-'+p.id?' active':'')+'" data-custom-preset="'+p.id+'" title="'+escapeHtml(p.name)+'" style="background:'+sample+'"></button><button class="display-preset-delete" data-delete-preset="'+p.id+'" title="Delete">×</button><span class="display-theme-name">'+escapeHtml(p.name)+'</span></div>';}).join('');box.innerHTML=built+custom;box.querySelectorAll('[data-built-preset]').forEach(function(b){b.onclick=function(){var key=b.dataset.builtPreset;state.theme=Object.assign({},state.theme,{preset:key,gradientDirection:'vertical',accentRainbow:key==='rainbow',buttonColor:key==='rainbow'?'#b007ab':state.theme.buttonColor,startColor:key==='rainbow'?'#3a9d23':state.theme.startColor,buttonRainbow:false,startRainbow:false,clockRainbow:key==='rainbow'});syncThemeControls(state.theme,key);applyTheme();renderPresets();};});box.querySelectorAll('[data-custom-preset]').forEach(function(b){b.onclick=function(){var p=(state.customThemePresets||[]).find(function(x){return x.id===b.dataset.customPreset;});if(p){state.theme=Object.assign({},JSON.parse(JSON.stringify(p.theme)),{preset:'custom-'+p.id});syncThemeControls(state.theme);applyTheme();renderPresets();}};});box.querySelectorAll('[data-delete-preset]').forEach(function(b){b.onclick=function(){state.customThemePresets=(state.customThemePresets||[]).filter(function(p){return p.id!==b.dataset.deletePreset;});renderPresets();};});}
       el.querySelector('#display-save-preset').onclick=function(){appTextPrompt('Name this display theme:','',function(name){if(!name||!name.trim())return;var savedTheme=JSON.parse(JSON.stringify(state.theme));delete savedTheme.preset;state.customThemePresets=state.customThemePresets||[];state.customThemePresets.push({id:uid(),name:name.trim(),theme:savedTheme});renderPresets();});};
       el.querySelector('#display-defaults').onclick=function(){state.background={color:'',image:'',gradient:''};state.theme={preset:'classic',customColors:['#3d95ff'],buttonColor:'#9cc6f0',startColor:'#7ed957',buttonRainbow:false,startRainbow:false,clockColor:'#1a4fc4',clockRainbow:false,calDaysColors:['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a'],fontColor:'#ffffff',gradientDirection:'vertical'};syncThemeControls(state.theme,'classic');applyBackground();applyTheme();refreshPreview();renderPresets();setBgMode('photo');el.querySelector('#display-photo-status').textContent='Built-in wallpaper';};
       el.querySelector('#display-cancel').onclick=function(){state.background=original.background;state.theme=original.theme;state.customThemePresets=original.presets;applyBackground();applyTheme();finished=true;closeWindow(id);};
@@ -2357,6 +2367,10 @@ try {
           if(res && res.value){
             try { state = JSON.parse(res.value); normalizeState(); } catch(e){}
           }
+          if(state.account&&state.account.email){
+            activeStorageKey=accountStorageKey(state.account.email);
+            return store.get(activeStorageKey,false).then(function(scoped){if(scoped&&scoped.value){try{state=JSON.parse(scoped.value);normalizeState();}catch(e){}}else{return store.set(activeStorageKey,JSON.stringify(state),false);}});
+          }
         }).catch(function(){ /* nothing saved yet */ });
       } catch(e){
         return Promise.resolve();
@@ -2379,7 +2393,7 @@ try {
     var payload = JSON.stringify(state);
     var attempt;
     try{
-      attempt = store.set(STORAGE_KEY, payload, false);
+      attempt = store.set(activeStorageKey, payload, false);
     } catch(e){
       attempt = Promise.reject(e);
     }
@@ -2387,7 +2401,7 @@ try {
       .catch(function(){
         // one quiet retry - transient hiccups shouldn't surface to the user
         try{
-          return store.set(STORAGE_KEY, payload, false).catch(function(){ /* give up quietly */ });
+          return store.set(activeStorageKey, payload, false).catch(function(){ /* give up quietly */ });
         } catch(e){ /* give up quietly */ }
       })
       .then(function(){
@@ -2395,6 +2409,11 @@ try {
         if(savePending){ savePending = false; return saveState(); }
         if(cloudUser) scheduleCloudPush();
       });
+  }
+  function activateAccountDiary(email,auth,password,forceFresh){
+    var normalizedEmail=String(email||'').trim().toLowerCase(),store=getLocalStore(),newKey=accountStorageKey(normalizedEmail);
+    function finish(next){state=next||makeFreshState();normalizeState();state.account=state.account||{};state.account.email=normalizedEmail;state.account.password=password;state.account.screenName=state.account.screenName||((auth.user&&auth.user.user_metadata&&auth.user.user_metadata.screen_name)||normalizedEmail.split('@')[0]);activeStorageKey=newKey;applyBackground();applyTheme();return saveState();}
+    return saveState().then(function(){if(forceFresh||!store)return finish(makeFreshState());return store.get(newKey,false).then(function(saved){if(saved&&saved.value){try{return finish(JSON.parse(saved.value));}catch(e){}}if(state.account&&state.account.email===normalizedEmail)return finish(state);return finish(makeFreshState());});});
   }
 
   // ---------------- cloud sync (Firebase: Google sign-in + Firestore) ----------------
@@ -2967,11 +2986,13 @@ try {
     var pwInput = document.getElementById('in-password');
     var emailInput = document.getElementById('in-email');
     var switchRow=document.getElementById('account-switch-row');
+    document.getElementById('account-mode-note').style.display='none';
     document.getElementById('screenname-row').style.display='block';
 
     if(state.account){
-      switchRow.style.display='none';
       signonMode = state.account.email ? 'login' : 'connect';
+      switchRow.style.display='block';
+      document.getElementById('account-switch').textContent=signonMode==='connect'?'Already have an online account? Sign On':'Create a New Account';
       document.getElementById('confirm-row').style.display = signonMode==='connect'?'block':'none';
       document.getElementById('forgot-row').style.display = signonMode==='login'?'block':'none';
       document.getElementById('in-screenname').value = state.account.screenName;
@@ -3016,18 +3037,22 @@ try {
   }
 
   document.getElementById('account-switch').addEventListener('click',function(){
-    var pwInput=document.getElementById('in-password'),creating=signonMode==='create';
-    signonMode=creating?'login':'create';
-    document.getElementById('screenname-row').style.display=creating?'none':'block';
-    document.getElementById('confirm-row').style.display=creating?'none':'block';
-    document.getElementById('forgot-row').style.display=creating?'block':'none';
-    document.getElementById('signon-go-label').textContent=creating?'Sign On':'Create Account';
-    document.getElementById('account-switch').textContent=creating?'Need an account? Create One':'Already have an account? Sign On';
+    var pwInput=document.getElementById('in-password'),startingFresh=signonMode==='login'&&state.account&&state.account.email,leavingFresh=signonMode==='createfresh',goingToLogin=signonMode!=='login';
+    if(startingFresh)signonMode='createfresh';else if(leavingFresh)signonMode='login';else signonMode=goingToLogin?'login':(state.account?'connect':'create');
+    var creating=signonMode==='create'||signonMode==='connect'||signonMode==='createfresh';
+    document.getElementById('screenname-row').style.display=creating?'block':'none';
+    document.getElementById('confirm-row').style.display=creating?'block':'none';
+    document.getElementById('forgot-row').style.display=creating?'none':'block';
+    document.getElementById('signon-go-label').textContent=signonMode==='login'?'Sign On':(signonMode==='connect'?'Connect Online Account':'Create Account');
+    document.getElementById('account-switch').textContent=signonMode==='createfresh'?'Back to Sign On':(signonMode==='login'?(state.account&&state.account.email?'Create a New Account':'Connect this local account instead'):'Already have an online account? Sign On');
+    document.getElementById('account-mode-note').style.display=signonMode==='createfresh'?'block':'none';
     document.getElementById('signon-error').textContent='';
     document.getElementById('in-email').value='';document.getElementById('in-email').readOnly=false;
+    if(signonMode==='createfresh'){document.getElementById('in-screenname').value='';document.getElementById('in-screenname').removeAttribute('readonly');}
+    else if(signonMode==='connect')document.getElementById('in-screenname').setAttribute('readonly','readonly');
     pwInput.value='';pwInput.type='password';pwInput.readOnly=false;pwInput.classList.remove('pw-saved');pwFieldIsSavedPlaceholder=false;
     document.getElementById('in-password2').value='';
-    (creating?document.getElementById('in-email'):document.getElementById('in-screenname')).focus();
+    (signonMode==='login'||signonMode==='connect'?document.getElementById('in-email'):document.getElementById('in-screenname')).focus();
   });
 
   document.getElementById('in-password').addEventListener('click', function(){
@@ -3052,25 +3077,27 @@ try {
     var autoLog = document.getElementById('in-autologin').checked;
     var submit=document.getElementById('signon-submit');
 
-    if(signonMode === 'create'||signonMode === 'connect'){
+    if(signonMode === 'create'||signonMode === 'connect'||signonMode === 'createfresh'){
       var pass2 = document.getElementById('in-password2').value;
       if(!name){ errEl.textContent = 'Please enter a screen name.'; return; }
       if(!/^\S+@\S+\.\S+$/.test(email)){errEl.textContent='Please enter a valid private email address.';return;}
+      if(signonMode==='createfresh'&&state.account&&state.account.email&&email===state.account.email.toLowerCase()){errEl.textContent='A fresh diary requires a different email address.';return;}
       if(pass.length<6){ errEl.textContent = 'Password must be at least 6 characters.'; return; }
       if(pass !== pass2){ errEl.textContent = 'Passwords do not match.'; return; }
       submit.style.pointerEvents='none';errEl.style.color='#555';errEl.textContent='Creating secure account…';
+      var connectingExisting=signonMode==='connect';
       supabaseAuthRequest('/signup?redirect_to='+encodeURIComponent(DESKTOPDIARY_APP_URL),{email:email,password:pass,data:{screen_name:name}}).then(function(auth){
-        state.account = state.account||{};state.account.screenName=name;state.account.password=pass;state.account.email=email;
-        state.savePassword=savePw;state.autoLogin=autoLog;if(auth.access_token)setSupabaseSession(auth);
-        return saveState().then(function(){if(auth.access_token){enterDesktop();}else{showSignon();errEl.style.color='#2a7d2a';errEl.textContent='Check your email to confirm the account, then sign on.';}});
-      }).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
+        if(auth.access_token)setSupabaseSession(auth);
+        if(connectingExisting){state.account=state.account||{};state.account.screenName=name;state.account.password=pass;state.account.email=email;activeStorageKey=accountStorageKey(email);return saveState();}
+        return activateAccountDiary(email,auth,pass,true);
+      }).then(function(){state.savePassword=savePw;state.autoLogin=autoLog;return saveState();}).then(function(){if(getSupabaseSession()){enterDesktop();}else{showSignon();errEl.style.color='#2a7d2a';errEl.textContent='Check your email to confirm the account, then sign on.';}}).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
     } else {
       var loginPassword=pwFieldIsSavedPlaceholder?state.account.password:pass;
       var loginEmail=(state.account&&state.account.email)||email;
       if(!/^\S+@\S+\.\S+$/.test(loginEmail)){errEl.textContent='Please enter your account email.';return;}
       if(!loginPassword){errEl.textContent='Please enter your password.';return;}
       submit.style.pointerEvents='none';errEl.style.color='#555';errEl.textContent='Signing in securely…';
-      supabaseAuthRequest('/token?grant_type=password',{email:loginEmail,password:loginPassword}).then(function(auth){setSupabaseSession(auth);if(!state.account){var meta=auth.user&&auth.user.user_metadata||{};state.account={screenName:meta.screen_name||loginEmail.split('@')[0],email:loginEmail,password:loginPassword};}else{state.account.email=loginEmail;state.account.password=loginPassword;}state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
+      supabaseAuthRequest('/token?grant_type=password',{email:loginEmail,password:loginPassword}).then(function(auth){setSupabaseSession(auth);return activateAccountDiary(loginEmail,auth,loginPassword,false);}).then(function(){state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
     }
   });
 
@@ -5319,7 +5346,7 @@ try {
   // ================= ARINET (fake in-app browser) =================
   // Extensible bookmark registry — add more entries here later.
   var ARINET_SITES = [
-    { name: 'Mass Track', url: 'https://ari-harakiri.github.io/Mass-Track/', icon: '⚖️' },
+    { name: 'Mass Track', url: 'https://ari-harakiri.github.io/Mass-Track/', icon: '<img src="data:image/png;base64,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" alt="Mass Track scales">' },
     { name: 'Shufflr', url: 'https://www.shufflr.org', icon: '🔀' },
     { name: 'The Useless Web', url: 'https://theuselessweb.com/', icon: '🌀' },
     { name: 'Chrome Music Lab', url: 'https://musiclab.chromeexperiments.com/', icon: '🎹' },
