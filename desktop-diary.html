@@ -5343,7 +5343,7 @@ try {
   function deliverLocalDueMail(){
     var now=new Date(),today=desktopMailDateString(now),delivery=pigeonDeliveryState();
     var due=state.mail.scheduled.filter(function(message){var deliveryDate=desktopMailDateString(new Date(message.deliverAt));return message.deliverAt<=now.getTime()&&(deliveryDate<today||now.getHours()>=8);});
-    due.forEach(function(message){state.mail.inbox.push({id:uid(),from:message.from,to:message.to,subject:message.subject,body:message.body,ts:message.deliverAt,read:false,futureSelf:true});});
+    due.forEach(function(message){var delivered={id:uid(),from:message.from,to:message.to,subject:message.subject,body:message.body,ts:message.deliverAt,read:false,letterType:mailLetterType(message)||'future-self'};if(delivered.letterType==='imaginary')delivered.displayRecipient=message.displayRecipient;state.mail.inbox.push(delivered);});
     if(due.length)state.mail.scheduled=state.mail.scheduled.filter(function(message){return message.deliverAt>now.getTime();});
     if(now.getHours()>=8)delivery.lastDeliveryDate=today;return due;
   }
@@ -5402,13 +5402,46 @@ try {
   }
 
   // ================= DtD POST MAIL (offline fallback + online delivery) =================
+  // ---- Private letters (Note to Self: Future Me / Letter Unsent) shared helpers ----
+  // These never touch real recipient lookup, friend search, or the send_dtd_message
+  // recipient parameter with anything other than the current user's own address/handle.
+  var DTD_IMAGINARY_MARKER='⁣dtd-imaginary:';
+  var DTD_DELIVERY_OPTIONS=[
+    {id:'1d',label:'1 day',days:1},{id:'3d',label:'3 days',days:3},
+    {id:'1w',label:'1 week',days:7},{id:'2w',label:'2 weeks',days:14},
+    {id:'1m',label:'1 month',months:1},{id:'3m',label:'3 months',months:3},
+    {id:'6m',label:'6 months',months:6},{id:'9m',label:'9 months',months:9},
+    {id:'1y',label:'1 year',years:1},{id:'custom',label:'Custom date…'}
+  ];
+  function dtdLocalDateString(d){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
+  function dtdOffsetDate(base,opt){var d=new Date(base.getTime());if(opt.days)d.setDate(d.getDate()+opt.days);if(opt.months)d.setMonth(d.getMonth()+opt.months);if(opt.years)d.setFullYear(d.getFullYear()+opt.years);return d;}
+  function dtdDeliveryMinDate(){var t=new Date();t.setDate(t.getDate()+1);return dtdLocalDateString(t);}
+  function dtdDeliveryMenuHtml(){
+    var min=dtdDeliveryMinDate();
+    return '<label><span>Send in</span><select id="dtd-delivery-option">'+DTD_DELIVERY_OPTIONS.map(function(o){return '<option value="'+o.id+'">'+escapeHtml(o.label)+'</option>';}).join('')+'</select></label><label class="dtd-delivery-custom-row" id="dtd-delivery-custom-row" style="display:none"><span>Custom date</span><input id="dtd-deliver-at" type="date" min="'+min+'" value="'+min+'"></label>';
+  }
+  function dtdWireDeliveryMenu(main){
+    var select=main.querySelector('#dtd-delivery-option'),customRow=main.querySelector('#dtd-delivery-custom-row'),customInput=main.querySelector('#dtd-deliver-at'),min=dtdDeliveryMinDate();
+    function sync(){customRow.style.display=select.value==='custom'?'grid':'none';}
+    select.onchange=sync;sync();
+    return function resolveDeliveryDate(){
+      if(select.value==='custom')return(customInput.value&&customInput.value>=min)?customInput.value:'';
+      var opt=DTD_DELIVERY_OPTIONS.find(function(o){return o.id===select.value;});
+      return opt?dtdLocalDateString(dtdOffsetDate(new Date(),opt)):'';
+    };
+  }
+  function mailLetterType(msg){if(!msg)return null;if(msg.letterType)return msg.letterType;if(msg.futureSelf)return'future-self';return null;}
+  function mailDisplayParty(msg){var t=mailLetterType(msg);if(t==='imaginary')return msg.displayRecipient||'Unsent Letter';if(t==='future-self')return'Future Me';return null;}
+  function encodeImaginarySubject(displayRecipient,subject){return DTD_IMAGINARY_MARKER+encodeURIComponent(displayRecipient||'')+'⁣'+(subject||'');}
+  function decodeImaginarySubject(raw){raw=raw||'';if(raw.indexOf(DTD_IMAGINARY_MARKER)!==0)return null;var rest=raw.slice(DTD_IMAGINARY_MARKER.length),sep=rest.indexOf('⁣');if(sep===-1)return null;return{displayRecipient:decodeURIComponent(rest.slice(0,sep)),subject:rest.slice(sep+1)};}
+  function decodeOnlinePrivateLetter(m,profileHandle){if(!m||m.from_handle!==profileHandle||m.to_handle!==profileHandle)return null;var parsed=decodeImaginarySubject(m.message_subject);if(parsed)return{type:'imaginary',displayRecipient:parsed.displayRecipient,subject:parsed.subject};return{type:'future-self',displayRecipient:'Future Me',subject:m.message_subject};}
   function openDtdPostWindow(){
     var existing=openWindows.find(function(w){return w.type==='dtdmail';});
     if(existing){focusWindow(existing.id);return;}
     if(getSupabaseSession()){openOnlineDtdPostWindow();return;}
     function suggestedHandle(){return ((state.account&&state.account.screenName)||'user').toLowerCase().replace(/[^a-z0-9._-]+/g,'.').replace(/^[._-]+|[._-]+$/g,'').slice(0,20)||'user';}
     function mailConstructionBar(){return '<div class="dtd-construction"><span>UNDER CONSTRUCTION · LOCAL DELIVERY ONLY</span></div>';}
-    function mailboxBody(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Note to Self…</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="contacts">Friends</button></div><div class="dtd-main"><div class="dtd-heading">Inbox</div><div class="dtd-list"></div></div></div>';}
+    function mailboxBody(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Note to Self</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="contacts">Friends</button></div><div class="dtd-main"><div class="dtd-heading">Inbox</div><div class="dtd-list"></div></div></div>';}
     var setup='<div style="padding:18px;text-align:center"><div class="dtd-heading">Choose your Post Mail address</div><p style="font-size:11px;line-height:1.45;color:#555">Your address is separate from your screen name, so your screen name can change later without affecting your mail.</p><div style="display:flex;justify-content:center;align-items:center;gap:4px;margin:16px 0"><input id="dtd-handle" type="text" maxlength="20" value="'+escapeHtml(suggestedHandle())+'" style="width:130px;padding:6px;border:1px solid #888;text-align:right"><b style="font-size:11px">@desktopdiary.local</b></div><div id="dtd-address-status" style="min-height:28px;font-size:10px;color:#555">3–20 characters: letters, numbers, dots, dashes, or underscores.</div><button class="btn" id="dtd-reserve" style="padding:7px 16px">Reserve Address</button><div style="font-size:9px;color:#777;border-top:1px solid #ccc;margin-top:17px;padding-top:9px">This reserves the address in this copy of DesktopDiary. Worldwide availability will be added when DtD accounts connect online.</div></div>';
     var body='<div class="win-body">'+mailConstructionBar()+(state.mail.address?mailboxBody():setup)+'</div>';
     createWindow({title:'DtD Post Mail',extraClass:'dtd-win',bodyHtml:body,type:'dtdmail',onMount:function(el){
@@ -5426,13 +5459,16 @@ try {
         if(folder==='contacts'){renderDtdContacts(main,function(handle){showCompose(handle+'@desktopdiary.local','');});return;}
         var list=(state.mail&&state.mail[folder]||[]).slice().sort(function(a,b){return b.ts-a.ts;});
         var heading=folder==='inbox'?'Inbox':(folder==='sent'?'Sent':'Scheduled');
-        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+list.filter(function(m){return !m.read;}).length+' unread)':'')+'</div><div class="dtd-list">'+(list.length?list.map(function(m){return '<div class="dtd-row'+(!m.read&&folder==='inbox'?' unread':'')+'" data-mail-id="'+escapeHtml(m.id)+'"><span>'+(folder==='inbox'?escapeHtml(m.from):escapeHtml(m.to))+'</span><span class="dtd-subject">'+escapeHtml(m.subject||'(no subject)')+'</span><time>'+escapeHtml(fmtDateShort(folder==='scheduled'?m.deliverAt:m.ts))+'</time></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
+        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+list.filter(function(m){return !m.read;}).length+' unread)':'')+'</div><div class="dtd-list">'+(list.length?list.map(function(m){return '<div class="dtd-row'+(!m.read&&folder==='inbox'?' unread':'')+'" data-mail-id="'+escapeHtml(m.id)+'"><span>'+escapeHtml(mailDisplayParty(m)||(folder==='inbox'?m.from:m.to))+'</span><span class="dtd-subject">'+escapeHtml(m.subject||'(no subject)')+'</span><time>'+escapeHtml(fmtDateShort(folder==='scheduled'?m.deliverAt:m.ts))+'</time></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
         main.querySelectorAll('[data-mail-id]').forEach(function(row){row.onclick=function(){openMessage(row.dataset.mailId);};});
       }
       function openMessage(id){
         var msg=(state.mail[folder]||[]).find(function(m){return m.id===id;});if(!msg)return;
         if(folder==='inbox'&&!msg.read){msg.read=true;saveState();refreshMailPigeonFromCache();}
-        main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(msg.subject||'(no subject)')+'</b><br>From: '+escapeHtml(msg.from)+'<br>To: '+escapeHtml(msg.to)+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(folder==='scheduled'?msg.deliverAt:msg.ts))+'</div><div class="dtd-message">'+escapeHtml(msg.body||'')+'</div>'+(folder==='scheduled'?'':'<div class="dtd-inline-reply" style="display:none"><textarea class="dtd-inline-reply-body" placeholder="Write a fresh letter back…"></textarea><div class="dtd-inline-reply-actions"><span class="dtd-inline-reply-note">The previous letter will not be included.</span><span><button class="btn dtd-reply-cancel">Cancel</button> <button class="btn dtd-reply-send">Send Reply</button></span></div><div class="signon-error dtd-reply-error"></div></div>')+'<div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button>'+(folder==='scheduled'?'':'<span><button class="btn dtd-save-contact">Save Friend</button> <button class="btn dtd-reply">Reply</button></span>')+'</div>';
+        var privateType=mailLetterType(msg),hideActions=folder==='scheduled'||!!privateType;
+        var metaFrom=privateType?'You':msg.from,metaTo=privateType?mailDisplayParty(msg):msg.to;
+        var disclaimer=privateType==='imaginary'?'<div style="padding:0 10px 8px;font-size:9px;font-weight:bold;color:#a3261e">This letter will never be sent to this person.</div>':'';
+        main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(msg.subject||'(no subject)')+'</b><br>From: '+escapeHtml(metaFrom)+'<br>To: '+escapeHtml(metaTo)+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(folder==='scheduled'?msg.deliverAt:msg.ts))+'</div>'+disclaimer+'<div class="dtd-message">'+escapeHtml(msg.body||'')+'</div>'+(hideActions?'':'<div class="dtd-inline-reply" style="display:none"><textarea class="dtd-inline-reply-body" placeholder="Write a fresh letter back…"></textarea><div class="dtd-inline-reply-actions"><span class="dtd-inline-reply-note">The previous letter will not be included.</span><span><button class="btn dtd-reply-cancel">Cancel</button> <button class="btn dtd-reply-send">Send Reply</button></span></div><div class="signon-error dtd-reply-error"></div></div>')+'<div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button>'+(hideActions?'':'<span><button class="btn dtd-save-contact">Save Friend</button> <button class="btn dtd-reply">Reply</button></span>')+'</div>';
         main.querySelector('.dtd-back').onclick=renderList;
         if(main.querySelector('.dtd-save-contact'))main.querySelector('.dtd-save-contact').onclick=function(){var contact=saveDtdContact(folder==='inbox'?msg.from:msg.to,'');openInfoWindow(contact?'Saved to Friends.':'That DtD address is not valid.');};
         if(main.querySelector('.dtd-reply'))main.querySelector('.dtd-reply').onclick=function(){var box=main.querySelector('.dtd-inline-reply');box.style.display='grid';main.querySelector('.dtd-reply').style.display='none';box.querySelector('textarea').focus();};
@@ -5451,15 +5487,40 @@ try {
         };
         setTimeout(function(){(to?bodyEl:toEl).focus();},20);
       }
+      function schedulePrivateLetter(letterType,displayRecipient,resolveDeliveryDate){
+        var dateValue=resolveDeliveryDate(),when=dateValue?new Date(dateValue+'T08:00:00').getTime():0,text=main.querySelector('#dtd-body').value;
+        if(!when){main.querySelector('.dtd-error').textContent='Choose a delivery time.';return;}
+        if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}
+        var record={id:uid(),from:localAddress(),to:localAddress(),subject:main.querySelector('#dtd-subject').value.trim(),body:text,ts:Date.now(),deliverAt:when,read:true,letterType:letterType};
+        if(letterType==='imaginary')record.displayRecipient=displayRecipient;
+        state.mail.scheduled.push(record);saveState();playOutgoingPigeon();openInfoWindow('Your letter is sealed. It will return at 8:00 AM on its delivery date.');setFolder('inbox');
+      }
       function showFutureCompose(){
-        var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);var localMin=new Date(tomorrow.getTime()-tomorrow.getTimezoneOffset()*60000).toISOString().slice(0,10);
-        main.innerHTML='<div class="dtd-heading">Note to Self</div><div class="dtd-compose"><label><span>To</span><input type="text" value="'+escapeHtml(localAddress())+'" readonly></label><label><span>Delivery date</span><input id="dtd-deliver-at" type="date" min="'+localMin+'" value="'+localMin+'"></label><label><span>Subject</span><input id="dtd-subject" type="text" placeholder="A note for later"></label><textarea id="dtd-body" placeholder="What would you like to receive later?"></textarea><div style="font-size:9px;color:#666">It will arrive the first time DesktopDiary is open on or after this date.</div><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-schedule">Schedule</button></div><div class="signon-error dtd-error"></div></div>';
-        main.querySelector('.dtd-compose-cancel').onclick=renderList;
-        main.querySelector('.dtd-schedule').onclick=function(){var dateValue=main.querySelector('#dtd-deliver-at').value,when=dateValue?new Date(dateValue+'T08:00:00').getTime():0,text=main.querySelector('#dtd-body').value;if(!when||dateValue<localMin){main.querySelector('.dtd-error').textContent='Choose a future date.';return;}if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}state.mail.scheduled.push({id:uid(),from:localAddress(),to:localAddress(),subject:main.querySelector('#dtd-subject').value.trim(),body:text,ts:Date.now(),deliverAt:when,read:true,futureSelf:true});saveState();playOutgoingPigeon();openInfoWindow('Your letter is sealed. It will return at 8:00 AM on its delivery date.');setFolder('inbox');};
+        main.innerHTML='<div class="dtd-heading">Note to Future Me</div><div class="dtd-compose"><label><span>To</span><input type="text" value="Future Me" readonly></label>'+dtdDeliveryMenuHtml()+'<label><span>Subject</span><input id="dtd-subject" type="text" placeholder="A note for later"></label><textarea id="dtd-body" placeholder="What would you like to receive later?"></textarea><div style="font-size:9px;color:#666">It will arrive the first time DesktopDiary is open on or after this date.</div><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-schedule">Schedule</button></div><div class="signon-error dtd-error"></div></div>';
+        var resolveDeliveryDate=dtdWireDeliveryMenu(main);
+        main.querySelector('.dtd-compose-cancel').onclick=showPrivateLetterChoice;
+        main.querySelector('.dtd-schedule').onclick=function(){schedulePrivateLetter('future-self',null,resolveDeliveryDate);};
         setTimeout(function(){main.querySelector('#dtd-subject').focus();},20);
       }
+      function showImaginaryCompose(){
+        main.innerHTML='<div class="dtd-heading">Letter Unsent</div><div class="dtd-compose"><label><span>To</span><input id="dtd-imaginary-to" type="text" placeholder="e.g. My Boss, Mom, The Universe"></label>'+dtdDeliveryMenuHtml()+'<label><span>Subject</span><input id="dtd-subject" type="text" placeholder="A letter you need to write"></label><textarea id="dtd-body" placeholder="Say what you need to say…"></textarea><div style="font-size:9px;font-weight:bold;color:#a3261e">This letter will never be sent to this person.</div><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-schedule">Schedule</button></div><div class="signon-error dtd-error"></div></div>';
+        var resolveDeliveryDate=dtdWireDeliveryMenu(main);
+        main.querySelector('.dtd-compose-cancel').onclick=showPrivateLetterChoice;
+        main.querySelector('.dtd-schedule').onclick=function(){
+          var to=main.querySelector('#dtd-imaginary-to').value.trim();
+          if(!to){main.querySelector('.dtd-error').textContent='Enter who this letter is to.';return;}
+          schedulePrivateLetter('imaginary',to,resolveDeliveryDate);
+        };
+        setTimeout(function(){main.querySelector('#dtd-imaginary-to').focus();},20);
+      }
+      function showPrivateLetterChoice(){
+        main.innerHTML='<div class="dtd-heading">Note to Self</div><div class="dtd-compose" style="text-align:center"><p style="font-size:11px;color:#555;line-height:1.5;text-align:left;margin:0">Private letters stay with you. Choose the kind of letter to write.</p><button class="btn" id="dtd-private-futureself" style="padding:10px">Future Me</button><button class="btn" id="dtd-private-imaginary" style="padding:10px">Letter Unsent</button><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button></div></div>';
+        main.querySelector('.dtd-compose-cancel').onclick=renderList;
+        main.querySelector('#dtd-private-futureself').onclick=showFutureCompose;
+        main.querySelector('#dtd-private-imaginary').onclick=showImaginaryCompose;
+      }
       el.querySelector('#dtd-compose').onclick=function(){showCompose('','');};
-      el.querySelector('#dtd-future').onclick=showFutureCompose;
+      el.querySelector('#dtd-future').onclick=showPrivateLetterChoice;
       el.querySelectorAll('.dtd-folder').forEach(function(b){b.onclick=function(){setFolder(b.dataset.folder);};});
       renderList();
       var deliveryTimer=setInterval(function(){if(deliverDue()&&folder==='inbox')renderList();},30000);
@@ -5481,7 +5542,7 @@ try {
 
   function openOnlineDtdPostWindow(){
     function bar(){return '<div class="dtd-construction"><span>ONLINE TEST PHASE · UNDER CONSTRUCTION</span></div>';}
-    function shell(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Note to Self…</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="contacts">Friends</button><div class="dtd-delivery-note"><b>Daily delivery · 8:00 AM</b></div></div><div class="dtd-main"><div class="dtd-heading">Connecting…</div></div></div>';}
+    function shell(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Note to Self</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="contacts">Friends</button><div class="dtd-delivery-note"><b>Daily delivery · 8:00 AM</b></div></div><div class="dtd-main"><div class="dtd-heading">Connecting…</div></div></div>';}
     createWindow({title:'DtD Post Mail',extraClass:'dtd-win',bodyHtml:'<div class="win-body">'+bar()+'<div style="padding:28px;text-align:center">Connecting to DtD Post Mail…</div></div>',type:'dtdmail',onMount:function(el){
       var profile=null,folder='inbox',main=null,currentRows=[];
       function address(handle){return handle+'@desktopdiary.local';}
@@ -5500,7 +5561,7 @@ try {
       function mountMailbox(){
         el.querySelector('.win-body').innerHTML=bar()+shell();main=el.querySelector('.dtd-main');state.mail.onlineAddress=address(profile.handle);saveState();syncAllDtdPublicContent().catch(function(){});
         el.querySelector('#dtd-compose').onclick=function(){showCompose('','');};
-        el.querySelector('#dtd-future').onclick=showFuture;
+        el.querySelector('#dtd-future').onclick=showPrivateLetterChoice;
         el.querySelectorAll('.dtd-folder').forEach(function(b){b.onclick=function(){setFolder(b.dataset.folder);};});
         loadFolder();
         var timer=setInterval(function(){if(folder==='inbox'&&new Date().getHours()>=8&&state.mail.lastOnlineDeliveryDate!==todayString())loadFolder(true);},60000),rec=openWindows.find(function(w){return w.el===el;});if(rec)rec.dtdDeliveryTimer=timer;
@@ -5519,12 +5580,19 @@ try {
       function renderRows(){
         refreshMailPigeonFromCache();
         var heading=folder==='inbox'?'Inbox':'Sent',unread=folder==='inbox'?currentRows.filter(function(m){return !m.read_at;}).length:0;
-        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+unread+' unread)':'')+' <span style="float:right;font-weight:normal;font-size:9px">'+escapeHtml(address(profile.handle))+'</span></div><div class="dtd-list">'+(currentRows.length?currentRows.map(function(m){var who=folder==='inbox'?m.from_handle:m.to_handle,isDated=folder==='sent'&&m.deliver_on>String(m.created_at).slice(0,10),date=isDated?m.deliver_on:m.created_at;return '<div class="dtd-row'+(folder==='inbox'&&!m.read_at?' unread':'')+'" data-mail-id="'+escapeHtml(m.message_id)+'"><span>'+escapeHtml(address(who))+'</span><span class="dtd-subject">'+escapeHtml(m.message_subject||'(no subject)')+'</span><time>'+(isDated?'Delivers ':'')+escapeHtml(fmtDateShort(new Date(date).getTime()))+'</time></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
+        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+unread+' unread)':'')+' <span style="float:right;font-weight:normal;font-size:9px">'+escapeHtml(address(profile.handle))+'</span></div><div class="dtd-list">'+(currentRows.length?currentRows.map(function(m){var who=folder==='inbox'?m.from_handle:m.to_handle,isDated=folder==='sent'&&m.deliver_on>String(m.created_at).slice(0,10),date=isDated?m.deliver_on:m.created_at,priv=decodeOnlinePrivateLetter(m,profile.handle),whoLabel=priv?priv.displayRecipient:address(who),subjectLabel=priv?priv.subject:m.message_subject;return '<div class="dtd-row'+(folder==='inbox'&&!m.read_at?' unread':'')+'" data-mail-id="'+escapeHtml(m.message_id)+'"><span>'+escapeHtml(whoLabel)+'</span><span class="dtd-subject">'+escapeHtml(subjectLabel||'(no subject)')+'</span><time>'+(isDated?'Delivers ':'')+escapeHtml(fmtDateShort(new Date(date).getTime()))+'</time></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
         main.querySelectorAll('[data-mail-id]').forEach(function(row){row.onclick=function(){openMessage(row.dataset.mailId);};});
       }
       function openMessage(id){
         var m=currentRows.find(function(x){return x.message_id===id;});if(!m)return;
         if(folder==='inbox'&&!m.read_at){supabaseRpc('mark_dtd_message_read',{message_id:m.message_id}).catch(function(){});m.read_at=new Date().toISOString();saveState();refreshMailPigeonFromCache();}
+        var priv=decodeOnlinePrivateLetter(m,profile.handle);
+        if(priv){
+          var disclaimer=priv.type==='imaginary'?'<div style="padding:0 10px 8px;font-size:9px;font-weight:bold;color:#a3261e">This letter will never be sent to this person.</div>':'';
+          main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(priv.subject||'(no subject)')+'</b><br>From: You<br>To: '+escapeHtml(priv.displayRecipient)+'<br>'+escapeHtml(scrapbookDate(new Date(m.created_at).getTime()))+'</div>'+disclaimer+'<div class="dtd-message">'+escapeHtml(m.message_body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc"><button class="btn dtd-back">Back</button></div>';
+          main.querySelector('.dtd-back').onclick=renderRows;
+          return;
+        }
         var profileHandle=folder==='inbox'?m.from_handle:m.to_handle,initials=(profileHandle||'?').slice(0,2).toUpperCase();
         main.innerHTML='<div class="dtd-meta"><button class="dtd-profile-link" title="View '+escapeHtml(profileHandle)+'\'s profile">'+escapeHtml(initials)+'</button><b>'+escapeHtml(m.message_subject||'(no subject)')+'</b><br>From: '+escapeHtml(address(m.from_handle))+'<br>To: '+escapeHtml(address(m.to_handle))+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(new Date(folder==='scheduled'?m.deliver_on:m.created_at).getTime()))+'</div><div class="dtd-message">'+escapeHtml(m.message_body||'')+'</div><div class="dtd-inline-reply" style="display:none"><textarea class="dtd-inline-reply-body" placeholder="Write a fresh letter back…"></textarea><div class="dtd-inline-reply-actions"><span class="dtd-inline-reply-note">The previous letter will not be included.</span><span><button class="btn dtd-reply-cancel">Cancel</button> <button class="btn dtd-reply-send">Send Reply</button></span></div><div class="signon-error dtd-reply-error"></div></div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button><span><button class="btn dtd-save-contact">Save Friend</button> <button class="btn dtd-reply">Reply</button></span></div>';
         var profileButton=main.querySelector('.dtd-profile-link');profileButton.onclick=function(){if(profileHandle===profile.handle)openViewProfileWindow();else openDtdPublicProfileWindow(profileHandle);};
@@ -5539,10 +5607,38 @@ try {
         main.innerHTML='<div class="dtd-heading">New Online Message</div><div class="dtd-compose"><label><span>From</span><input value="'+escapeHtml(address(profile.handle))+'" readonly></label><label><span>To</span><span class="dtd-address-input"><input id="dtd-to" maxlength="20" value="'+escapeHtml(recipient)+'" placeholder="friend" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="dtd-address-suffix">@desktopdiary.local</span></span></label><label><span>Subject</span><input id="dtd-subject" value="'+escapeHtml(subject||'')+'"></label><label><span>Delivery date</span><input id="dtd-send-date" type="date" min="'+nextDeliveryDate()+'"><small style="grid-column:2;font-size:9px;color:#666">Optional · leave blank for the next 8 AM delivery</small></label><textarea id="dtd-body" placeholder="Plain text only…"></textarea><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-send">Send</button></div><div class="signon-error dtd-error"></div></div>';
         var toEl=main.querySelector('#dtd-to'),bodyEl=main.querySelector('#dtd-body'),send=main.querySelector('.dtd-send');toEl.oninput=function(){toEl.value=toEl.value.toLowerCase().replace(/[^a-z0-9._-]/g,'');};main.querySelector('.dtd-compose-cancel').onclick=loadFolder;send.onclick=function(){var recipient=recipientHandle(toEl.value),text=bodyEl.value,date=main.querySelector('#dtd-send-date').value||nextDeliveryDate();if(!recipient){main.querySelector('.dtd-error').textContent='Enter your friend\'s username.';return;}if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}send.disabled=true;supabaseRpc('send_dtd_message',{recipient_handle:recipient,message_subject:main.querySelector('#dtd-subject').value.trim(),message_body:text,delivery_date:date}).then(function(){playOutgoingPigeon();setFolder('sent');}).catch(function(err){main.querySelector('.dtd-error').textContent=err.message;send.disabled=false;});};setTimeout(function(){(to?bodyEl:toEl).focus();},20);
       }
-      function showFuture(){
-        var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);var min=new Date(tomorrow.getTime()-tomorrow.getTimezoneOffset()*60000).toISOString().slice(0,10);
-        main.innerHTML='<div class="dtd-heading">Note to Self</div><div class="dtd-compose"><label><span>To</span><input value="'+escapeHtml(address(profile.handle))+'" readonly></label><label><span>Delivery date</span><input id="dtd-deliver-at" type="date" min="'+min+'" value="'+min+'"></label><label><span>Subject</span><input id="dtd-subject" placeholder="A note for later"></label><textarea id="dtd-body" placeholder="What would you like to receive later?"></textarea><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-schedule">Schedule</button></div><div class="signon-error dtd-error"></div></div>';
-        main.querySelector('.dtd-compose-cancel').onclick=loadFolder;var send=main.querySelector('.dtd-schedule');send.onclick=function(){var date=main.querySelector('#dtd-deliver-at').value,text=main.querySelector('#dtd-body').value;if(date<min){main.querySelector('.dtd-error').textContent='Choose a future date.';return;}if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}send.disabled=true;supabaseRpc('send_dtd_message',{recipient_handle:profile.handle,message_subject:main.querySelector('#dtd-subject').value.trim(),message_body:text,delivery_date:date}).then(function(){playOutgoingPigeon();openInfoWindow('Your letter is sealed. It will return at 8:00 AM on its delivery date.');setFolder('inbox');}).catch(function(err){main.querySelector('.dtd-error').textContent=err.message;send.disabled=false;});};
+      function scheduleOnlinePrivateLetter(letterType,displayRecipient,resolveDeliveryDate,send){
+        var date=resolveDeliveryDate(),text=main.querySelector('#dtd-body').value;
+        if(!date){main.querySelector('.dtd-error').textContent='Choose a delivery time.';return;}
+        if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}
+        var rawSubject=main.querySelector('#dtd-subject').value.trim();
+        var subjectToSend=letterType==='imaginary'?encodeImaginarySubject(displayRecipient,rawSubject):rawSubject;
+        send.disabled=true;
+        supabaseRpc('send_dtd_message',{recipient_handle:profile.handle,message_subject:subjectToSend,message_body:text,delivery_date:date}).then(function(){playOutgoingPigeon();openInfoWindow('Your letter is sealed. It will return at 8:00 AM on its delivery date.');setFolder('inbox');}).catch(function(err){main.querySelector('.dtd-error').textContent=err.message;send.disabled=false;});
+      }
+      function showFutureCompose(){
+        main.innerHTML='<div class="dtd-heading">Note to Future Me</div><div class="dtd-compose"><label><span>To</span><input value="Future Me" readonly></label>'+dtdDeliveryMenuHtml()+'<label><span>Subject</span><input id="dtd-subject" placeholder="A note for later"></label><textarea id="dtd-body" placeholder="What would you like to receive later?"></textarea><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-schedule">Schedule</button></div><div class="signon-error dtd-error"></div></div>';
+        var resolveDeliveryDate=dtdWireDeliveryMenu(main);
+        main.querySelector('.dtd-compose-cancel').onclick=showPrivateLetterChoice;
+        var send=main.querySelector('.dtd-schedule');
+        send.onclick=function(){scheduleOnlinePrivateLetter('future-self',null,resolveDeliveryDate,send);};
+      }
+      function showImaginaryCompose(){
+        main.innerHTML='<div class="dtd-heading">Letter Unsent</div><div class="dtd-compose"><label><span>To</span><input id="dtd-imaginary-to" type="text" placeholder="e.g. My Boss, Mom, The Universe"></label>'+dtdDeliveryMenuHtml()+'<label><span>Subject</span><input id="dtd-subject" placeholder="A letter you need to write"></label><textarea id="dtd-body" placeholder="Say what you need to say…"></textarea><div style="font-size:9px;font-weight:bold;color:#a3261e">This letter will never be sent to this person.</div><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-schedule">Schedule</button></div><div class="signon-error dtd-error"></div></div>';
+        var resolveDeliveryDate=dtdWireDeliveryMenu(main);
+        main.querySelector('.dtd-compose-cancel').onclick=showPrivateLetterChoice;
+        var send=main.querySelector('.dtd-schedule');
+        send.onclick=function(){
+          var to=main.querySelector('#dtd-imaginary-to').value.trim();
+          if(!to){main.querySelector('.dtd-error').textContent='Enter who this letter is to.';return;}
+          scheduleOnlinePrivateLetter('imaginary',to,resolveDeliveryDate,send);
+        };
+      }
+      function showPrivateLetterChoice(){
+        main.innerHTML='<div class="dtd-heading">Note to Self</div><div class="dtd-compose" style="text-align:center"><p style="font-size:11px;color:#555;line-height:1.5;text-align:left;margin:0">Private letters stay with you. Choose the kind of letter to write.</p><button class="btn" id="dtd-private-futureself" style="padding:10px">Future Me</button><button class="btn" id="dtd-private-imaginary" style="padding:10px">Letter Unsent</button><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button></div></div>';
+        main.querySelector('.dtd-compose-cancel').onclick=loadFolder;
+        main.querySelector('#dtd-private-futureself').onclick=showFutureCompose;
+        main.querySelector('#dtd-private-imaginary').onclick=showImaginaryCompose;
       }
       loadProfile().then(function(found){profile=found;if(profile)mountMailbox();else showAddressSetup();}).catch(function(err){showError(err.message);});
     }});
