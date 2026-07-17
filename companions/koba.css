@@ -1,0 +1,168 @@
+/* Koba's approved motion sprites live here so later scene changes do not
+   silently override unrelated DesktopDiary styles. */
+#desktop-companion{
+  pointer-events:none;
+}
+#desktop-companion .companion-dog-sprite{
+  pointer-events:none;
+}
+
+/* A smaller invisible target keeps the airy sprite corners from behaving as
+   though they were part of Koba. Parent click and drag handlers still receive
+   events that bubble up from this chest-and-face area. */
+#koba-click-target{
+  position:absolute;
+  z-index:1;
+  left:17px;
+  top:5px;
+  width:62px;
+  height:80px;
+  border-radius:44% 44% 34% 34%;
+  pointer-events:auto;
+  cursor:pointer;
+}
+#desktop-companion.play-ball-fetching #koba-click-target{
+  pointer-events:none;
+}
+#desktop-companion #companion-actions,
+#desktop-companion #companion-reaction{
+  pointer-events:auto;
+}
+#desktop-companion.interacting #companion-reaction{
+  bottom:125px;
+}
+
+/* The interaction sheets have different amounts of transparent padding.
+   Compensate per scene so Koba keeps the same apparent size and foot line. */
+#desktop-companion.interacting.feed .companion-dog-sprite,
+#desktop-companion.interacting.bone .companion-dog-sprite,
+#desktop-companion.interacting.treat .companion-dog-sprite{
+  position:relative;
+  left:-16px;
+  top:-28px;
+  width:124px;
+  height:124px;
+  flex:0 0 auto;
+}
+#desktop-companion.interacting.pet .companion-dog-sprite{
+  position:relative;
+  left:-7px;
+  top:-4px;
+  width:106px;
+  height:106px;
+  flex:0 0 auto;
+}
+#desktop-companion.happy .companion-dog-sprite{
+  position:relative;
+  left:-4px;
+  top:-4px;
+  width:100px;
+  height:100px;
+  flex:0 0 auto;
+}
+
+@keyframes koba-module-six-frames{
+  0%,16.665%{background-position:0 0}
+  16.666%,33.332%{background-position:20% 0}
+  33.333%,49.999%{background-position:40% 0}
+  50%,66.665%{background-position:60% 0}
+  66.666%,83.332%{background-position:80% 0}
+  83.333%,100%{background-position:100% 0}
+}
+
+/* These full-resolution sheets replace the small 92px generated strips that
+   were visibly degrading during movement. */
+#desktop-companion.roaming-walk .companion-dog-sprite{
+  background-image:url('sprites/koba/koba-walk.png');
+  background-size:600% 100%;
+  animation:koba-module-six-frames .78s step-end infinite;
+}
+#desktop-companion.roaming-run .companion-dog-sprite,
+#desktop-companion.koba-fetch-run .companion-dog-sprite{
+  width:92px;
+  height:92px;
+  background-image:url('sprites/koba/koba-run.png');
+  background-size:600% 100%;
+  animation:koba-module-six-frames .54s step-end infinite;
+}
+
+/* The third mailbox strike borrows Koba's approved run sheet. JavaScript uses
+   a temporary transform and restores it after the chase, so Koba's saved
+   desktop position never changes. */
+#desktop-companion.pigeon-chase-fleeing{
+  z-index:10003;
+  pointer-events:none;
+  transition:none !important;
+  animation:none !important;
+  will-change:transform;
+}
+#desktop-companion.pigeon-chase-fleeing #koba-click-target{pointer-events:none}
+#desktop-companion.pigeon-chase-fleeing .companion-dog-sprite,
+#desktop-companion.pigeon-chase-fleeing.sleeping .companion-dog-sprite{
+  position:relative;
+  left:0;
+  top:0;
+  width:110px;
+  height:92px;
+  background-image:url('sprites/koba/koba-pigeon-flee.png') !important;
+  background-size:400% 100% !important;
+  animation:koba-pigeon-flee-frames .72s step-end infinite !important;
+}
+#desktop-companion.pigeon-chase-left .companion-dog-sprite{transform:scaleX(-1) !important}
+
+@keyframes koba-pigeon-flee-frames{
+  0%,24.999%{background-position:0 0}
+  25%,49.999%{background-position:33.333% 0}
+  50%,74.999%{background-position:66.667% 0}
+  75%,100%{background-position:100% 0}
+}
+
+@media (prefers-reduced-motion:reduce){
+  #desktop-companion.roaming-walk .companion-dog-sprite,
+  #desktop-companion.roaming-run .companion-dog-sprite,
+  #desktop-companion.koba-fetch-run .companion-dog-sprite,
+  #desktop-companion.pigeon-chase-fleeing .companion-dog-sprite{animation:none !important}
+}
+
+#koba-ball-thought{
+  display:none;
+  position:absolute;
+  left:48px;
+  bottom:76px;
+  width:82px;
+  height:82px;
+  z-index:2;
+  pointer-events:none;
+  background:url('sprites/koba/koba-thinks-ball.png') center/contain no-repeat;
+  image-rendering:pixelated;
+  filter:drop-shadow(1px 2px 2px rgba(0,0,0,.28));
+  transform-origin:15% 90%;
+}
+#desktop-companion.koba-thinking-ball #koba-ball-thought{
+  display:block;
+  animation:koba-ball-thought-pop 2.8s ease-in-out both;
+}
+@keyframes koba-ball-thought-pop{
+  0%{opacity:0;transform:scale(.72)}
+  12%,82%{opacity:1;transform:scale(1)}
+  100%{opacity:0;transform:scale(.88)}
+}
+
+/* Let Koba rest between the expressive ball-idle frames. The first frame is
+   held for five seconds, followed by one quick wag/tongue cycle. */
+#desktop-companion.koba-ball-watching .companion-dog-sprite,
+#desktop-companion.koba-fetch-happy .companion-dog-sprite{
+  animation:koba-ball-calm-idle 6.4s step-end infinite;
+}
+@keyframes koba-ball-calm-idle{
+  0%,78.124%{background-position:0 0}
+  78.125%,85.936%{background-position:33.333% 0}
+  85.937%,93.749%{background-position:66.667% 0}
+  93.75%,99.999%{background-position:100% 0}
+  100%{background-position:0 0}
+}
+@media (prefers-reduced-motion:reduce){
+  #desktop-companion.koba-thinking-ball #koba-ball-thought,
+  #desktop-companion.koba-ball-watching .companion-dog-sprite,
+  #desktop-companion.koba-fetch-happy .companion-dog-sprite{animation:none}
+}
