@@ -1,0 +1,23 @@
+<div id="dd-loader" style="
+  position:fixed;inset:0;z-index:999999;
+  background:#000814;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'Courier New',monospace;
+  transition:opacity 0.6s ease;
+">
+  <div style="text-align:center;">
+    <div id="dd-loader-puppy" style="width:150px;height:150px;margin:0 auto 16px;background-image:var(--companion-puppy-loading);background-size:600% 100%;background-repeat:no-repeat;image-rendering:pixelated;animation:dd-loader-puppy-loop 3s steps(5) infinite;filter:drop-shadow(0 0 16px hotpink) drop-shadow(0 4px 10px rgba(0,0,0,.5));"></div>
+    <div style="
+      font-family:'DiaryMinecraft',monospace;font-size:36px;font-weight:normal;letter-spacing:4px;color:#39ff14;
+      text-shadow:3px 3px 0 #0d4d0d,0 0 14px #39ff14,0 0 30px #39ff14,0 0 50px rgba(57,255,20,.6);margin-bottom:36px;
+    ">DESKTOP DIARY</div>
+    <div style="width:260px;height:6px;background:#0d2137;border-radius:3px;overflow:hidden;margin:0 auto 14px;">
+      <div id="dd-loader-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#1a6fa8,#a8d8ea);border-radius:3px;transition:width 0.2s ease;"></div>
+    </div>
+    <div id="dd-loader-msg" style="font-size:9px;color:#2a5f80;letter-spacing:2px;height:14px;">INITIALIZING</div>
+  </div>
+</div>
+
+<script src="scripts/loader.js?v=20260716-1"></script>
+
+

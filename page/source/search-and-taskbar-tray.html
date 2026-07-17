@@ -1,0 +1,26 @@
+    <div id="tb-tray">
+      <div id="tb-search-wrap">
+      <button id="tb-search-toggle" type="button" title="Open your desktop companion" aria-label="Open your desktop companion and search" aria-expanded="false"><span class="companion-taskbar-sprite" aria-hidden="true"></span></button>
+      <div id="desktop-search" role="search">
+        <div class="companion-head">
+          <div class="companion-face" aria-hidden="true"><div class="companion-mini-sprite"></div></div>
+          <div><span class="companion-greeting" id="companion-greeting">Hi! I’m here.</span><span class="companion-note" id="companion-note">I can search your diary and remember things for you.</span></div>
+        </div>
+        <div class="desktop-search-bar">
+          <input id="desktop-search-input" type="search" autocomplete="off" placeholder="Search your diary…" aria-label="Search your diary">
+          <button id="desktop-search-button" type="button">Search</button>
+        </div>
+        <div class="companion-memory">
+          <button class="companion-memory-toggle" id="companion-memory-toggle" type="button" aria-expanded="false">Memory <span id="companion-memory-count">(0)</span></button>
+          <div class="companion-memory-panel" id="companion-memory-panel">
+            <div class="companion-memory-add"><input id="companion-memory-input" maxlength="500" placeholder="Something to remember…" aria-label="Something for your companion to remember"><button class="btn" id="companion-memory-save" type="button">Remember</button></div>
+            <div class="companion-memory-list" id="companion-memory-list"></div>
+          </div>
+        </div>
+        <div id="desktop-search-results" aria-live="polite"></div>
+      </div>
+      </div>
+      <div id="tb-clock"></div>
+    </div>
+  </div>
+
