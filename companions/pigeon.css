@@ -1,0 +1,168 @@
+/* Pigeon art stays separate from mail-delivery state and the mailbox's real
+   keyboard/click target. */
+#dtd-mailbox-icon .dtd-mailbox-art{
+  position:relative;
+  z-index:3;
+  pointer-events:none;
+  transform-origin:50% 82%;
+}
+#dtd-mailbox-icon .dtd-pigeon{
+  background-image:url('sprites/pigeon/pigeon-perched.png');
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:contain;
+  image-rendering:pixelated;
+}
+
+#dtd-mailbox-icon[data-pigeon-scene-locked="true"]{
+  pointer-events:none;
+  cursor:default;
+}
+#dtd-mailbox-icon.pigeon-mailbox-peeking .dtd-pigeon{
+  display:block !important;
+  position:absolute !important;
+  top:-18px !important;
+  right:-2px !important;
+  width:74px !important;
+  height:84px !important;
+  z-index:6 !important;
+  background-image:url('sprites/pigeon/pigeon-mailbox-discovery.png?v=20260718-approved-v3') !important;
+  background-size:contain !important;
+  background-repeat:no-repeat !important;
+  filter:drop-shadow(1px 2px 2px rgba(0,0,0,.44));
+  transform-origin:70% 96%;
+}
+#dtd-mailbox-icon.pigeon-mailbox-peeking .dtd-mailbox-art{opacity:1}
+#dtd-mailbox-icon.pigeon-mailbox-peeking .dtd-pigeon{
+  animation:dtd-mailbox-discovery-impact 1.35s ease-in-out both !important;
+}
+@keyframes dtd-mailbox-discovery-impact{
+  0%{opacity:0;transform:translate(4px,2px) rotate(0)}
+  12%{opacity:1;transform:translate(0,0) rotate(0)}
+  22%{transform:translate(-2px,0) rotate(-3deg)}
+  32%{transform:translate(2px,-1px) rotate(3deg)}
+  42%{transform:translate(-1px,0) rotate(-2deg)}
+  54%,78%{opacity:1;transform:translate(0,0) rotate(0)}
+  88%{opacity:1;transform:translateX(1px) rotate(1deg)}
+  100%{opacity:0;transform:translate(4px,1px) rotate(0)}
+}
+
+/* Later strikes keep the live mailbox but let it absorb the impact. */
+#dtd-mailbox-icon.pigeon-mailbox-annoyed .dtd-mailbox-art{
+  animation:dtd-mailbox-rattle .42s step-end 2;
+}
+#dtd-mailbox-icon.pigeon-mailbox-furious .dtd-mailbox-art{
+  animation:dtd-mailbox-rattle .2s step-end 5;
+}
+@keyframes dtd-mailbox-rattle{
+  0%,100%{transform:translate(0,0) rotate(0)}
+  25%{transform:translate(-2px,0) rotate(-2deg)}
+  50%{transform:translate(2px,-1px) rotate(2deg)}
+  75%{transform:translate(-1px,1px) rotate(-1deg)}
+}
+
+#dtd-mailbox-icon.pigeon-mailbox-annoyed .dtd-pigeon,
+#dtd-mailbox-icon.pigeon-mailbox-furious .dtd-pigeon{
+  display:block !important;
+  position:absolute !important;
+  top:-46px !important;
+  right:-10px !important;
+  width:64px !important;
+  height:64px !important;
+  z-index:6 !important;
+  --dtd-pigeon-angry-frame:url('sprites/pigeon/pigeon-mailbox-angry-frame-1.png?v=20260718-clean');
+  background-image:var(--dtd-pigeon-angry-frame) !important;
+  background-size:contain !important;
+  background-repeat:no-repeat !important;
+  filter:drop-shadow(1px 2px 2px rgba(0,0,0,.44));
+  transform-origin:70% 96%;
+}
+#dtd-mailbox-icon.pigeon-mailbox-annoyed .dtd-pigeon{
+  --dtd-pigeon-angry-frame:url('sprites/pigeon/pigeon-mailbox-angry-frame-2.png?v=20260718-clean');
+  top:-56px !important;
+  right:-10px !important;
+  width:74px !important;
+  height:74px !important;
+  animation:dtd-pigeon-annoyed-motion 3.2s cubic-bezier(.22,.64,.22,1) both !important;
+}
+@keyframes dtd-pigeon-annoyed-frames{
+  0%,22%{--dtd-pigeon-angry-frame:url('sprites/pigeon/pigeon-mailbox-angry-frame-1.png?v=20260718-clean')}
+  22.01%,62%{--dtd-pigeon-angry-frame:url('sprites/pigeon/pigeon-mailbox-angry-frame-2.png?v=20260718-clean')}
+  62.01%,100%{--dtd-pigeon-angry-frame:url('sprites/pigeon/pigeon-mailbox-angry-frame-3.png?v=20260718-clean')}
+}
+@keyframes dtd-pigeon-annoyed-motion{
+  0%{opacity:0;transform:translate(0,6px) rotate(-4deg)}
+  18%{opacity:1;transform:translate(0,2px) rotate(-2deg)}
+  36%{transform:translate(0,1px) rotate(-1deg)}
+  64%{transform:translate(0,0) rotate(0)}
+  78%,88%{transform:translate(0,0.4px) rotate(0)}
+  94%{transform:translate(0,-0.4px) rotate(-1deg)}
+  100%{opacity:0;transform:translate(0,1.6px) rotate(0)}
+}
+#dtd-mailbox-icon.pigeon-mailbox-furious .dtd-pigeon{
+  --dtd-pigeon-angry-frame:url('sprites/pigeon/pigeon-mailbox-angry-frame-3.png?v=20260718-clean');
+  top:-56px !important;
+  right:-12px !important;
+  width:74px !important;
+  height:74px !important;
+  animation:dtd-pigeon-furious-motion 2.15s cubic-bezier(.22,.64,.22,1) both !important;
+}
+@keyframes dtd-pigeon-furious-frames{
+  0%,26%{--dtd-pigeon-angry-frame:url('sprites/pigeon/pigeon-mailbox-angry-frame-2.png?v=20260718-clean')}
+  26.001%,84%{--dtd-pigeon-angry-frame:url('sprites/pigeon/pigeon-mailbox-angry-frame-3.png?v=20260718-clean')}
+  84.001%,100%{--dtd-pigeon-angry-frame:url('sprites/pigeon/pigeon-mailbox-angry-frame-1.png?v=20260718-clean')}
+}
+@keyframes dtd-pigeon-furious-motion{
+  0%{opacity:0;transform:translate(0,3px) scale(.98) rotate(-2deg)}
+  12%{opacity:1;transform:translate(-1px,1px) scale(1.05) rotate(-2deg)}
+  24%{transform:translate(2px,0) scale(1.09) rotate(3deg)}
+  36%{transform:translate(-2px,-1px) scale(1.12) rotate(-3deg)}
+  48%{transform:translate(2px,0) scale(1.12) rotate(3deg)}
+  60%{transform:translate(-1px,-1px) scale(1.12) rotate(-2deg)}
+  72%,88%{opacity:1;transform:translate(0,-1px) scale(1.12) rotate(0)}
+  100%{opacity:0;transform:translate(2px,0) scale(1.08) rotate(1deg)}
+}
+#dtd-mailbox-icon.pigeon-mailbox-chasing .dtd-pigeon{display:none !important}
+
+.dtd-pigeon-chaser{
+  position:absolute;
+  width:64px;
+  height:64px;
+  z-index:10004;
+  pointer-events:none;
+  will-change:transform;
+  transition:transform 170ms cubic-bezier(.23,.58,.29,1);
+  filter:drop-shadow(1px 2px 2px rgba(0,0,0,.4));
+}
+.dtd-pigeon-chaser-sprite{
+  width:64px;
+  height:64px;
+  background:url('sprites/pigeon/pigeon-chase-new.png?v=20260718-clean-v2') 0 0/300% 100% no-repeat;
+  image-rendering:pixelated;
+  animation:dtd-pigeon-chase-frames 1.62s step-end infinite;
+}
+.dtd-pigeon-chaser .dtd-pigeon-chaser-rig{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+}
+.dtd-pigeon-chaser.facing-left .dtd-pigeon-chaser-rig{transform:scaleX(-1)}
+.dtd-pigeon-chaser-rig .dtd-pigeon-chaser-sprite{
+  transform-origin:70% 96%;
+}
+@keyframes dtd-pigeon-chase-frames{
+  0%,33.332%{background-position:0% 0}
+  33.333%,66.666%{background-position:50% 0}
+  66.667%,100%{background-position:100% 0}
+}
+
+@media (prefers-reduced-motion:reduce){
+  #dtd-mailbox-icon.pigeon-mailbox-annoyed .dtd-mailbox-art,
+  #dtd-mailbox-icon.pigeon-mailbox-furious .dtd-mailbox-art,
+  #dtd-mailbox-icon.pigeon-mailbox-annoyed .dtd-pigeon,
+  #dtd-mailbox-icon.pigeon-mailbox-furious .dtd-pigeon,
+  .dtd-pigeon-chaser-sprite{animation:none !important}
+  #dtd-mailbox-icon.pigeon-mailbox-annoyed .dtd-pigeon{background-position:50% 0 !important}
+}
