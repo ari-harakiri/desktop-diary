@@ -4671,6 +4671,21 @@ try {
     return chunks;
   }
 
+  function cloudMetaContentCount(meta){
+    meta = meta || {};
+    var count = 0;
+    ['buddies','statusLog','statusPresets','moodLog','blogPosts','customFonts','customMoods','customThemePresets','stickyNotes'].forEach(function(key){
+      if(Array.isArray(meta[key])) count += meta[key].length;
+    });
+    count += Object.keys(meta.chunkCounts || {}).length;
+    count += Object.keys(meta.drafts || {}).filter(function(key){ return Array.isArray(meta.drafts[key]) && meta.drafts[key].length; }).length;
+    var profile = meta.profile || {};
+    if(profile.pic || profile.html || profile.header || profile.aboutMe) count++;
+    if(meta.status && (meta.status.label || meta.status.html || meta.status.mood)) count++;
+    if(meta.hasBgImage) count++;
+    return count;
+  }
+
   function pushToCloud(){
     if(!db || !cloudUser) return Promise.reject(new Error('Not signed in.'));
     var uid = cloudUser.uid;
@@ -4699,23 +4714,35 @@ try {
       chunkCounts: {},
       updatedAt: Date.now()
     };
-    var writes = [];
+    var entryChunks = {};
     Object.keys(state.entries).forEach(function(buddyId){
-      var chunks = chunkEntries(state.entries[buddyId]);
-      meta.chunkCounts[buddyId] = chunks.length;
-      chunks.forEach(function(chunk, i){
-        writes.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).set({ entries: chunk }));
-      });
+      entryChunks[buddyId] = chunkEntries(state.entries[buddyId]);
+      meta.chunkCounts[buddyId] = entryChunks[buddyId].length;
     });
-    // background image lives in its own doc (can be a large data URI) so it never
-    // risks pushing the meta doc over Firestore's ~1MB document size limit
-    if(state.background && state.background.image){
-      writes.push(db.collection('users').doc(uid).collection('diary').doc('background').set({ image: state.background.image }));
-    } else {
-      writes.push(db.collection('users').doc(uid).collection('diary').doc('background').delete().catch(function(){}));
-    }
-    writes.push(db.collection('users').doc(uid).collection('diary').doc('meta').set(meta));
-    return Promise.all(writes);
+    var metaRef = db.collection('users').doc(uid).collection('diary').doc('meta');
+    return metaRef.get().then(function(existingSnap){
+      var existingMeta = existingSnap.exists ? (existingSnap.data() || {}) : {};
+      if(cloudMetaContentCount(existingMeta) > 0 && cloudMetaContentCount(meta) === 0){
+        var protectedError = new Error('Cloud backup protected: this device has no diary content, but the cloud backup does. Pull from Cloud before pushing.');
+        protectedError.code = 'cloud-empty-overwrite-blocked';
+        throw protectedError;
+      }
+      var writes = [];
+      Object.keys(entryChunks).forEach(function(buddyId){
+        entryChunks[buddyId].forEach(function(chunk, i){
+          writes.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).set({ entries: chunk }));
+        });
+      });
+      // background image lives in its own doc (can be a large data URI) so it never
+      // risks pushing the meta doc over Firestore's ~1MB document size limit
+      if(state.background && state.background.image){
+        writes.push(db.collection('users').doc(uid).collection('diary').doc('background').set({ image: state.background.image }));
+      } else {
+        writes.push(db.collection('users').doc(uid).collection('diary').doc('background').delete().catch(function(){}));
+      }
+      writes.push(metaRef.set(meta));
+      return Promise.all(writes);
+    });
   }
 
   function pullFromCloud(){
@@ -5811,20 +5838,23 @@ try {
     document.getElementById('tb-search-toggle').setAttribute('aria-expanded','false');
     var layer = document.getElementById('sticky-layer');
     if(layer) layer.innerHTML = '';
-    // Preserve only what the sign-on screen needs, then wipe all user data from memory
+    // Preserve only what the sign-on screen needs. Do not wipe the live diary
+    // until any final cloud push has captured it.
     var prevEmail = state.account && state.account.email;
     var prevName  = state.account && state.account.screenName;
     var prevSavePw = state.savePassword;
     var prevAuto   = state.autoLogin;
     var hadCloudUser = !!cloudUser;
-    state = makeFreshState();
-    if(prevEmail){
-      state.account = { email: prevEmail, screenName: prevName };
-      state.savePassword = !!prevSavePw;
-      state.autoLogin    = !!prevAuto;
+    function finishLocalSignoff(){
+      state = makeFreshState();
+      if(prevEmail){
+        state.account = { email: prevEmail, screenName: prevName };
+        state.savePassword = !!prevSavePw;
+        state.autoLogin    = !!prevAuto;
+      }
+      activeStorageKey = STORAGE_KEY; // reset to generic key; sign-in will re-scope
+      setTimeout(function(){ showSignon(); }, 900);
     }
-    activeStorageKey = STORAGE_KEY; // reset to generic key; sign-in will re-scope
-    function doSignoff(){ setTimeout(function(){ showSignon(); }, 900); }
     // Never let a hung or failed network call strand the user with the buddy
     // list gone and no sign-on screen — always finish within a few seconds.
     function withTimeout(getPromise, ms){
@@ -5846,9 +5876,9 @@ try {
       // sync (their diary data can leak into a different account).
       withTimeout(function(){ return pushToCloud(); }, 4000)
         .then(function(){ return withTimeout(function(){ return signOutCloud(); }, 4000); })
-        .then(doSignoff);
+        .then(finishLocalSignoff);
     } else {
-      doSignoff();
+      finishLocalSignoff();
     }
   }
 
