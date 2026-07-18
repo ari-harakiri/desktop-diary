@@ -35,6 +35,7 @@ reference it.
 | `koba-go-to-sleep.png` | styles | 83473 bytes | `5fd0f6ac8ac34a5b1c76571032e78e3dd769bc731fc8f5cb3f6f078d87cd954c` |
 | `pigeon-mailbox.png` | HTML shell | 35040 bytes | `a3aee1ddc38136175aba2ac75bd8d8cde18cccc16b22180d49749a6e1b3e3187` |
 | `arinet-desktop-icon.png` | HTML shell | 5760 bytes | `6f00c1adbac33bb4d8369f532701773d685bec0c8148a671fd549132ea2271d5` |
+| `arinet-globe-word-spin-clockwise-4-frame-transparent.png` | AriNet desktop animation | 967916 bytes | `aad8146f03ed31d4b2170e88d5ba4a9c4173ddb68fae38b2649676bede95bb6a` |
 | `trash-icon.png` | HTML shell | 156951 bytes | `2ee36ff6d67649861dbc14a6eb118094e61f7dde05c2a35cb1a107d8e9202958` |
 | `paint-tool-select.png` | application JavaScript | 7694 bytes | `45eb275e6dcf06b058fe98912816367f96b17222d0963853cea1d66b00e295ae` |
 | `paint-tool-pencil.png` | application JavaScript | 8323 bytes | `7b8ecb5f5f315e64c566442a479fb966fe70ab8186a7cd44d1e42809f89c0b97` |
