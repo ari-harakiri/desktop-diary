@@ -10,7 +10,7 @@
           '<button class="btn" id="bw-save">Add Buddy</button>' +
         '</div>' +
       '</div>';
-    createWindow({
+    var windowOptions = {
       title: 'Buddy Lists',
       extraClass: 'addbuddy-win',
       bodyHtml: body,
@@ -79,5 +79,22 @@
           });
         });
       }
-    });
+    };
+    var buddyListEl = document.getElementById('buddylist-win');
+    if(!isMobile() && buddyListEl && buddyListEl.style.display !== 'none'){
+      var buddyRect = buddyListEl.getBoundingClientRect();
+      var editorWidth = Math.min(280, window.innerWidth * 0.92);
+      var editorHeight = Math.min(185, window.innerHeight * 0.54);
+      var overlap = 18;
+      var editorLeft = buddyRect.left - editorWidth + overlap;
+      if(editorLeft < 8 && buddyRect.right + editorWidth - overlap <= window.innerWidth - 8){
+        editorLeft = buddyRect.right - overlap;
+      }
+      if(editorLeft < 8 || editorLeft + editorWidth > window.innerWidth - 8){
+        editorLeft = (window.innerWidth - editorWidth) / 2;
+      }
+      windowOptions.initialLeft = Math.round(editorLeft);
+      windowOptions.initialTop = Math.round(buddyRect.top + (buddyRect.height - editorHeight) / 2);
+    }
+    createWindow(windowOptions);
   }

@@ -463,7 +463,7 @@ try {
 
     var bar = document.createElement('div');
     bar.className = 'sticky-bar';
-    bar.style.background = shadeColor(note.color || '#fff9a3', -18);
+    bar.style.background = note.color || '#fff9a3';
 
     var titleInput = document.createElement('input');
     titleInput.className = 'sticky-bar-title';
@@ -481,10 +481,11 @@ try {
     colorBtn.style.background = note.color || '#fff9a3';
     colorBtn.title = 'Change color';
 
-    var closeBtn = document.createElement('button');
-    closeBtn.className = 'sticky-close';
-    closeBtn.innerHTML = '&times;';
-    closeBtn.title = 'Delete note';
+    var deleteBtn = document.createElement('button');
+    deleteBtn.className = 'sticky-delete';
+    deleteBtn.innerHTML = '&#128465;';
+    deleteBtn.title = 'Delete note';
+    deleteBtn.setAttribute('aria-label', 'Delete note');
 
     var stickyRecord = bindStickyToTaskbar(note, el);
     var titleTimer;
@@ -516,7 +517,6 @@ try {
     bar.appendChild(titleInput);
     bar.appendChild(minimizeBtn);
     bar.appendChild(colorBtn);
-    bar.appendChild(closeBtn);
 
     var body = document.createElement('textarea');
     body.className = 'sticky-body';
@@ -528,6 +528,7 @@ try {
 
     el.appendChild(bar);
     el.appendChild(body);
+    el.appendChild(deleteBtn);
     el.appendChild(resizeHandle);
     layer.appendChild(el);
 
@@ -594,7 +595,7 @@ try {
     });
 
     // delete
-    closeBtn.addEventListener('click', function(){
+    deleteBtn.addEventListener('click', function(){
       ro.disconnect();
       if(stickyRecord && stickyRecord.id){
         closeWindow(stickyRecord.id);
@@ -670,7 +671,7 @@ try {
       swatch.addEventListener('click', function(){
         note.color = c;
         el.style.background = c;
-        bar.style.background = shadeColor(c, -18);
+        bar.style.background = c;
         colorBtn.style.background = c;
         saveStickyNotes();
         picker.remove(); activeStickyPicker = null;
@@ -5618,7 +5619,7 @@ try {
           '<button class="btn" id="bw-save">Add Buddy</button>' +
         '</div>' +
       '</div>';
-    createWindow({
+    var windowOptions = {
       title: 'Buddy Lists',
       extraClass: 'addbuddy-win',
       bodyHtml: body,
@@ -5687,7 +5688,24 @@ try {
           });
         });
       }
-    });
+    };
+    var buddyListEl = document.getElementById('buddylist-win');
+    if(!isMobile() && buddyListEl && buddyListEl.style.display !== 'none'){
+      var buddyRect = buddyListEl.getBoundingClientRect();
+      var editorWidth = Math.min(280, window.innerWidth * 0.92);
+      var editorHeight = Math.min(185, window.innerHeight * 0.54);
+      var overlap = 18;
+      var editorLeft = buddyRect.left - editorWidth + overlap;
+      if(editorLeft < 8 && buddyRect.right + editorWidth - overlap <= window.innerWidth - 8){
+        editorLeft = buddyRect.right - overlap;
+      }
+      if(editorLeft < 8 || editorLeft + editorWidth > window.innerWidth - 8){
+        editorLeft = (window.innerWidth - editorWidth) / 2;
+      }
+      windowOptions.initialLeft = Math.round(editorLeft);
+      windowOptions.initialTop = Math.round(buddyRect.top + (buddyRect.height - editorHeight) / 2);
+    }
+    createWindow(windowOptions);
   }
 
   // ================= STATUS WINDOWS =================
@@ -6947,18 +6965,18 @@ try {
   function openHelpWindow(){
     trackDtdUsage('help_opened');
     var body='<div class="win-body" style="font-size:12px;line-height:1.6;padding:10px;">'+
-      '<div class="help-section-title">📱 Add to Home Screen</div>'+
-      '<div class="site-instruction-copy">'+escapeHtml(dtdSiteContent.install_instructions)+'</div>'+
-      '<div class="help-section-title" style="margin-top:14px;">How It Works</div>'+
+      '<div class="help-section-title">Help / How It Works</div>'+
       '<div class="site-instruction-copy">'+escapeHtml(dtdSiteContent.help_instructions)+'</div>'+
+      '<div class="help-section-title" style="margin-top:14px;">📱 Add to Home Screen</div>'+
+      '<div class="site-instruction-copy">'+escapeHtml(dtdSiteContent.install_instructions)+'</div>'+
     '</div>';
     createWindow({title:'Help & Install',extraClass:'help-win',bodyHtml:body,type:'help'});
     loadDtdSiteContent().then(function(){
       var helpWindow=openWindows.find(function(w){return w.type==='help';});
       if(!helpWindow||!helpWindow.el)return;
       var copies=helpWindow.el.querySelectorAll('.site-instruction-copy');
-      if(copies[0])copies[0].textContent=dtdSiteContent.install_instructions;
-      if(copies[1])copies[1].textContent=dtdSiteContent.help_instructions;
+      if(copies[0])copies[0].textContent=dtdSiteContent.help_instructions;
+      if(copies[1])copies[1].textContent=dtdSiteContent.install_instructions;
     });
   }
 
