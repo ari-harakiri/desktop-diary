@@ -884,6 +884,14 @@ var runtime={
   #trash-desktop-icon { top:136px; left:16px; right:auto; bottom:auto; }
   .trash-icon-art { position:relative; width:52px; height:52px; }
   .trash-icon-art img { position:absolute; width:auto; height:52px; left:50%; top:50%; max-width:none; transform:translate(-50%,-50%); image-rendering:pixelated; filter:drop-shadow(0 0 1px #18ef28) drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
+  .trash-icon-art.is-wiggling { animation:trash-desktop-wiggle 420ms ease-in-out 1; transform-origin:50% 85%; }
+  @keyframes trash-desktop-wiggle {
+    0%,100% { transform:translateX(0) rotate(0deg); }
+    20% { transform:translateX(-1px) rotate(-7deg); }
+    40% { transform:translateX(1px) rotate(7deg); }
+    60% { transform:translateX(-1px) rotate(-5deg); }
+    80% { transform:translateX(1px) rotate(4deg); }
+  }
   #trash-count { position:absolute; right:2px; top:2px; display:none; min-width:16px; height:16px; padding:0 3px; border:1px solid #fff; border-radius:9px; background:#c93636; color:#fff; font:bold 9px/16px Tahoma,Arial,sans-serif; text-align:center; text-shadow:none; box-shadow:0 1px 3px rgba(0,0,0,.4); }
   .trash-win { width:min(390px,94vw); height:min(430px,76vh); }
   .sudoku-win { width:min(710px,96vw); height:min(590px,90vh); }
@@ -1168,8 +1176,20 @@ var runtime={
   .arinet-tile-name { font-size:11px; font-weight:bold; color:#333; margin-top:5px; }
   .arinet-status { padding:2px 8px; font-size:10px; color:#666; background:#c8c4b4; border-top:1px solid #9a9080; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #arinet-desktop-icon { top:8px; left:16px; }
-  .arinet-desktop-icon-art { width:52px; height:52px; display:flex; align-items:center; justify-content:center; }
-  .arinet-desktop-icon-art img { width:52px; height:52px; object-fit:contain; image-rendering:pixelated; filter:drop-shadow(1px 2px 3px rgba(0,0,0,.65)); }
+  .arinet-desktop-icon-art {
+    width:52px; height:52px;
+    background:url('assets/embedded/arinet-globe-word-spin-clockwise-4-frame-transparent.png') no-repeat 0 0 / 400% 100%;
+    image-rendering:pixelated;
+    filter:drop-shadow(1px 2px 3px rgba(0,0,0,.65));
+  }
+  .arinet-desktop-icon-art.is-spinning { animation:arinet-desktop-spin 720ms steps(1,end) 1; }
+  @keyframes arinet-desktop-spin {
+    0%,24.99% { background-position:0 0; }
+    25%,49.99% { background-position:33.333% 0; }
+    50%,74.99% { background-position:66.667% 0; }
+    75%,99.99% { background-position:100% 0; }
+    100% { background-position:0 0; }
+  }
   .dtd-win { width:min(470px,95vw); height:min(520px,82vh); }
   .dtd-win .win-body { padding:0; overflow:hidden; display:flex; flex-direction:column; }
   .dtd-construction { flex:0 0 auto; padding:5px 9px; border-bottom:2px solid #111; color:#111; background:repeating-linear-gradient(135deg,#ffd836 0,#ffd836 12px,#1d1d1d 12px,#1d1d1d 18px); font:700 9px/1.2 Arial,sans-serif; letter-spacing:.08em; text-align:center; }
@@ -2984,8 +3004,8 @@ function forceLoaderInteractionRecovery(){
     <span>DtD Post</span>
   </div>
 
-  <div id="arinet-desktop-icon" class="desktop-icon" role="button" tabindex="0" title="Open AriNet Browser">
-    <div class="arinet-desktop-icon-art"><img src="assets/embedded/arinet-desktop-icon.png" alt="AriNet"></div>
+  <div id="arinet-desktop-icon" class="desktop-icon" role="button" tabindex="0" title="Click to spin; double-click to open AriNet Browser">
+    <div class="arinet-desktop-icon-art" aria-hidden="true"></div>
     <span>AriNet</span>
   </div>
 
@@ -3008,7 +3028,7 @@ function forceLoaderInteractionRecovery(){
     <div id="companion-reaction" aria-live="polite"></div>
   </div>
 
-  <div id="trash-desktop-icon" class="desktop-icon" role="button" tabindex="0" title="Open Trash">
+  <div id="trash-desktop-icon" class="desktop-icon" role="button" tabindex="0" title="Click to wiggle; double-click to open Trash">
     <div class="trash-icon-art"><img src="assets/embedded/trash-icon.png" alt=""><b id="trash-count"></b></div>
     <span>Trash</span>
   </div>
@@ -4322,14 +4342,95 @@ try {
       });
     }
     if(trash){
-      bindAccessibleAction(trash, function(e){
+      var trashArt=trash.querySelector('.trash-icon-art');
+      var trashClickTimer=0;
+      function wiggleTrash(){
+        trashClickTimer=0;
+        if(!trashArt)return;
+        trashArt.classList.remove('is-wiggling');
+        void trashArt.offsetWidth;
+        trashArt.classList.add('is-wiggling');
+      }
+      trashArt.addEventListener('animationend', function(e){
+        if(e.animationName==='trash-desktop-wiggle')trashArt.classList.remove('is-wiggling');
+      });
+      trash.addEventListener('click', function(e){
         e.stopPropagation();
+        clearTimeout(trashClickTimer);
+        if(e.detail>1)return;
+        trashClickTimer=setTimeout(wiggleTrash,260);
+      });
+      trash.addEventListener('dblclick', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        clearTimeout(trashClickTimer);
+        trashClickTimer=0;
+        trashArt.classList.remove('is-wiggling');
+        openTrashWindow();
+      });
+      trash.addEventListener('keydown', function(e){
+        if(e.key!=='Enter'&&e.key!==' ')return;
+        e.preventDefault();
+        e.stopPropagation();
+        clearTimeout(trashClickTimer);
+        trashClickTimer=0;
+        trashArt.classList.remove('is-wiggling');
         openTrashWindow();
       });
     }
     if(arinetIcon){
-      bindAccessibleAction(arinetIcon, function(e){
+      var arinetArt=arinetIcon.querySelector('.arinet-desktop-icon-art');
+      var arinetSpinning=false;
+      var arinetOpenAfterSpin=false;
+      var arinetSpinFallback=0;
+      function finishAriNetSpin(){
+        if(!arinetSpinning)return;
+        clearTimeout(arinetSpinFallback);
+        arinetSpinFallback=0;
+        arinetArt.classList.remove('is-spinning');
+        arinetSpinning=false;
+        if(arinetOpenAfterSpin){
+          arinetOpenAfterSpin=false;
+          openAriNetWindow();
+        }
+      }
+      function startAriNetSpin(){
+        if(!arinetArt){
+          openAriNetWindow();
+          return;
+        }
+        arinetSpinning=true;
+        arinetArt.classList.remove('is-spinning');
+        void arinetArt.offsetWidth;
+        arinetArt.classList.add('is-spinning');
+        clearTimeout(arinetSpinFallback);
+        arinetSpinFallback=setTimeout(finishAriNetSpin,800);
+      }
+      arinetArt.addEventListener('animationend', function(e){
+        if(e.animationName==='arinet-desktop-spin')finishAriNetSpin();
+      });
+      arinetIcon.addEventListener('click', function(e){
         e.stopPropagation();
+        if(arinetSpinning){
+          arinetOpenAfterSpin=true;
+          return;
+        }
+        startAriNetSpin();
+      });
+      arinetIcon.addEventListener('dblclick', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        arinetOpenAfterSpin=true;
+        if(!arinetSpinning)startAriNetSpin();
+      });
+      arinetIcon.addEventListener('keydown', function(e){
+        if(e.key!=='Enter'&&e.key!==' ')return;
+        e.preventDefault();
+        e.stopPropagation();
+        if(arinetSpinning){
+          arinetOpenAfterSpin=true;
+          return;
+        }
         openAriNetWindow();
       });
     }
