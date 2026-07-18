@@ -8362,34 +8362,31 @@ try {
         scheduleCompanionSearchCycle();
       },trick.duration);
     }
-    var kobaTaskbarClickTimer=null;
     function minimizeKobaFromTaskbar(){
-      kobaTaskbarClickTimer=null;
       if(searchBox.style.display==='block')closeSearch();else closeCompanionActions();
       if(window.endKobaPlayBallPose)window.endKobaPlayBallPose();
       if(window.cancelKobaTransientMotion)window.cancelKobaTransientMotion();
       if(!(window.isKobaExclusiveMotionActive&&window.isKobaExclusiveMotionActive())&&window.returnKobaToKennel)window.returnKobaToKennel(false,true);
       document.body.classList.add('koba-minimized');
       toggle.setAttribute('aria-expanded','false');
-      toggle.title='Double-click to search with Koba';
+      toggle.title='Restore Koba and open search';
+      toggle.setAttribute('aria-label','Restore Koba and open search');
     }
     function searchWithKobaFromTaskbar(){
-      clearTimeout(kobaTaskbarClickTimer);kobaTaskbarClickTimer=null;
       document.body.classList.remove('koba-minimized');
       if(!(window.isKobaExclusiveMotionActive&&window.isKobaExclusiveMotionActive())&&window.placeKobaInKennel)window.placeKobaInKennel();
       if(searchBox.style.display!=='block'){
         stopCompanionBehavior();closeCompanionActions();desktopCompanion.classList.remove('sleeping');desktopCompanion.classList.add('searching');openSearchUI();scheduleCompanionSearchCycle();
       }else{input.focus();input.select();}
-      toggle.title='Click once to minimize Koba · double-click to search';
+      toggle.title='Minimize Koba';
+      toggle.setAttribute('aria-label','Minimize Koba');
     }
-    toggle.title='Click once to minimize Koba · double-click to search';
-    toggle.setAttribute('aria-label','Click once to minimize Koba; double-click to search');
-    toggle.addEventListener('click',function(e){
-      if(e.detail>1)return;
-      clearTimeout(kobaTaskbarClickTimer);
-      kobaTaskbarClickTimer=setTimeout(minimizeKobaFromTaskbar,240);
+    toggle.title='Minimize Koba';
+    toggle.setAttribute('aria-label','Minimize Koba');
+    toggle.addEventListener('click',function(){
+      if(document.body.classList.contains('koba-minimized'))searchWithKobaFromTaskbar();
+      else minimizeKobaFromTaskbar();
     });
-    toggle.addEventListener('dblclick',function(e){e.preventDefault();e.stopPropagation();searchWithKobaFromTaskbar();});
     bindAccessibleAction(desktopCompanion,function(e){
       e.stopPropagation();
       if(window.isKobaExclusiveMotionActive&&window.isKobaExclusiveMotionActive()){
