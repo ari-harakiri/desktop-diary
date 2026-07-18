@@ -872,6 +872,7 @@ var runtime={
   @keyframes dtd-envelope-collect { 0%{transform:translate(0,0) rotate(0);opacity:1;z-index:2} 18%,24%{transform:translate(3px,-20px) rotate(-8deg);opacity:1;z-index:3} 25%,100%{transform:translate(3px,-20px) rotate(-8deg);opacity:0;z-index:3} }
   @media (prefers-reduced-motion:reduce){#dtd-mailbox-icon .dtd-pigeon,#dtd-mailbox-icon.has-new-mail:not(.pigeon-arriving):not(.pigeon-departing) .dtd-pigeon,#dtd-mailbox-icon.pigeon-departing .dtd-pigeon,#dtd-mailbox-icon.pigeon-composing.pigeon-compose-arriving:not(.has-new-mail):not(.pigeon-arriving):not(.pigeon-departing):not(.pigeon-sending) .dtd-pigeon,#dtd-mailbox-icon.has-new-mail.pigeon-arriving .dtd-pigeon,#dtd-mailbox-icon.pigeon-sending .dtd-pigeon{animation:none}}
   body:not(.signed-in) #desktop-companion { display:none; }
+  body.koba-minimized #desktop-companion { display:none !important; }
   #desktop-companion { top:auto; left:auto; right:8px; bottom:40px; width:92px; height:92px; overflow:visible; }
   #desktop-companion .companion-dog-sprite { width:92px; height:92px; background-image:url('assets/companion/koba-new-idle.png'); background-repeat:no-repeat; background-size:100% 100%; background-position:0 0; image-rendering:pixelated; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45)); }
   #desktop-companion.searching .companion-dog-sprite { background-image:var(--companion-puppy-bury); background-size:600% 100%; background-position:100% 0; animation:none; }
@@ -5817,6 +5818,7 @@ try {
 
   function enterDesktop(){
     setActiveSession(true);
+    document.body.classList.remove('koba-minimized');
     document.body.classList.add('signed-in');
     if(window.anchorKobaPlayBallHome)window.anchorKobaPlayBallHome(true);
     if(window.placeKobaInKennel)window.placeKobaInKennel();
@@ -7523,7 +7525,14 @@ try {
       this.scheduleSequence(function(){
         self.placeRestingBall(self.logicalPosition);
         self.setState('NoticeBall');
-        self.scheduleSequence(function(){self.waitForKobaIdle();},self.config.noticeDelayMin+Math.random()*(self.config.noticeDelayMax-self.config.noticeDelayMin));
+        // Give the landed ball a readable reaction beat. Previously intrigue
+        // only appeared while the ball was being held, so a quick throw erased
+        // it before the player could see it.
+        self.clearBallAttention();
+        self.koba.classList.remove('koba-ball-watching');
+        self.showKobaBallAttention(false);
+        var excitedHold=self.config.noticeDelayMin+Math.random()*(self.config.noticeDelayMax-self.config.noticeDelayMin);
+        self.scheduleSequence(function(){self.waitForKobaIdle();},self.config.fetchIntrigueDuration+excitedHold);
       },this.config.bounceDuration);
     };
     FetchToyController.prototype.kobaIsBusy=function(){
@@ -7790,12 +7799,13 @@ try {
       var desktopWidth=(desktop&&desktop.clientWidth)||window.innerWidth;
       var desktopHeight=(desktop&&desktop.clientHeight)||window.innerHeight;
       var taskbarHeight=(taskbar&&taskbar.offsetHeight)||TASKBAR_H;
-      return{x:Math.max(0,desktopWidth-width-8),y:Math.max(0,desktopHeight-taskbarHeight-height-6),overBuddyList:false,userPlaced:false};
+      // Leave a clear grab area around the taskbar ball below Koba.
+      return{x:Math.max(0,desktopWidth-width-8),y:Math.max(0,desktopHeight-taskbarHeight-height-36),overBuddyList:false,userPlaced:false};
     }
     function kobaKennelPoint(){
       var companionState=state.companion&&typeof state.companion==='object'?state.companion:null;
       var saved=companionState&&companionState.kennelPosition;
-      if(!saved||!Number.isFinite(Number(saved.x))||!Number.isFinite(Number(saved.y))||(Number(saved.x)===0&&Number(saved.y)===0))return defaultKobaKennelPoint();
+      if(!saved||saved.userPlaced!==true||!Number.isFinite(Number(saved.x))||!Number.isFinite(Number(saved.y))||(Number(saved.x)===0&&Number(saved.y)===0))return defaultKobaKennelPoint();
       var desktop=document.getElementById('desktop'),taskbar=document.getElementById('taskbar');
       var maxX=Math.max(0,desktop.clientWidth-desktopCompanion.offsetWidth);
       var maxY=Math.max(0,desktop.clientHeight-(taskbar?taskbar.offsetHeight:32)-desktopCompanion.offsetHeight);
@@ -8352,7 +8362,34 @@ try {
         scheduleCompanionSearchCycle();
       },trick.duration);
     }
-    toggle.addEventListener('click',function(){var opening=searchBox.style.display!=='block';if(opening){stopCompanionBehavior();closeCompanionActions();desktopCompanion.classList.remove('sleeping');desktopCompanion.classList.add('searching');openSearchUI();scheduleCompanionSearchCycle();}else{if(kobaMemosOpen)closeKobaMemos(true);closeSearch();}});
+    var kobaTaskbarClickTimer=null;
+    function minimizeKobaFromTaskbar(){
+      kobaTaskbarClickTimer=null;
+      if(searchBox.style.display==='block')closeSearch();else closeCompanionActions();
+      if(window.endKobaPlayBallPose)window.endKobaPlayBallPose();
+      if(window.cancelKobaTransientMotion)window.cancelKobaTransientMotion();
+      if(!(window.isKobaExclusiveMotionActive&&window.isKobaExclusiveMotionActive())&&window.returnKobaToKennel)window.returnKobaToKennel(false,true);
+      document.body.classList.add('koba-minimized');
+      toggle.setAttribute('aria-expanded','false');
+      toggle.title='Double-click to search with Koba';
+    }
+    function searchWithKobaFromTaskbar(){
+      clearTimeout(kobaTaskbarClickTimer);kobaTaskbarClickTimer=null;
+      document.body.classList.remove('koba-minimized');
+      if(!(window.isKobaExclusiveMotionActive&&window.isKobaExclusiveMotionActive())&&window.placeKobaInKennel)window.placeKobaInKennel();
+      if(searchBox.style.display!=='block'){
+        stopCompanionBehavior();closeCompanionActions();desktopCompanion.classList.remove('sleeping');desktopCompanion.classList.add('searching');openSearchUI();scheduleCompanionSearchCycle();
+      }else{input.focus();input.select();}
+      toggle.title='Click once to minimize Koba · double-click to search';
+    }
+    toggle.title='Click once to minimize Koba · double-click to search';
+    toggle.setAttribute('aria-label','Click once to minimize Koba; double-click to search');
+    toggle.addEventListener('click',function(e){
+      if(e.detail>1)return;
+      clearTimeout(kobaTaskbarClickTimer);
+      kobaTaskbarClickTimer=setTimeout(minimizeKobaFromTaskbar,240);
+    });
+    toggle.addEventListener('dblclick',function(e){e.preventDefault();e.stopPropagation();searchWithKobaFromTaskbar();});
     bindAccessibleAction(desktopCompanion,function(e){
       e.stopPropagation();
       if(window.isKobaExclusiveMotionActive&&window.isKobaExclusiveMotionActive()){
@@ -10027,7 +10064,7 @@ try {
         }
         var profileHandle=folder==='inbox'?m.from_handle:m.to_handle,initials=(profileHandle||'?').slice(0,2).toUpperCase();
         var receivedTime=folder==='inbox'?(m.deliver_on||m.created_at):m.created_at;
-        main.innerHTML='<div class="dtd-meta"><button class="dtd-profile-link" title="View '+escapeHtml(profileHandle)+'\'s profile">'+escapeHtml(initials)+'</button><b>'+escapeHtml(m.message_subject||'(no subject)')+'</b><br>From: '+escapeHtml(address(m.from_handle))+'<br>To: '+escapeHtml(address(m.to_handle))+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(new Date(receivedTime).getTime()))+'</div><div class="dtd-message">'+escapeHtml(m.message_body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button><span><button class="btn dtd-save-diary">Save to Diary</button> <button class="btn dtd-save-contact">Save E-Buddy</button> <button class="btn dtd-reply">Reply</button> <button class="btn dtd-delete-mail">Delete</button></span></div>';
+        main.innerHTML='<div class="dtd-meta"><button class="dtd-profile-link" title="View '+escapeHtml(profileHandle)+'\'s profile">'+escapeHtml(initials)+'</button><b>'+escapeHtml(m.message_subject||'(no subject)')+'</b><br>From: '+escapeHtml(address(m.from_handle))+'<br>To: '+escapeHtml(address(m.to_handle))+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(new Date(receivedTime).getTime()))+'</div><div class="dtd-message">'+escapeHtml(m.message_body||'')+'</div><div class="dtd-inline-reply" style="display:none"><textarea class="dtd-inline-reply-body" placeholder="Write a fresh letter back…"></textarea><div class="dtd-inline-reply-actions"><span class="dtd-inline-reply-note">The previous letter will not be included.</span><span><button class="btn dtd-reply-cancel">Cancel</button> <button class="btn dtd-reply-send">Send Reply</button></span></div><div class="signon-error dtd-reply-error"></div></div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button><span><button class="btn dtd-save-diary">Save to Diary</button> <button class="btn dtd-save-contact">Save E-Buddy</button> <button class="btn dtd-reply">Reply</button> <button class="btn dtd-delete-mail">Delete</button></span></div>';
         var profileButton=main.querySelector('.dtd-profile-link');profileButton.onclick=function(){if(profileHandle===profile.handle)openViewProfileWindow();else openDtdPublicProfileWindow(profileHandle);};
         var contactDisplayName='';
         supabaseRpc('get_dtd_public_profile',{requested_handle:profileHandle}).then(function(p){if(!p)return;contactDisplayName=p.display_name||'';if(p.profile_picture)profileButton.innerHTML='<img src="'+escapeHtml(p.profile_picture)+'" alt="">';}).catch(function(){});
@@ -10052,7 +10089,7 @@ try {
         beginPigeonComposing();
         var recipient=recipientHandle(to||'');
         main.innerHTML='<div class="dtd-heading">New Online Message</div><div class="dtd-compose"><label><span>From</span><input value="'+escapeHtml(address(profile.handle))+'" readonly></label><label><span>To</span><span class="dtd-address-input"><input id="dtd-to" maxlength="20" value="'+escapeHtml(recipient)+'" placeholder="friend" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="dtd-address-suffix">@desktopdiary.local</span></span></label><label><span>Subject</span><input id="dtd-subject" value="'+escapeHtml(subject||'')+'"></label><label><span>Delivery date</span><input id="dtd-send-date" type="date" min="'+nextDeliveryDate()+'"><small style="grid-column:2;font-size:9px;color:#666">Before 8 AM: delivered today · At or after 8 AM: delivered tomorrow</small></label><textarea id="dtd-body" placeholder="Plain text only…"></textarea><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-send">Send</button></div><div class="signon-error dtd-error"></div></div>';
-        var toEl=main.querySelector('#dtd-to'),bodyEl=main.querySelector('#dtd-body'),send=main.querySelector('.dtd-send');toEl.oninput=function(){toEl.value=toEl.value.toLowerCase().replace(/[^a-z0-9._-]/g,'');};main.querySelector('.dtd-compose-cancel').onclick=loadFolder;send.onclick=function(){var recipient=recipientHandle(toEl.value),text=bodyEl.value,date=main.querySelector('#dtd-send-date').value||nextDeliveryDate();if(!recipient){main.querySelector('.dtd-error').textContent='Enter your friend\'s username.';return;}if(!text.trim()){main.querySelector('.dtd-error').textContent='Write a message first.';return;}send.disabled=true;supabaseRpc('send_dtd_message',{recipient_handle:recipient,message_subject:main.querySelector('#dtd-subject').value.trim(),message_body:text,delivery_date:date,client_timezone:dtdClientTimezone()}).then(function(){trackDtdUsage('letter_sent');endPigeonComposing(true);setFolder('sent');}).catch(function(err){main.querySelector('.dtd-error').textContent=err.message;send.disabled=false;});};setTimeout(function(){(to?bodyEl:toEl).focus();},20);
+        var toEl=main.querySelector('#dtd-to'),bodyEl=main.querySelector('#dtd-body'),send=main.querySelector('.dtd-send'),composeError=main.querySelector('.dtd-error');toEl.oninput=function(){toEl.value=toEl.value.toLowerCase().replace(/[^a-z0-9._-]/g,'');};main.querySelector('.dtd-compose-cancel').onclick=loadFolder;send.onclick=function(){var recipient=recipientHandle(toEl.value),text=bodyEl.value,date=main.querySelector('#dtd-send-date').value||nextDeliveryDate();if(!recipient){if(composeError)composeError.textContent='Enter your friend\'s username.';return;}if(!text.trim()){if(composeError)composeError.textContent='Write a message first.';return;}send.disabled=true;supabaseRpc('send_dtd_message',{recipient_handle:recipient,message_subject:main.querySelector('#dtd-subject').value.trim(),message_body:text,delivery_date:date,client_timezone:dtdClientTimezone()}).then(function(){trackDtdUsage('letter_sent');endPigeonComposing(true);setFolder('sent');}).catch(function(err){if(composeError&&composeError.isConnected)composeError.textContent=err.message;send.disabled=false;});};setTimeout(function(){if((to?bodyEl:toEl).isConnected)(to?bodyEl:toEl).focus();},20);
       }
       function scheduleOnlinePrivateLetter(letterType,displayRecipient,resolveDeliveryDate,send){
         var date=resolveDeliveryDate(),text=main.querySelector('#dtd-body').value;

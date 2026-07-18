@@ -214,6 +214,7 @@
   @keyframes dtd-envelope-collect { 0%{transform:translate(0,0) rotate(0);opacity:1;z-index:2} 18%,24%{transform:translate(3px,-20px) rotate(-8deg);opacity:1;z-index:3} 25%,100%{transform:translate(3px,-20px) rotate(-8deg);opacity:0;z-index:3} }
   @media (prefers-reduced-motion:reduce){#dtd-mailbox-icon .dtd-pigeon,#dtd-mailbox-icon.has-new-mail:not(.pigeon-arriving):not(.pigeon-departing) .dtd-pigeon,#dtd-mailbox-icon.pigeon-departing .dtd-pigeon,#dtd-mailbox-icon.pigeon-composing.pigeon-compose-arriving:not(.has-new-mail):not(.pigeon-arriving):not(.pigeon-departing):not(.pigeon-sending) .dtd-pigeon,#dtd-mailbox-icon.has-new-mail.pigeon-arriving .dtd-pigeon,#dtd-mailbox-icon.pigeon-sending .dtd-pigeon{animation:none}}
   body:not(.signed-in) #desktop-companion { display:none; }
+  body.koba-minimized #desktop-companion { display:none !important; }
   #desktop-companion { top:auto; left:auto; right:8px; bottom:40px; width:92px; height:92px; overflow:visible; }
   #desktop-companion .companion-dog-sprite { width:92px; height:92px; background-image:url('../assets/companion/koba-new-idle.png'); background-repeat:no-repeat; background-size:100% 100%; background-position:0 0; image-rendering:pixelated; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45)); }
   #desktop-companion.searching .companion-dog-sprite { background-image:var(--companion-puppy-bury); background-size:600% 100%; background-position:100% 0; animation:none; }
