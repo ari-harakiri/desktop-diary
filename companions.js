@@ -20,9 +20,10 @@
       perched:root+'pigeon/pigeon-perched.png',
       flyingEmpty:root+'pigeon/pigeon-flying-empty.png',
       flyingWithMail:root+'pigeon/pigeon-flying-with-mail.png',
-      mailboxDiscovery:root+'pigeon/pigeon-mailbox-discovery.png?v=20260716-5',
-      mailboxAngry:root+'pigeon/pigeon-mailbox-angry.png?v=20260716-4',
-      chase:root+'pigeon/pigeon-chase-new.png'
+      mailboxDiscovery:root+'pigeon/pigeon-mailbox-discovery.png?v=20260718-approved-v3',
+      mailboxAngry:root+'pigeon/pigeon-mailbox-angry-frame-1.png?v=20260718-clean',
+      mailboxAngryFrames:[1,2,3].map(function(frame){return root+'pigeon/pigeon-mailbox-angry-frame-'+frame+'.png?v=20260718-clean';}),
+      chase:root+'pigeon/pigeon-chase-new.png?v=20260718-clean-v2'
     }
   };
 
