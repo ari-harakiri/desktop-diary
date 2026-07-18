@@ -15,7 +15,7 @@
   var root='companions/sprites/';
   var registry={
     koba:{
-      idle:root+'koba/koba-new-idle.png',
+      idle:'assets/embedded/companion-puppy-bury.png',
       walk:root+'koba/koba-walk.png',
       run:root+'koba/koba-run.png',
       wake:root+'koba/koba-new-wake.png',
@@ -49,7 +49,6 @@
   function preloadKobaSprites(){
     if(kobaPreloadImages.length)return;
     [
-      'assets/companion/koba-new-idle.png',
       'companions/sprites/koba/koba-walk.png',
       'companions/sprites/koba/koba-run.png',
       'companions/sprites/koba/koba-bark.png',
@@ -829,6 +828,19 @@ var runtime={
   /* Koba always stays above ordinary windows, the taskbar, and search. */
   #desktop-companion { z-index:120600; }
   #desktop-companion.dragging { z-index:999999; }
+  #desktop-companion.dragging .companion-dog-sprite {
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    width:92px !important;
+    height:92px !important;
+    background-image:var(--companion-puppy-bury) !important;
+    background-size:600% 100% !important;
+    background-position:100% 0 !important;
+    background-repeat:no-repeat !important;
+    animation:none !important;
+    transform:none !important;
+  }
   #desktop-companion.over-buddy-list { z-index:999998; }
   #desktop-companion.searching, #desktop-companion.waking, #desktop-companion.digging, #desktop-companion.burying, #desktop-companion.actions-open, #desktop-companion.interacting { z-index:120600; }
   .desktop-icon img { display:block; filter:drop-shadow(1px 1px 2px rgba(0,0,0,.6)); pointer-events:none; -webkit-user-drag:none; user-drag:none; }
@@ -874,7 +886,7 @@ var runtime={
   body:not(.signed-in) #desktop-companion { display:none; }
   body.koba-minimized #desktop-companion { display:none !important; }
   #desktop-companion { top:auto; left:auto; right:8px; bottom:40px; width:92px; height:92px; overflow:visible; }
-  #desktop-companion .companion-dog-sprite { width:92px; height:92px; background-image:url('assets/companion/koba-new-idle.png'); background-repeat:no-repeat; background-size:100% 100%; background-position:0 0; image-rendering:pixelated; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45)); }
+  #desktop-companion .companion-dog-sprite { width:92px; height:92px; background-image:var(--companion-puppy-bury); background-repeat:no-repeat; background-size:600% 100%; background-position:100% 0; image-rendering:pixelated; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45)); }
   #desktop-companion.searching .companion-dog-sprite { background-image:var(--companion-puppy-bury); background-size:600% 100%; background-position:100% 0; animation:none; }
   #desktop-companion.searching.spin-burst .companion-dog-sprite { animation:companion-puppy-spin-frames 1.4s step-end forwards; }
   #desktop-companion.searching.confused-burst .companion-dog-sprite { animation:companion-puppy-confused-frames 1.2s step-end forwards; }
@@ -3679,7 +3691,7 @@ try {
 
   function stickyWindowLabel(note){
     var title = (note && typeof note.title === 'string' ? note.title : '').trim();
-    return title || '';
+    return title || 'Sticky Note';
   }
 
   function bindStickyToTaskbar(note, el){
@@ -4333,6 +4345,7 @@ try {
         icon.classList.remove('dragging');
         if(!moved)return;
         suppressClickUntil=Date.now()+450;
+        if(icon.id==='desktop-companion')window.__ddKobaDragSuppressTaskbarUntil=Date.now()+700;
         var perched=overlapsBuddyList(icon);
         if(icon.id==='desktop-companion')icon.classList.toggle('over-buddy-list',perched);
         state.desktopIconPositions[icon.id]={x:icon.offsetLeft,y:icon.offsetTop,overBuddyList:perched};
@@ -4346,6 +4359,10 @@ try {
           return;
         }
         if(icon.id==='desktop-companion'){
+          // A drag released over Koba's taskbar button can be reported as a
+          // button click on touch browsers. Suppress that leaked click.
+          window.__ddKobaDragSuppressTaskbarUntil=Date.now()+700;
+          document.body.classList.remove('koba-minimized');
           if(window.endKobaPlayBallPose)window.endKobaPlayBallPose();
           if(window.cancelKobaTransientMotion)window.cancelKobaTransientMotion();
           else if(window.stopKobaRoaming)window.stopKobaRoaming();
@@ -6368,7 +6385,8 @@ try {
     var rec = openWindows.find(function(w){ return w.id === id; });
     if(!rec) return;
     if(rec.minimized){
-      rec.el.style.display = '';
+      rec.el.style.display = rec.type === 'sticky' ? 'flex' : '';
+      if(rec.type === 'sticky') rec.el.style.pointerEvents = 'all';
       rec.minimized = false;
       if(rec.tbEl) rec.tbEl.classList.remove('minimized');
     }
@@ -8384,6 +8402,7 @@ try {
     toggle.title='Minimize Koba';
     toggle.setAttribute('aria-label','Minimize Koba');
     toggle.addEventListener('click',function(){
+      if(Date.now()<Number(window.__ddKobaDragSuppressTaskbarUntil||0))return;
       if(document.body.classList.contains('koba-minimized'))searchWithKobaFromTaskbar();
       else minimizeKobaFromTaskbar();
     });

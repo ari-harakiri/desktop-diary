@@ -407,7 +407,7 @@ try {
 
   function stickyWindowLabel(note){
     var title = (note && typeof note.title === 'string' ? note.title : '').trim();
-    return title || '';
+    return title || 'Sticky Note';
   }
 
   function bindStickyToTaskbar(note, el){
@@ -1061,6 +1061,7 @@ try {
         icon.classList.remove('dragging');
         if(!moved)return;
         suppressClickUntil=Date.now()+450;
+        if(icon.id==='desktop-companion')window.__ddKobaDragSuppressTaskbarUntil=Date.now()+700;
         var perched=overlapsBuddyList(icon);
         if(icon.id==='desktop-companion')icon.classList.toggle('over-buddy-list',perched);
         state.desktopIconPositions[icon.id]={x:icon.offsetLeft,y:icon.offsetTop,overBuddyList:perched};
@@ -1074,6 +1075,10 @@ try {
           return;
         }
         if(icon.id==='desktop-companion'){
+          // A drag released over Koba's taskbar button can be reported as a
+          // button click on touch browsers. Suppress that leaked click.
+          window.__ddKobaDragSuppressTaskbarUntil=Date.now()+700;
+          document.body.classList.remove('koba-minimized');
           if(window.endKobaPlayBallPose)window.endKobaPlayBallPose();
           if(window.cancelKobaTransientMotion)window.cancelKobaTransientMotion();
           else if(window.stopKobaRoaming)window.stopKobaRoaming();
@@ -3066,7 +3071,8 @@ try {
     var rec = openWindows.find(function(w){ return w.id === id; });
     if(!rec) return;
     if(rec.minimized){
-      rec.el.style.display = '';
+      rec.el.style.display = rec.type === 'sticky' ? 'flex' : '';
+      if(rec.type === 'sticky') rec.el.style.pointerEvents = 'all';
       rec.minimized = false;
       if(rec.tbEl) rec.tbEl.classList.remove('minimized');
     }
@@ -5082,6 +5088,7 @@ try {
     toggle.title='Minimize Koba';
     toggle.setAttribute('aria-label','Minimize Koba');
     toggle.addEventListener('click',function(){
+      if(Date.now()<Number(window.__ddKobaDragSuppressTaskbarUntil||0))return;
       if(document.body.classList.contains('koba-minimized'))searchWithKobaFromTaskbar();
       else minimizeKobaFromTaskbar();
     });

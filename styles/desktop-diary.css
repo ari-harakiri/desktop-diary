@@ -171,6 +171,19 @@
   /* Koba always stays above ordinary windows, the taskbar, and search. */
   #desktop-companion { z-index:120600; }
   #desktop-companion.dragging { z-index:999999; }
+  #desktop-companion.dragging .companion-dog-sprite {
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    width:92px !important;
+    height:92px !important;
+    background-image:var(--companion-puppy-bury) !important;
+    background-size:600% 100% !important;
+    background-position:100% 0 !important;
+    background-repeat:no-repeat !important;
+    animation:none !important;
+    transform:none !important;
+  }
   #desktop-companion.over-buddy-list { z-index:999998; }
   #desktop-companion.searching, #desktop-companion.waking, #desktop-companion.digging, #desktop-companion.burying, #desktop-companion.actions-open, #desktop-companion.interacting { z-index:120600; }
   .desktop-icon img { display:block; filter:drop-shadow(1px 1px 2px rgba(0,0,0,.6)); pointer-events:none; -webkit-user-drag:none; user-drag:none; }
@@ -216,7 +229,7 @@
   body:not(.signed-in) #desktop-companion { display:none; }
   body.koba-minimized #desktop-companion { display:none !important; }
   #desktop-companion { top:auto; left:auto; right:8px; bottom:40px; width:92px; height:92px; overflow:visible; }
-  #desktop-companion .companion-dog-sprite { width:92px; height:92px; background-image:url('../assets/companion/koba-new-idle.png'); background-repeat:no-repeat; background-size:100% 100%; background-position:0 0; image-rendering:pixelated; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45)); }
+  #desktop-companion .companion-dog-sprite { width:92px; height:92px; background-image:var(--companion-puppy-bury); background-repeat:no-repeat; background-size:600% 100%; background-position:100% 0; image-rendering:pixelated; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.45)); }
   #desktop-companion.searching .companion-dog-sprite { background-image:var(--companion-puppy-bury); background-size:600% 100%; background-position:100% 0; animation:none; }
   #desktop-companion.searching.spin-burst .companion-dog-sprite { animation:companion-puppy-spin-frames 1.4s step-end forwards; }
   #desktop-companion.searching.confused-burst .companion-dog-sprite { animation:companion-puppy-confused-frames 1.2s step-end forwards; }

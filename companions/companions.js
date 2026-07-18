@@ -4,7 +4,7 @@
   var root='companions/sprites/';
   var registry={
     koba:{
-      idle:root+'koba/koba-new-idle.png',
+      idle:'assets/embedded/companion-puppy-bury.png',
       walk:root+'koba/koba-walk.png',
       run:root+'koba/koba-run.png',
       wake:root+'koba/koba-new-wake.png',
@@ -38,7 +38,6 @@
   function preloadKobaSprites(){
     if(kobaPreloadImages.length)return;
     [
-      'assets/companion/koba-new-idle.png',
       'companions/sprites/koba/koba-walk.png',
       'companions/sprites/koba/koba-run.png',
       'companions/sprites/koba/koba-bark.png',
