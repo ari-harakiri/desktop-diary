@@ -1544,6 +1544,9 @@ try {
       if(Array.isArray(meta[key])) count += meta[key].length;
     });
     count += Object.keys(meta.chunkCounts || {}).length;
+    if(meta.notebook && Array.isArray(meta.notebook.pages)){
+      count += meta.notebook.pages.filter(function(p){ return p && ((p.title||'').trim() || (p.text||'').trim()); }).length;
+    }
     count += Object.keys(meta.drafts || {}).filter(function(key){ return Array.isArray(meta.drafts[key]) && meta.drafts[key].length; }).length;
     var profile = meta.profile || {};
     if(profile.pic || profile.html || profile.header || profile.aboutMe) count++;
@@ -1577,6 +1580,7 @@ try {
       customMoodColors: state.customMoodColors,
       theme: state.theme,
       customThemePresets: state.customThemePresets,
+      notebook: state.notebook,
       chunkCounts: {},
       updatedAt: Date.now()
     };
@@ -1663,6 +1667,7 @@ try {
         if(meta.customMoodColors && typeof meta.customMoodColors === 'object') state.customMoodColors = meta.customMoodColors;
         if(meta.theme && typeof meta.theme === 'object') state.theme = meta.theme;
         if(Array.isArray(meta.customThemePresets)) state.customThemePresets = meta.customThemePresets;
+        if(meta.notebook && typeof meta.notebook === 'object') state.notebook = meta.notebook;
         if(state.account && meta.screenName) state.account.screenName = meta.screenName;
         var penPalAccountKey=cloudPenPalAccountKey(pullAccountEmail),accountMailContacts=meta.mailContactsByAccount&&meta.mailContactsByAccount[penPalAccountKey];
         if(Array.isArray(accountMailContacts)) state.mail.contacts = accountMailContacts.slice();
@@ -7789,15 +7794,28 @@ try {
               pageInput.focus();
             }
           });
+          var savedTopBeforeKeyboard = null;
           function moveAboveKeyboard(){
             var vv = window.visualViewport;
             var visibleHeight = vv ? vv.height : window.innerHeight;
             var winHeight = el.offsetHeight;
+            if(savedTopBeforeKeyboard === null) savedTopBeforeKeyboard = el.offsetTop;
             var targetTop = Math.max(8, Math.min(el.offsetTop, visibleHeight - winHeight - 8));
             el.style.top = targetTop + 'px';
           }
+          function restoreOriginalPosition(){
+            setTimeout(function(){
+              var stillFocused = document.activeElement === titleInput || document.activeElement === pageInput;
+              if(!stillFocused && savedTopBeforeKeyboard !== null){
+                el.style.top = savedTopBeforeKeyboard + 'px';
+                savedTopBeforeKeyboard = null;
+              }
+            }, 100);
+          }
           if(titleInput) titleInput.addEventListener('focus', function(){ setTimeout(moveAboveKeyboard, 50); });
           pageInput.addEventListener('focus', function(){ setTimeout(moveAboveKeyboard, 50); });
+          if(titleInput) titleInput.addEventListener('blur', restoreOriginalPosition);
+          pageInput.addEventListener('blur', restoreOriginalPosition);
           if(window.visualViewport){
             window.visualViewport.addEventListener('resize', function(){
               if(document.activeElement === titleInput || document.activeElement === pageInput){
