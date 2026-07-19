@@ -11,6 +11,26 @@
 <link rel="apple-touch-icon" href="notepad1.png" />
 <meta name="theme-color" content="#0054e3" />
 <style>
+  @font-face {
+    font-family: 'DiaryMinecraft';
+    src: url(assets/fonts/diary-minecraft.ttf) format('truetype');
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'DiaryComicSans';
+    src: url(assets/fonts/diary-comic-sans.ttf) format('truetype');
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'DiaryEmoji';
+    src: url(assets/fonts/diary-emoji.ttf) format('truetype');
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'DiaryOldEnglish';
+    src: url(assets/fonts/diary-old-english.otf) format('opentype');
+    font-display: swap;
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; padding: 0; height: 100%; overflow: hidden;
@@ -25,8 +45,8 @@
   #notebook {
     position: relative;
     width: 100%;
-    max-width: 380px;
-    aspect-ratio: 220 / 213;
+    max-width: 428px;
+    aspect-ratio: 428 / 512;
     background: url('notepad1.png') center / cover no-repeat;
   }
   #save-btn {
@@ -70,7 +90,7 @@
     flex: 1;
     resize: none;
     font-size: 16px;
-    font-family: "Comic Sans MS", "Comic Sans", cursive;
+    font-family: "DiaryComicSans", "Comic Sans MS", "Comic Sans", cursive;
     color: #262626;
     padding: 2px 4px;
     line-height: 1.4;
@@ -304,6 +324,10 @@
   // --- Save as image ---
   saveBtn.addEventListener('click', function(){
     captureCurrentPage();
+    var fontReady = (document.fonts && document.fonts.load)
+      ? document.fonts.load('16px DiaryComicSans').catch(function(){})
+      : Promise.resolve();
+    fontReady.then(function(){
     var img = new Image();
     img.onload = function(){
       var canvas = document.createElement('canvas');
@@ -333,7 +357,7 @@
       var bodyFontSize = 14 * scale;
       var lineHeight = bodyFontSize * 1.3;
       ctx.fillStyle = '#262626';
-      ctx.font = bodyFontSize + 'px "Comic Sans MS", "Comic Sans", cursive';
+      ctx.font = bodyFontSize + 'px "DiaryComicSans", "Comic Sans MS", "Comic Sans", cursive';
       ctx.textBaseline = 'top';
 
       var y = bodyY;
@@ -363,6 +387,7 @@
       a.remove();
     };
     img.src = 'notepad1.png';
+    });
   });
 
   // --- Boot ---
