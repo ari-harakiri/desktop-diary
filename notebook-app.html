@@ -39,9 +39,76 @@
   }
   #stage {
     position: fixed; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    padding: env(safe-area-inset-top, 12px) 16px env(safe-area-inset-bottom, 12px);
+    display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
   }
+  #app-header {
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  }
+  #app-title { font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+  #settings-btn {
+    border: 1px solid rgba(255,255,255,.6);
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    border-radius: 6px;
+    width: 30px; height: 30px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  #settings-btn:active { background: rgba(255,255,255,.35); }
+  #notebook-stage {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px 16px;
+    min-height: 0;
+  }
+  #app-footer {
+    flex: 0 0 auto;
+    padding: 8px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  #font-row {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  #font-row::-webkit-scrollbar { display: none; }
+  .font-pill {
+    flex: 0 0 auto;
+    border: 1px solid rgba(255,255,255,.7);
+    background: rgba(255,255,255,.25);
+    color: #1a3350;
+    border-radius: 14px;
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .font-pill.active {
+    background: #fff;
+    border-color: #fff;
+    font-weight: 700;
+  }
+  #settings-panel {
+    display: none;
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,.9);
+    border-radius: 10px;
+    font-size: 13px;
+    color: #1a3350;
+  }
+  #settings-panel.open { display: block; }
+  #settings-panel label { display: block; margin-bottom: 6px; font-weight: 700; }
+  #bg-row { display: flex; gap: 8px; }
+  .bg-pill {
+    border: 1px solid #99a; background: #fff; border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer;
+  }
+  .bg-pill.active { background: #0054e3; color: #fff; border-color: #0054e3; }
   #notebook {
     position: relative;
     width: 100%;
@@ -116,7 +183,7 @@
   }
   #sync-dot {
     position: absolute;
-    bottom: 8px; left: 8px;
+    top: 8px; left: 8px;
     width: 8px; height: 8px;
     border-radius: 50%;
     background: #999;
@@ -129,21 +196,43 @@
 </head>
 <body>
 <div id="stage">
-  <div id="notebook">
-    <button id="save-btn" title="Save as image">💾</button>
-    <div id="edit-area">
-      <input id="title-input" type="text" placeholder="Title" maxlength="120" autocomplete="off" />
-      <textarea id="body-input" placeholder=""></textarea>
-    </div>
-    <div id="footer">
-      <span id="page-label"></span>
-      <div id="nav">
-        <button id="prev-btn" title="Previous page">‹</button>
-        <button id="next-btn" title="Next page">›</button>
+  <div id="app-header">
+    <span id="app-title">Notebook</span>
+    <button id="settings-btn" title="Settings">⚙</button>
+  </div>
+  <div id="notebook-stage">
+    <div id="notebook">
+      <button id="save-btn" title="Save as image">💾</button>
+      <div id="edit-area">
+        <input id="title-input" type="text" placeholder="Title" maxlength="120" autocomplete="off" />
+        <textarea id="body-input" placeholder=""></textarea>
       </div>
-      <button id="trash-btn" title="Delete this page">🗑</button>
+      <div id="footer">
+        <span id="page-label"></span>
+        <div id="nav">
+          <button id="prev-btn" title="Previous page">‹</button>
+          <button id="next-btn" title="Next page">›</button>
+        </div>
+        <button id="trash-btn" title="Delete this page">🗑</button>
+      </div>
+      <div id="sync-dot" title="Sync status"></div>
     </div>
-    <div id="sync-dot" title="Sync status"></div>
+  </div>
+  <div id="app-footer">
+    <div id="settings-panel">
+      <label>Paper style</label>
+      <div id="bg-row">
+        <button class="bg-pill active" data-bg="notepad1.png">Plain</button>
+        <button class="bg-pill" data-bg="notepad2.png">Curled corner</button>
+      </div>
+    </div>
+    <div id="font-row">
+      <button class="font-pill" data-font="inherit">Default</button>
+      <button class="font-pill active" data-font="DiaryComicSans">Comic Sans</button>
+      <button class="font-pill" data-font="DiaryOldEnglish">Old English</button>
+      <button class="font-pill" data-font="DiaryMinecraft">Minecraft</button>
+      <button class="font-pill" data-font="DiaryEmoji">Emoji</button>
+    </div>
   </div>
 </div>
 
@@ -168,7 +257,7 @@
     return [{ id: 'page-1', title: '', text: '', createdAt: Date.now() }];
   }
 
-  var state = { pages: freshPages(), currentPageIndex: 0 };
+  var state = { pages: freshPages(), currentPageIndex: 0, font: 'DiaryComicSans', paper: 'notepad1.png' };
   var cloudUser = null;
   var db = null;
   var saveTimer = null;
@@ -182,12 +271,32 @@
   var saveBtn = document.getElementById('save-btn');
   var syncDot = document.getElementById('sync-dot');
   var notebookEl = document.getElementById('notebook');
+  var settingsBtn = document.getElementById('settings-btn');
+  var settingsPanel = document.getElementById('settings-panel');
+  var fontRow = document.getElementById('font-row');
+  var bgRow = document.getElementById('bg-row');
 
   function getCurrentPage(){
     if(!state.pages.length) state.pages = freshPages();
     if(state.currentPageIndex >= state.pages.length) state.currentPageIndex = state.pages.length - 1;
     if(state.currentPageIndex < 0) state.currentPageIndex = 0;
     return state.pages[state.currentPageIndex];
+  }
+
+  function applyPreferences(){
+    var fontValue = state.font || 'DiaryComicSans';
+    bodyInput.style.fontFamily = fontValue === 'inherit'
+      ? ''
+      : '"' + fontValue + '", "Comic Sans MS", "Comic Sans", cursive';
+    Array.prototype.forEach.call(fontRow.querySelectorAll('.font-pill'), function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-font') === fontValue);
+    });
+
+    var paperValue = state.paper || 'notepad1.png';
+    notebookEl.style.backgroundImage = "url('" + paperValue + "')";
+    Array.prototype.forEach.call(bgRow.querySelectorAll('.bg-pill'), function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-bg') === paperValue);
+    });
   }
 
   function renderCurrentPage(){
@@ -233,7 +342,7 @@
     setSyncStatus('saving');
     var metaRef = db.collection('users').doc(cloudUser.uid).collection('diary').doc('meta');
     metaRef.set({
-      notebook: { pages: state.pages, currentPageIndex: state.currentPageIndex },
+      notebook: { pages: state.pages, currentPageIndex: state.currentPageIndex, font: state.font, paper: state.paper },
       updatedAt: Date.now()
     }, { merge: true }).then(function(){
       setSyncStatus('online');
@@ -260,7 +369,10 @@
       if(nb && Array.isArray(nb.pages) && nb.pages.length){
         state.pages = nb.pages;
         state.currentPageIndex = Number.isFinite(nb.currentPageIndex) ? nb.currentPageIndex : 0;
+        if(nb.font) state.font = nb.font;
+        if(nb.paper) state.paper = nb.paper;
         renderCurrentPage();
+        applyPreferences();
       }
       setSyncStatus('online');
     }).catch(function(){
@@ -299,6 +411,28 @@
     renderCurrentPage();
     persistLocal();
     pushToCloudIfSignedIn();
+  });
+
+  settingsBtn.addEventListener('click', function(){
+    settingsPanel.classList.toggle('open');
+  });
+
+  Array.prototype.forEach.call(fontRow.querySelectorAll('.font-pill'), function(btn){
+    btn.addEventListener('click', function(){
+      state.font = btn.getAttribute('data-font');
+      applyPreferences();
+      persistLocal();
+      pushToCloudIfSignedIn();
+    });
+  });
+
+  Array.prototype.forEach.call(bgRow.querySelectorAll('.bg-pill'), function(btn){
+    btn.addEventListener('click', function(){
+      state.paper = btn.getAttribute('data-bg');
+      applyPreferences();
+      persistLocal();
+      pushToCloudIfSignedIn();
+    });
   });
 
   titleInput.addEventListener('input', queueSave);
@@ -393,6 +527,7 @@
   // --- Boot ---
   loadLocal();
   renderCurrentPage();
+  applyPreferences();
   setSyncStatus('offline');
 
   try {
