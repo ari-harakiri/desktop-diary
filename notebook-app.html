@@ -1,0 +1,394 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Notebook</title>
+<link rel="manifest" href="notebook-manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Notebook" />
+<link rel="apple-touch-icon" href="notepad1.png" />
+<meta name="theme-color" content="#0054e3" />
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: linear-gradient(#5b9bf0, #a9d0f5 55%, #bfe6a6 55%, #7fc85c);
+    font-family: Tahoma, Arial, sans-serif;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: env(safe-area-inset-top, 12px) 16px env(safe-area-inset-bottom, 12px);
+  }
+  #notebook {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    aspect-ratio: 220 / 213;
+    background: url('notepad1.png') center / cover no-repeat;
+  }
+  #save-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 34px; height: 30px;
+    border: 1px solid rgba(0,0,0,.35);
+    border-radius: 4px;
+    background: rgba(255,255,255,.6);
+    font-size: 17px;
+    line-height: 1;
+    color: #333;
+    cursor: pointer;
+    z-index: 5;
+  }
+  #save-btn:active { background: rgba(255,255,255,.85); }
+  #edit-area {
+    position: absolute;
+    inset: 12% 6% 16% 10%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #title-input {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    outline: none;
+    font-size: 17px;
+    font-weight: 700;
+    font-family: Tahoma, Arial, sans-serif;
+    padding: 2px 4px;
+    color: #262626;
+  }
+  #title-input::placeholder { color: #7a7a7a; }
+  #body-input {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    outline: none;
+    flex: 1;
+    resize: none;
+    font-size: 16px;
+    font-family: "Comic Sans MS", "Comic Sans", cursive;
+    color: #262626;
+    padding: 2px 4px;
+    line-height: 1.4;
+  }
+  #footer {
+    position: absolute;
+    left: 7%; right: 11%; bottom: 5%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #3f3f3f;
+  }
+  #page-label { font-size: 12px; }
+  #nav { display: flex; gap: 14px; }
+  #nav button {
+    border: none; background: transparent; cursor: pointer;
+    font-size: 22px; color: #3f3f3f; padding: 4px 6px; line-height: 1;
+  }
+  #trash-btn {
+    border: none; background: transparent; cursor: pointer;
+    font-size: 15px; color: #3b3b3b; padding: 4px;
+  }
+  #sync-dot {
+    position: absolute;
+    bottom: 8px; left: 8px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #999;
+    z-index: 5;
+    transition: background .25s ease;
+  }
+  #sync-dot.online { background: #3ba33b; }
+  #sync-dot.saving { background: #e0a000; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="notebook">
+    <button id="save-btn" title="Save as image">💾</button>
+    <div id="edit-area">
+      <input id="title-input" type="text" placeholder="Title" maxlength="120" autocomplete="off" />
+      <textarea id="body-input" placeholder=""></textarea>
+    </div>
+    <div id="footer">
+      <span id="page-label"></span>
+      <div id="nav">
+        <button id="prev-btn" title="Previous page">‹</button>
+        <button id="next-btn" title="Next page">›</button>
+      </div>
+      <button id="trash-btn" title="Delete this page">🗑</button>
+    </div>
+    <div id="sync-dot" title="Sync status"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var LOCAL_KEY = 'notebook-app-standalone-v1';
+  var firebaseConfig = {
+    apiKey: "AIzaSyD2zxq7c33ff6CnLlNrVolPGtaqHRJhaa0",
+    authDomain: "instantdiary-14474.firebaseapp.com",
+    projectId: "instantdiary-14474",
+    storageBucket: "instantdiary-14474.firebasestorage.app",
+    messagingSenderId: "20644051614",
+    appId: "1:20644051614:web:50d2be0d77cbec02a7998f"
+  };
+
+  function freshPages(){
+    return [{ id: 'page-1', title: '', text: '', createdAt: Date.now() }];
+  }
+
+  var state = { pages: freshPages(), currentPageIndex: 0 };
+  var cloudUser = null;
+  var db = null;
+  var saveTimer = null;
+
+  var titleInput = document.getElementById('title-input');
+  var bodyInput = document.getElementById('body-input');
+  var pageLabel = document.getElementById('page-label');
+  var prevBtn = document.getElementById('prev-btn');
+  var nextBtn = document.getElementById('next-btn');
+  var trashBtn = document.getElementById('trash-btn');
+  var saveBtn = document.getElementById('save-btn');
+  var syncDot = document.getElementById('sync-dot');
+  var notebookEl = document.getElementById('notebook');
+
+  function getCurrentPage(){
+    if(!state.pages.length) state.pages = freshPages();
+    if(state.currentPageIndex >= state.pages.length) state.currentPageIndex = state.pages.length - 1;
+    if(state.currentPageIndex < 0) state.currentPageIndex = 0;
+    return state.pages[state.currentPageIndex];
+  }
+
+  function renderCurrentPage(){
+    var page = getCurrentPage();
+    titleInput.value = page.title || '';
+    bodyInput.value = page.text || '';
+    pageLabel.textContent = 'pg ' + (state.currentPageIndex + 1);
+    prevBtn.disabled = state.currentPageIndex === 0;
+    nextBtn.disabled = false;
+  }
+
+  function captureCurrentPage(){
+    var page = getCurrentPage();
+    page.title = titleInput.value;
+    page.text = bodyInput.value;
+  }
+
+  function persistLocal(){
+    try{
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+    } catch(e){}
+  }
+
+  function loadLocal(){
+    try{
+      var raw = localStorage.getItem(LOCAL_KEY);
+      if(raw){
+        var parsed = JSON.parse(raw);
+        if(parsed && Array.isArray(parsed.pages) && parsed.pages.length){
+          state = parsed;
+        }
+      }
+    } catch(e){}
+  }
+
+  function setSyncStatus(mode){
+    syncDot.className = mode;
+    syncDot.title = mode === 'online' ? 'Synced to cloud' : (mode === 'saving' ? 'Saving…' : 'Local only (not signed in)');
+  }
+
+  function pushToCloudIfSignedIn(){
+    if(!db || !cloudUser) { persistLocal(); return; }
+    setSyncStatus('saving');
+    var metaRef = db.collection('users').doc(cloudUser.uid).collection('diary').doc('meta');
+    metaRef.set({
+      notebook: { pages: state.pages, currentPageIndex: state.currentPageIndex },
+      updatedAt: Date.now()
+    }, { merge: true }).then(function(){
+      setSyncStatus('online');
+    }).catch(function(){
+      setSyncStatus('offline');
+    });
+    persistLocal();
+  }
+
+  function queueSave(){
+    captureCurrentPage();
+    persistLocal();
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(pushToCloudIfSignedIn, 1500);
+  }
+
+  function pullFromCloud(){
+    if(!db || !cloudUser) return;
+    var metaRef = db.collection('users').doc(cloudUser.uid).collection('diary').doc('meta');
+    metaRef.get().then(function(snap){
+      if(!snap.exists) { setSyncStatus('online'); return; }
+      var data = snap.data() || {};
+      var nb = data.notebook;
+      if(nb && Array.isArray(nb.pages) && nb.pages.length){
+        state.pages = nb.pages;
+        state.currentPageIndex = Number.isFinite(nb.currentPageIndex) ? nb.currentPageIndex : 0;
+        renderCurrentPage();
+      }
+      setSyncStatus('online');
+    }).catch(function(){
+      setSyncStatus('offline');
+    });
+  }
+
+  // --- Navigation ---
+  prevBtn.addEventListener('click', function(){
+    captureCurrentPage();
+    if(state.currentPageIndex > 0){
+      state.currentPageIndex--;
+      renderCurrentPage();
+      persistLocal();
+    }
+  });
+  nextBtn.addEventListener('click', function(){
+    captureCurrentPage();
+    if(state.currentPageIndex < state.pages.length - 1){
+      state.currentPageIndex++;
+    } else {
+      state.pages.push({ id: 'page-' + (state.pages.length + 1) + '-' + Date.now(), title: '', text: '', createdAt: Date.now() });
+      state.currentPageIndex = state.pages.length - 1;
+    }
+    renderCurrentPage();
+    persistLocal();
+  });
+  trashBtn.addEventListener('click', function(){
+    if(state.pages.length <= 1){
+      state.pages = freshPages();
+      state.currentPageIndex = 0;
+    } else {
+      state.pages.splice(state.currentPageIndex, 1);
+      if(state.currentPageIndex >= state.pages.length) state.currentPageIndex = state.pages.length - 1;
+    }
+    renderCurrentPage();
+    persistLocal();
+    pushToCloudIfSignedIn();
+  });
+
+  titleInput.addEventListener('input', queueSave);
+  bodyInput.addEventListener('input', queueSave);
+  titleInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      bodyInput.focus();
+    }
+  });
+
+  // --- Mobile keyboard avoidance ---
+  var savedScrollBeforeKeyboard = null;
+  function scrollAboveKeyboard(){
+    if(window.visualViewport){
+      window.scrollTo(0, 0);
+      notebookEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+  titleInput.addEventListener('focus', function(){ setTimeout(scrollAboveKeyboard, 60); });
+  bodyInput.addEventListener('focus', function(){ setTimeout(scrollAboveKeyboard, 60); });
+
+  // --- Save as image ---
+  saveBtn.addEventListener('click', function(){
+    captureCurrentPage();
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      var scale = img.naturalWidth / 220;
+      var editLeft = 22 * scale, editTop = 26 * scale;
+      var editRight = canvas.width - (13 * scale);
+      var editBottom = canvas.height - (34 * scale);
+      var editWidth = editRight - editLeft;
+
+      var page = getCurrentPage();
+      var title = (page.title || '').trim();
+      var titleY = editTop;
+      var titleFontSize = 15 * scale;
+      if(title){
+        ctx.fillStyle = '#262626';
+        ctx.font = 'bold ' + titleFontSize + 'px Tahoma, Arial, sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.fillText(title, editLeft, titleY, editWidth);
+      }
+
+      var bodyY = titleY + titleFontSize + (10 * scale);
+      var bodyFontSize = 14 * scale;
+      var lineHeight = bodyFontSize * 1.3;
+      ctx.fillStyle = '#262626';
+      ctx.font = bodyFontSize + 'px "Comic Sans MS", "Comic Sans", cursive';
+      ctx.textBaseline = 'top';
+
+      var y = bodyY;
+      (page.text || '').split('\n').forEach(function(rawLine){
+        var words = rawLine.split(' ');
+        var line = '';
+        for(var i = 0; i < words.length; i++){
+          var test = line ? line + ' ' + words[i] : words[i];
+          if(ctx.measureText(test).width > editWidth && line){
+            if(y + lineHeight <= editBottom) ctx.fillText(line, editLeft, y);
+            y += lineHeight;
+            line = words[i];
+          } else {
+            line = test;
+          }
+        }
+        if(y + lineHeight <= editBottom) ctx.fillText(line, editLeft, y);
+        y += lineHeight;
+      });
+
+      var titleForFile = title ? title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40) : 'page';
+      var a = document.createElement('a');
+      a.download = 'notebook-' + titleForFile + '-' + new Date().toISOString().slice(0, 10) + '.png';
+      a.href = canvas.toDataURL('image/png');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    };
+    img.src = 'notepad1.png';
+  });
+
+  // --- Boot ---
+  loadLocal();
+  renderCurrentPage();
+  setSyncStatus('offline');
+
+  try {
+    if(!window.firebase.apps || !window.firebase.apps.length){
+      firebase.initializeApp(firebaseConfig);
+    }
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
+    db = firebase.firestore();
+    firebase.auth().onAuthStateChanged(function(user){
+      if(user){
+        cloudUser = user;
+        pullFromCloud();
+      } else {
+        cloudUser = null;
+        setSyncStatus('offline');
+      }
+    });
+  } catch(e){
+    setSyncStatus('offline');
+  }
+})();
+</script>
+</body>
+</html>
