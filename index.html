@@ -2,10 +2,20 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="refresh" content="0; url=./desktop-diary.html" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>Desktop Diary</title>
+    <meta name="referrer" content="no-referrer" />
+    <script>
+      (function () {
+        var dest = 'desktop-diary.html';
+        var separator = dest.indexOf('?') === -1 ? '?' : '&';
+        window.location.replace(dest + separator + 't=' + Date.now());
+      })();
+    </script>
   </head>
   <body>
-    <p>Loading Desktop Diary… If you are not redirected, open <a href="./desktop-diary.html">desktop-diary.html</a>.</p>
+    <p>Redirecting to Desktop Diary… If it does not load, open <a href="desktop-diary.html">desktop-diary.html</a>.</p>
   </body>
 </html>

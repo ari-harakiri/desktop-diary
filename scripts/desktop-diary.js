@@ -47,6 +47,9 @@ try {
     if(!raw){
       return 'https://ari-harakiri.github.io/desktop-diary/desktop-diary.html';
     }
+    if(raw.indexOf('file://') === 0){
+      return 'https://ari-harakiri.github.io/desktop-diary/desktop-diary.html';
+    }
     return raw;
   })();
   var SUPABASE_URL = 'https://iiclhmiuggvsjthdtxlb.supabase.co';
@@ -127,7 +130,7 @@ try {
   // Privacy-safe analytics: callers can send only an allowlisted event name
   // and a broad device class. Supabase supplies the time and decides whether
   // auth.uid() may be attached by reading the member's database preference.
-  var DTD_USAGE_EVENTS={session_started:1,diary_opened:1,diary_entry_created:1,post_mail_opened:1,letter_sent:1,sudoku_started:1,sudoku_completed:1,profile_editor_opened:1,sticky_note_created:1,paint_opened:1,arinet_opened:1,help_opened:1,koba_interacted:1};
+  var DTD_USAGE_EVENTS={session_started:1,diary_opened:1,diary_entry_created:1,post_mail_opened:1,letter_sent:1,sudoku_started:1,sudoku_completed:1,profile_editor_opened:1,paint_opened:1,arinet_opened:1,help_opened:1,koba_interacted:1};
   var dtdUsageSessionTracked=false;
   function dtdUsageDeviceClass(){
     var sw=(window.screen&&screen.width)||window.innerWidth||1200,sh=(window.screen&&screen.height)||window.innerHeight||800,shortSide=Math.min(sw,sh);
@@ -144,7 +147,7 @@ try {
   }
   var DEFAULT_SITE_CONTENT={
     install_instructions:'iPhone / iPad (Safari)\n\n1. Open DesktopDiary in Safari (not Chrome).\n2. Tap the Share button at the bottom of the screen—the box with an arrow pointing up.\n3. Scroll down and tap “Add to Home Screen.”\n4. Give it a name and tap Add.\n5. DesktopDiary now lives on your home screen like a real app.\n\nAndroid / Samsung (Chrome)\n\n1. Open DesktopDiary in Chrome.\n2. Tap the three-dot menu in the top-right corner.\n3. Tap “Add to Home Screen” or “Install App.”\n4. Tap Add to confirm.\n5. DesktopDiary now lives on your home screen like a real app.',
-    help_instructions:'Every buddy on your Buddy List is someone—or something—you can spill your guts to.\n\nUse messages to save birthdays, random memories, gift ideas, inside jokes, rants, shopping lists, life updates, or whatever is on your mind. Add your own categories and organize things your own way.\n\nClick a buddy to open an IM window and leave them a note. Keep a running history of thoughts, plans, and memories all in one place.\n\nBuddy icons show how recently their diary was updated:\nOnline = This week\nAway = More than 7 days\nOffline = More than 30 days\n\nUpdate your vibe anytime by setting your Status. It will be saved in the Log.\n\nHead to your Diary and choose New Entry to write and save.\n\nCustomize your profile, edit the HTML, choose a background, add sticky notes, and turn your desktop into your personal homepage.\n\nUse File → Cloud Sync to keep a backup through Google sign-in. Local storage also auto-saves on this device, but local data can be lost if the browser cache is cleared.\n\nBasically: it is like AIM, a diary, a notepad, and a personal homepage all rolled into one.'
+    help_instructions:'Every buddy on your Buddy List is someone—or something—you can spill your guts to.\n\nUse messages to save birthdays, random memories, gift ideas, inside jokes, rants, shopping lists, life updates, or whatever is on your mind. Add your own categories and organize things your own way.\n\nClick a buddy to open an IM window and leave them a note. Keep a running history of thoughts, plans, and memories all in one place.\n\nBuddy icons show how recently their diary was updated:\nOnline = This week\nAway = More than 7 days\nOffline = More than 30 days\n\nUpdate your vibe anytime by setting your Status. It will be saved in the Log.\n\nHead to your Diary and choose New Entry to write and save.\n\nCustomize your profile, edit the HTML, choose a background, and turn your desktop into your personal homepage.\n\nUse File → Cloud Sync to keep a backup through Google sign-in. Local storage also auto-saves on this device, but local data can be lost if the browser cache is cleared.\n\nBasically: it is like AIM, a diary, a notepad, and a personal homepage all rolled into one.'
   };
   var dtdSiteContent={install_instructions:DEFAULT_SITE_CONTENT.install_instructions,help_instructions:DEFAULT_SITE_CONTENT.help_instructions};
   var dtdAdminAccess=false;
@@ -210,7 +213,7 @@ try {
     themeRecentColors: [],  // recently used custom colors in Edit Theme (device-local, not synced)
     theme: { preset: 'classic', customColors: ['#3d95ff'], buttonColor: '#9cc6f0', startColor: '#7ed957', buttonRainbow: false, startRainbow: false, clockColor: '#1a4fc4', calDaysColors: ['#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a','#8f8b7a'], fontColor: '#ffffff' }, // window chrome and interface colors
     customFonts: [],        // user-uploaded fonts (device-local, not synced): { id, name, dataUrl }
-    stickyNotes: [],        // desktop sticky notes (device-local): { id, title, text, color, x, y, w, h }
+
     desktopIconPositions: {}, // desktop icon id -> { x, y }
     buddyListPosition: null, // device-local Buddy List position: { x, y }
     trash: [],              // recoverable deleted content, retained for seven days
@@ -222,7 +225,8 @@ try {
     drafts: {},             // buddyId -> [ { id, html, ts }, ... ] saved draft log
     mail: { address: '', inbox: [], sent: [], scheduled: [], contacts: [] }, // DtD Post Mail account, messages, and address book
     companion: { animal: 'puppy', memories: [], lastOpened: null, toys: { ball: { x: null, y: null, throwCount: 0 } }, penPalNotifications: { knownIncoming: [], pendingOutgoing: [], unreadAlerts: [] } }, // private desktop-companion memory, toys, and notification state
-    scrapbook: { backgroundPreset: 'computer', backgroundColor: '#f1f3f5', backgroundPattern: 'none', border: 'simple', fontFamily: 'system', headingFont: 'system', fontSize: 'medium', stickers: [], notes: [] }
+    scrapbook: { backgroundPreset: 'computer', backgroundColor: '#f1f3f5', backgroundPattern: 'none', border: 'simple', fontFamily: 'system', headingFont: 'system', fontSize: 'medium', stickers: [], notes: [] },
+    notebook: { pages: [ { id: 'page-1', text: '', createdAt: Date.now() } ], currentPageIndex: 0, backgroundImage: 'notepad1.png' } // notebook: plain-text pages, unlimited length
   };
   var EMPTY_STATE_TEMPLATE=JSON.stringify(state);
   function makeFreshState(){return JSON.parse(EMPTY_STATE_TEMPLATE);}
@@ -282,14 +286,6 @@ try {
     }
     if(!Array.isArray(state.customThemePresets)) state.customThemePresets = [];
     if(!Array.isArray(state.customFonts)) state.customFonts = [];
-    if(!Array.isArray(state.stickyNotes)) state.stickyNotes = [];
-    state.stickyNotes = state.stickyNotes.map(function(note){
-      if(!note || typeof note !== 'object') return null;
-      if(!note.id) note.id = uid();
-      if(typeof note.title !== 'string') note.title = '';
-      if(typeof note.text !== 'string') note.text = '';
-      return note;
-    }).filter(Boolean);
     if(!state.desktopIconPositions || typeof state.desktopIconPositions !== 'object') state.desktopIconPositions = {};
     if(!state.buddyListPosition || !Number.isFinite(Number(state.buddyListPosition.x)) || !Number.isFinite(Number(state.buddyListPosition.y))) state.buddyListPosition = null;
     if(!Array.isArray(state.trash)) state.trash = [];
@@ -371,6 +367,24 @@ try {
     state.scrapbook.stickers=state.scrapbook.stickers.filter(function(sticker){return typeof sticker==='string'&&sticker.length<12;}).slice(0,12);
     if(!Array.isArray(state.scrapbook.notes)) state.scrapbook.notes=[];
     state.scrapbook.notes=state.scrapbook.notes.filter(function(note){return note&&typeof note.text==='string'&&note.text.trim();}).map(function(note){if(!note.id)note.id=uid();note.text=note.text.trim().slice(0,500);return note;}).slice(0,20);
+    if(!state.notebook || typeof state.notebook !== 'object') state.notebook = { pages: [ { id: 'page-1', text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' } ], currentPageIndex: 0, backgroundImage: 'notepad1.png' };
+    if(!Array.isArray(state.notebook.pages)) state.notebook.pages = [ { id: 'page-1', text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' } ];
+    state.notebook.pages = state.notebook.pages.map(function(page, index){
+      if(!page || typeof page !== 'object') return null;
+      if(!page.id) page.id = 'page-' + uid();
+      page.title = typeof page.title === 'string' ? page.title : '';
+      page.text = typeof page.text === 'string' ? page.text : '';
+      page.createdAt = Number.isFinite(Number(page.createdAt)) ? Number(page.createdAt) : Date.now();
+      page.updatedAt = Number.isFinite(Number(page.updatedAt)) ? Number(page.updatedAt) : page.createdAt;
+      return page;
+    }).filter(Boolean);
+    if(!state.notebook.pages.length){
+      state.notebook.pages = [ { id: 'page-' + uid(), text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' } ];
+    }
+    if(!state.notebook.currentPageIndex && state.notebook.currentPageIndex !== 0) state.notebook.currentPageIndex = 0;
+    if(!Number.isFinite(Number(state.notebook.currentPageIndex))) state.notebook.currentPageIndex = 0;
+    state.notebook.currentPageIndex = Math.max(0, Math.min(state.notebook.pages.length - 1, Number(state.notebook.currentPageIndex)));
+    state.notebook.backgroundImage = normalizeNotebookBackgroundImage(state.notebook.backgroundImage);
     if(!state.mail.welcomed){
       state.mail.inbox.push({id:uid(),from:'postmaster@desktopdiary.local',to:(state.account&&state.account.screenName||'you')+'@desktopdiary.local',subject:'Welcome to DtD Post Mail',body:'DtD Post Mail is a private, local-only mail simulator. Messages you write stay inside DesktopDiary and never leave your device.',ts:Date.now(),read:false});
       state.mail.welcomed = true;
@@ -400,332 +414,10 @@ try {
     } catch(e){ return Promise.resolve(); }
   }
 
-  // ---------------- sticky notes ----------------
-  var STICKY_COLORS = ['#fff9a3','#ffd6a5','#b5ead7','#c9b1ff','#ffc8dd','#bde0fe'];
-
-  function saveStickyNotes(){ saveState(); }
-
-  function stickyWindowLabel(note){
-    var title = (note && typeof note.title === 'string' ? note.title : '').trim();
-    return title || 'Sticky Note';
-  }
-
-  function bindStickyToTaskbar(note, el){
-    if(!note || !note.id) return null;
-    var id = 'sticky-' + note.id;
-    var rec = openWindows.find(function(w){ return w.id === id; });
-    if(rec){
-      rec.el = el;
-      rec.note = note;
-      rec.minimized = false;
-      if(rec.tbSetLabel) rec.tbSetLabel(stickyWindowLabel(note));
-      else if(rec.tbEl){ rec.tbEl.textContent = stickyWindowLabel(note); }
-      else {
-        addTaskbarItem(rec, stickyWindowLabel(note));
-      }
-      return rec;
-    }
-    rec = {
-      id: id,
-      el: el,
-      type: 'sticky',
-      buddyId: null,
-      onClose: null,
-      maximized: false,
-      prevRect: null,
-      minimized: false,
-      note: note
-    };
-    openWindows.push(rec);
-    addTaskbarItem(rec, stickyWindowLabel(note));
-    return rec;
-  }
-
-  function renderAllStickyNotes(){
-    var layer = document.getElementById('sticky-layer');
-    if(!layer) return;
-    layer.innerHTML = '';
-    (state.stickyNotes || []).forEach(function(note){ mountStickyNote(note); });
-  }
-
-  function mountStickyNote(note){
-    var layer = document.getElementById('sticky-layer');
-    if(!layer) return;
-    var el = document.createElement('div');
-    el.className = 'sticky';
-    el.style.left = (note.x || 40) + 'px';
-    el.style.top = (note.y || 60) + 'px';
-    el.style.width = (note.w || 180) + 'px';
-    el.style.height = (note.h || 160) + 'px';
-    el.style.background = note.color || '#fff9a3';
-    el.style.zIndex = (zCounter += 10); // always spawn above windows
-    el.setAttribute('data-sid', note.id);
-
-    var bar = document.createElement('div');
-    bar.className = 'sticky-bar';
-    bar.style.background = note.color || '#fff9a3';
-
-    var titleInput = document.createElement('input');
-    titleInput.className = 'sticky-bar-title';
-    titleInput.type = 'text';
-    titleInput.placeholder = '';
-    titleInput.value = note.title || '';
-
-    var minimizeBtn = document.createElement('button');
-    minimizeBtn.className = 'sticky-min-btn';
-    minimizeBtn.innerHTML = '&minus;';
-    minimizeBtn.title = 'Minimize note';
-
-    var colorBtn = document.createElement('button');
-    colorBtn.className = 'sticky-color-btn';
-    colorBtn.style.background = note.color || '#fff9a3';
-    colorBtn.title = 'Change color';
-
-    var deleteBtn = document.createElement('button');
-    deleteBtn.className = 'sticky-delete';
-    deleteBtn.innerHTML = '&#128465;';
-    deleteBtn.title = 'Delete note';
-    deleteBtn.setAttribute('aria-label', 'Delete note');
-
-    var stickyRecord = bindStickyToTaskbar(note, el);
-    var titleTimer;
-    function commitStickyTitle(){
-      clearTimeout(titleTimer);
-      note.title = titleInput.value || '';
-      if(stickyRecord && stickyRecord.tbSetLabel) stickyRecord.tbSetLabel(stickyWindowLabel(note));
-      saveStickyNotes();
-    }
-    titleInput.addEventListener('mousedown', function(e){ e.stopPropagation(); });
-    titleInput.addEventListener('touchstart', function(e){ e.stopPropagation(); });
-    titleInput.addEventListener('click', function(e){ e.stopPropagation(); });
-    titleInput.addEventListener('keydown', function(e){
-      if(e.key === 'Enter'){
-        e.preventDefault();
-        e.stopPropagation();
-        commitStickyTitle();
-        titleInput.blur();
-      }
-    });
-    titleInput.addEventListener('input', function(){
-      clearTimeout(titleTimer);
-      titleTimer = setTimeout(function(){
-        commitStickyTitle();
-      }, 250);
-    });
-    titleInput.addEventListener('blur', commitStickyTitle);
-
-    bar.appendChild(titleInput);
-    bar.appendChild(minimizeBtn);
-    bar.appendChild(colorBtn);
-
-    var body = document.createElement('textarea');
-    body.className = 'sticky-body';
-    body.value = note.text || '';
-    body.placeholder = 'Type a note\u2026';
-
-    var resizeHandle = document.createElement('div');
-    resizeHandle.className = 'sticky-resize-handle';
-
-    el.appendChild(bar);
-    el.appendChild(body);
-    el.appendChild(deleteBtn);
-    el.appendChild(resizeHandle);
-    layer.appendChild(el);
-
-    // touch resize via handle
-    resizeHandle.addEventListener('touchstart', function(e){
-      e.stopPropagation();
-      var t = e.touches[0];
-      var startX = t.clientX, startY = t.clientY;
-      var startW = el.offsetWidth, startH = el.offsetHeight;
-      function onMove(ev){
-        var tt = ev.touches[0];
-        var newW = Math.max(140, startW + (tt.clientX - startX));
-        var newH = Math.max(100, startH + (tt.clientY - startY));
-        el.style.width = newW + 'px';
-        el.style.height = newH + 'px';
-      }
-      function onEnd(){
-        note.w = el.offsetWidth; note.h = el.offsetHeight;
-        saveStickyNotes();
-        resizeHandle.removeEventListener('touchmove', onMove);
-        resizeHandle.removeEventListener('touchend', onEnd);
-      }
-      resizeHandle.addEventListener('touchmove', onMove, { passive:false });
-      resizeHandle.addEventListener('touchend', onEnd);
-    }, { passive:true });
-
-    // bring to front on any interaction
-    el.addEventListener('mousedown', function(){ el.style.zIndex = ++zCounter; if(stickyRecord) focusWindow(stickyRecord.id); });
-    el.addEventListener('touchstart', function(){ el.style.zIndex = ++zCounter; if(stickyRecord) focusWindow(stickyRecord.id); }, { passive:true });
-
-    // drag via title bar
-    makeStickyDraggable(el, bar, note);
-
-    // resize observer to save dimensions
-    var resizeTimer;
-    var ro = new ResizeObserver(function(){
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function(){
-        note.w = el.offsetWidth; note.h = el.offsetHeight;
-        saveStickyNotes();
-      }, 400);
-    });
-    ro.observe(el);
-
-    // text changes
-    var textTimer;
-    body.addEventListener('input', function(){
-      clearTimeout(textTimer);
-      textTimer = setTimeout(function(){
-        note.text = body.value;
-        saveStickyNotes();
-      }, 600);
-    });
-
-    // color picker
-    colorBtn.addEventListener('click', function(e){
-      e.stopPropagation();
-      showStickyColorPicker(el, note, colorBtn, bar);
-    });
-
-    minimizeBtn.addEventListener('click', function(e){
-      e.stopPropagation();
-      if(stickyRecord) minimizeWindow(stickyRecord);
-    });
-
-    // delete
-    deleteBtn.addEventListener('click', function(){
-      ro.disconnect();
-      if(stickyRecord && stickyRecord.id){
-        closeWindow(stickyRecord.id);
-      } else {
-        el.remove();
-      }
-      var noteLabel=(note.text||'').trim().split(/\n/)[0].slice(0,48)||'Sticky Note';
-      moveToTrash('sticky',noteLabel,note,{});
-      state.stickyNotes = state.stickyNotes.filter(function(n){ return n.id !== note.id; });
-      saveStickyNotes();
-    });
-  }
-
-  function shadeColor(hex, pct){
-    // lighten/darken a hex color by pct (-100..100)
-    var n = parseInt(hex.replace('#',''), 16);
-    var r = Math.min(255, Math.max(0, (n>>16) + pct));
-    var g = Math.min(255, Math.max(0, ((n>>8)&0xff) + pct));
-    var b = Math.min(255, Math.max(0, (n&0xff) + pct));
-    return '#' + [r,g,b].map(function(x){ return ('0'+x.toString(16)).slice(-2); }).join('');
-  }
-
-  function makeStickyDraggable(el, handle, note){
-    var startX, startY, startL, startT, dragging = false;
-    function onStart(cx, cy){
-      dragging = true;
-      startX = cx; startY = cy;
-      startL = el.offsetLeft; startT = el.offsetTop;
-      el.style.zIndex = ++zCounter;
-    }
-    function onMove(cx, cy){
-      if(!dragging) return;
-      var nx = startL + (cx - startX);
-      var ny = startT + (cy - startY);
-      var maxX = window.innerWidth - el.offsetWidth;
-      var maxY = window.innerHeight - TASKBAR_H - el.offsetHeight;
-      nx = Math.max(0, Math.min(nx, maxX));
-      ny = Math.max(0, Math.min(ny, maxY));
-      el.style.left = nx + 'px'; el.style.top = ny + 'px';
-    }
-    function onEnd(){
-      if(!dragging) return;
-      dragging = false;
-      note.x = el.offsetLeft; note.y = el.offsetTop;
-      saveStickyNotes();
-    }
-    handle.addEventListener('mousedown', function(e){
-      if(e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-      e.preventDefault(); onStart(e.clientX, e.clientY);
-      document.addEventListener('mousemove', onMouse);
-      document.addEventListener('mouseup', onMouseUp);
-    });
-    function onMouse(e){ onMove(e.clientX, e.clientY); }
-    function onMouseUp(){ onEnd(); document.removeEventListener('mousemove', onMouse); document.removeEventListener('mouseup', onMouseUp); }
-    handle.addEventListener('touchstart', function(e){
-      if(e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-      var t = e.touches[0]; onStart(t.clientX, t.clientY);
-    }, { passive:true });
-    handle.addEventListener('touchmove', function(e){
-      var t = e.touches[0]; onMove(t.clientX, t.clientY); e.preventDefault();
-    }, { passive:false });
-    handle.addEventListener('touchend', onEnd);
-  }
-
-  var activeStickyPicker = null;
-  function showStickyColorPicker(el, note, colorBtn, bar){
-    if(activeStickyPicker){ activeStickyPicker.remove(); activeStickyPicker = null; }
-    var picker = document.createElement('div');
-    picker.style.cssText = 'position:fixed;z-index:999999;display:flex;gap:6px;background:#fff;border:1px solid #aaa;border-radius:8px;padding:7px;box-shadow:0 2px 10px rgba(0,0,0,.3);';
-    STICKY_COLORS.forEach(function(c){
-      var swatch = document.createElement('div');
-      swatch.style.cssText = 'width:22px;height:22px;border-radius:50%;background:'+c+';border:2px solid rgba(0,0,0,'+(note.color===c?'.6':'.18')+';cursor:pointer;';
-      swatch.addEventListener('click', function(){
-        note.color = c;
-        el.style.background = c;
-        bar.style.background = c;
-        colorBtn.style.background = c;
-        saveStickyNotes();
-        picker.remove(); activeStickyPicker = null;
-      });
-      picker.appendChild(swatch);
-    });
-    var rect = colorBtn.getBoundingClientRect();
-    picker.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
-    picker.style.top = (rect.bottom + 4) + 'px';
-    document.body.appendChild(picker);
-    activeStickyPicker = picker;
-    setTimeout(function(){
-      document.addEventListener('click', function dismiss(e){
-        if(!picker.contains(e.target)){ picker.remove(); activeStickyPicker = null; document.removeEventListener('click', dismiss); }
-      });
-    }, 0);
-  }
-
-  var stickySpawnCounter = 0;
-  function nextStickySpawnPos(w, h){
-    // cascade each new note diagonally so they don't stack on top of each other;
-    // wrap back to the start once the cascade would run off-screen
-    var step = 28;
-    var baseX = 50, baseY = 50;
-    var maxSteps = Math.max(1, Math.floor((Math.max(window.innerWidth - baseX - w, 0)) / step));
-    var idx = stickySpawnCounter % (maxSteps || 1);
-    stickySpawnCounter++;
-    var rawX = baseX + idx * step;
-    var rawY = baseY + idx * step;
-    // clampToViewport keeps the note fully on-screen and above the taskbar
-    return clampToViewport(rawX, rawY, w, h);
-  }
-
-  function createStickyNote(){
-    var w = 180, h = 160;
-    var pos = nextStickySpawnPos(w, h);
-    var note = {
-      id: uid(),
-      title: '',
-      text: '',
-      color: STICKY_COLORS[Math.floor(Math.random() * STICKY_COLORS.length)],
-      x: pos.x,
-      y: pos.y,
-      w: w, h: h
-    };
-    state.stickyNotes = state.stickyNotes || [];
-    state.stickyNotes.push(note);
-    saveStickyNotes();
-    mountStickyNote(note);
-    trackDtdUsage('sticky_note_created');
-  }
-
   function applyBackground(){
     var desktop = document.getElementById('desktop');
+    var fallbackBackground = typeof DEFAULT_BG_B64 === 'string' ? DEFAULT_BG_B64 : 'assets/embedded/default-desktop-background.jpg';
+    if(!desktop) return;
     if(state.background && state.background.image){
       desktop.style.background = 'center / cover no-repeat url("' + state.background.image + '")';
     } else if(state.background && state.background.gradient){
@@ -733,9 +425,12 @@ try {
     } else if(state.background && state.background.color){
       desktop.style.background = state.background.color;
     } else {
-      desktop.style.background = 'center / cover no-repeat url("' + DEFAULT_BG_B64 + '")';
+      desktop.style.background = 'center / cover no-repeat url("' + fallbackBackground + '")';
     }
   }
+
+  // Sticky Notes removed: this feature has been replaced by Notepad.
+
 
   // ---------------- display settings: windows, taskbar, and buttons ----------------
   var CLASSIC_THEME = {
@@ -1107,11 +802,11 @@ try {
   (function(){
     var startMenu = document.getElementById('start-menu');
     var tbStart = document.getElementById('tb-start');
-    var smSticky = document.getElementById('sm-stickynote');
     var smDisplay = document.getElementById('sm-display');
     var smPaint = document.getElementById('sm-paint');
     var smAriNet = document.getElementById('sm-arinet');
     var smTxtMail = document.getElementById('sm-txtmail');
+    var smNotebook = document.getElementById('sm-notebook');
     var smDesktop = document.getElementById('sm-showdesktop');
     var smScrapbook = document.getElementById('sm-scrapbook');
     var smSudoku = document.getElementById('sm-sudoku');
@@ -1140,9 +835,6 @@ try {
         }
       });
     }
-    if(smSticky){
-      smSticky.addEventListener('click', runAndHide(createStickyNote));
-    }
     if(smDisplay){
       smDisplay.addEventListener('click', runAndHide(openEditDisplayWindow));
     }
@@ -1154,6 +846,9 @@ try {
     }
     if(smTxtMail){
       smTxtMail.addEventListener('click', runAndHide(openDtdPostWindow));
+    }
+    if(smNotebook){
+      smNotebook.addEventListener('click', runAndHide(openNotebookWindow));
     }
     if(mailbox){
       mailbox.addEventListener('click', function(e){
@@ -1680,7 +1375,6 @@ try {
                 normalizeState();
                 applyTheme();
                 applyBackground();
-                renderAllStickyNotes();
                 if(document.getElementById('buddylist-win') &&
                    document.getElementById('buddylist-win').style.display !== 'none'){
                   renderBuddyList();
@@ -1726,7 +1420,7 @@ try {
   function cloudMetaContentCount(meta){
     meta = meta || {};
     var count = 0;
-    ['buddies','statusLog','statusPresets','moodLog','blogPosts','customFonts','customMoods','customThemePresets','stickyNotes'].forEach(function(key){
+    ['buddies','statusLog','statusPresets','moodLog','blogPosts','customFonts','customMoods','customThemePresets'].forEach(function(key){
       if(Array.isArray(meta[key])) count += meta[key].length;
     });
     count += Object.keys(meta.chunkCounts || {}).length;
@@ -1763,9 +1457,6 @@ try {
       customMoodColors: state.customMoodColors,
       theme: state.theme,
       customThemePresets: state.customThemePresets,
-      stickyNotes: (state.stickyNotes || []).map(function(n){
-        return { id:n.id, title:n.title||'', text:n.text, color:n.color, x:n.x, y:n.y, w:n.w, h:n.h };
-      }),
       chunkCounts: {},
       updatedAt: Date.now()
     };
@@ -1852,7 +1543,6 @@ try {
         if(meta.customMoodColors && typeof meta.customMoodColors === 'object') state.customMoodColors = meta.customMoodColors;
         if(meta.theme && typeof meta.theme === 'object') state.theme = meta.theme;
         if(Array.isArray(meta.customThemePresets)) state.customThemePresets = meta.customThemePresets;
-        if(Array.isArray(meta.stickyNotes)) state.stickyNotes = meta.stickyNotes;
         if(state.account && meta.screenName) state.account.screenName = meta.screenName;
         var penPalAccountKey=cloudPenPalAccountKey(pullAccountEmail),accountMailContacts=meta.mailContactsByAccount&&meta.mailContactsByAccount[penPalAccountKey];
         if(Array.isArray(accountMailContacts)) state.mail.contacts = accountMailContacts.slice();
@@ -2065,7 +1755,6 @@ try {
   }
   function refreshRecoveredContent(item){
     refreshTrashIcon();
-    if(item.type==='sticky')mountStickyNote(item.data);
     if(item.type==='buddy')renderBuddyList();
     if(item.type==='buddyEntry'){renderBuddyList();var im=openWindows.find(function(w){return w.type==='im'&&w.buddyId===item.meta.buddyId;});if(im&&im.el&&im.el._refreshLog)im.el._refreshLog();}
     if(item.type==='diaryPost'){
@@ -2073,10 +1762,9 @@ try {
       var profile=openWindows.find(function(w){return w.type==='viewprofile';});if(profile&&profile.el&&profile.el._refreshProfile)profile.el._refreshProfile();
     }
   }
-  function restoreTrashItem(item){
-    if(item.type==='sticky'){
-      if(!(state.stickyNotes||[]).some(function(n){return n.id===item.data.id;}))state.stickyNotes.push(item.data);
-    }else if(item.type==='buddy'){
+    function restoreTrashItem(item){
+      if(!item || !item.type) return false;
+      if(item.type==='buddy'){
       var pack=item.data||{},restoredBuddy=pack.buddy;if(!restoredBuddy)return false;
       if(!state.groups.some(function(g){return g.id===restoredBuddy.groupId;}))restoredBuddy.groupId='default';
       if(!state.buddies.some(function(b){return b.id===restoredBuddy.id;}))state.buddies.push(restoredBuddy);
@@ -2090,17 +1778,19 @@ try {
       state.blogPosts=state.blogPosts||[];
       if(!state.blogPosts.some(function(p){return p.id===item.data.id;}))state.blogPosts.push(item.data);
       syncDtdPublicEntry(item.data).catch(function(){});
-    }else return false;
+    }else{
+      return false;
+    }
     state.trash=state.trash.filter(function(t){return t.id!==item.id;});
     saveState();refreshRecoveredContent(item);return true;
   }
-  function trashTypeName(type){return type==='sticky'?'Sticky Note':(type==='buddy'?'Buddy':(type==='buddyEntry'?'Diary Entry':'Private Diary Entry'));}
+  function trashTypeName(type){return type==='buddy'?'Buddy':(type==='buddyEntry'?'Diary Entry':'Private Diary Entry');}
   function openTrashWindow(){
     var existing=openWindows.find(function(w){return w.type==='trash';});if(existing){focusWindow(existing.id);if(existing.el._renderTrash)existing.el._renderTrash();return;}
     createWindow({title:'Trash',extraClass:'trash-win',bodyHtml:'<div class="win-body" style="padding:0"></div>',type:'trash',onMount:function(el){
       function render(){
         if(purgeExpiredTrash())saveState();refreshTrashIcon();
-        var rows=state.trash.length?state.trash.map(function(item){var left=Math.max(1,Math.ceil((TRASH_RETENTION_MS-(Date.now()-item.deletedAt))/(24*60*60*1000))),icon=item.type==='sticky'?'🗒️':(item.type==='buddy'?'👤':(item.type==='buddyEntry'?'📖':'📝'));return '<div class="trash-row" data-trash-id="'+escapeHtml(item.id)+'"><div class="trash-row-icon">'+icon+'</div><div><div class="trash-row-title">'+escapeHtml(item.label)+'</div><div class="trash-row-meta">'+trashTypeName(item.type)+' · '+left+' day'+(left===1?'':'s')+' remaining</div></div><div class="trash-row-actions"><button class="btn trash-restore">Restore</button><button class="btn trash-delete-now" title="Delete permanently">×</button></div></div>';}).join(''):'<div class="vp-empty" style="padding:34px 12px">Trash is empty.</div>';
+      var rows=state.trash.length?state.trash.map(function(item){var itemAge=TRASH_RETENTION_MS-(Date.now()-item.deletedAt);var daysLeft=Math.ceil(itemAge/(24*60*60*1000));var left=Math.max(1,daysLeft);var icon=item.type==='buddy'?'👤':(item.type==='buddyEntry'?'📖':'📝');return '<div class="trash-row" data-trash-id="'+escapeHtml(item.id)+'"><div class="trash-row-icon">'+icon+'</div><div><div class="trash-row-title">'+escapeHtml(item.label)+'</div><div class="trash-row-meta">'+trashTypeName(item.type)+' · '+left+' day'+(left===1?'':'s')+' remaining</div></div><div class="trash-row-actions"><button class="btn trash-restore">Restore</button><button class="btn trash-delete-now" title="Delete permanently">×</button></div></div>';}).join(''):'<div class="vp-empty" style="padding:34px 12px">Trash is empty.</div>';
         el.querySelector('.win-body').innerHTML='<div class="trash-head"><div><b>Recently Deleted</b><small>Items are permanently removed after seven days.</small></div>'+(state.trash.length?'<button class="btn trash-empty">Empty Trash</button>':'')+'</div><div class="trash-list">'+rows+'</div>';
         el.querySelectorAll('[data-trash-id]').forEach(function(row){var item=state.trash.find(function(t){return t.id===row.dataset.trashId;});if(!item)return;row.querySelector('.trash-restore').onclick=function(){if(restoreTrashItem(item))render();};row.querySelector('.trash-delete-now').onclick=function(){appConfirm('Delete this item permanently?',function(ok){if(!ok)return;state.trash=state.trash.filter(function(t){return t.id!==item.id;});saveState();render();});};});
         var empty=el.querySelector('.trash-empty');if(empty)empty.onclick=function(){appConfirm('Permanently delete everything in Trash?',function(ok){if(!ok)return;state.trash=[];saveState();render();});};
@@ -2117,7 +1807,7 @@ try {
       extraClass:'sudoku-win',
       type:'sudoku',
       constructionBar:false,
-      bodyHtml:'<div class="sudoku-frame-host"><iframe title="Sudoku game" src="assets/sudoku-game.html" sandbox="allow-scripts allow-same-origin"></iframe></div>',
+      bodyHtml:'<div class="sudoku-frame-host"><iframe title="Sudoku game" src="assets/sudoku-game.html"></iframe></div>',
       onMount:function(el){
         var frame=el.querySelector('iframe');
         frame.addEventListener('load',function(){
@@ -2344,8 +2034,6 @@ try {
     setActiveSession(false);
     document.body.classList.remove('signed-in');
     if(window.returnKobaToKennel)window.returnKobaToKennel(false,true);
-    var stickyLayer=document.getElementById('sticky-layer');
-    if(stickyLayer)stickyLayer.innerHTML='';
     document.getElementById('buddylist-win').style.display = 'none';
     document.getElementById('connecting-wrap').style.display = 'none';
     document.getElementById('signon-icon').style.display = 'none';
@@ -2393,6 +2081,26 @@ try {
       document.getElementById('in-savepw').checked = false;
       document.getElementById('in-autologin').checked = false;
     }
+  }
+
+  function continueOfflineFromSignon(){
+    var errEl = document.getElementById('signon-error');
+    if(errEl){
+      errEl.style.color = '#2a7d2a';
+      errEl.textContent = 'Entering offline mode…';
+    }
+    setSupabaseSession(null);
+    state = state || makeFreshState();
+    state.savePassword = false;
+    state.autoLogin = false;
+    if(state.account){
+      if(state.account.password) state.account.password = '';
+      if(!state.account.screenName && state.account.email){
+        state.account.screenName = state.account.email.split('@')[0];
+      }
+      delete state.account.pendingEmail;
+    }
+    return saveState().then(function(){ return enterDesktop(); }).catch(function(){ return enterDesktop(); });
   }
 
   document.getElementById('account-switch').addEventListener('click',function(){
@@ -2508,7 +2216,7 @@ try {
     if(!/^\S+@\S+\.\S+$/.test(loginEmail)){errEl.textContent='Please enter your account email.';return;}
     if(!loginPassword){errEl.textContent='Please enter your password.';return;}
     submit.style.pointerEvents='none';errEl.style.color='#555';errEl.textContent='Signing in securely…';
-    supabaseAuthRequest('/token?grant_type=password',{email:loginEmail,password:loginPassword}).then(function(auth){setSupabaseSession(auth);return activateAccountDiary(loginEmail,auth,loginPassword,false);}).then(function(){state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color='';errEl.textContent=err.message;}).then(function(){submit.style.pointerEvents='';});
+    supabaseAuthRequest('/token?grant_type=password',{email:loginEmail,password:loginPassword}).then(function(auth){setSupabaseSession(auth);return activateAccountDiary(loginEmail,auth,loginPassword,false);}).then(function(){state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color=''; errEl.textContent = (err && err.message ? err.message : 'Unable to sign in right now.') + ' Click “Continue without cloud” to test offline.';}).then(function(){submit.style.pointerEvents='';});
   });
 
   document.getElementById('in-email').addEventListener('keydown', function(e){if(e.key==='Enter'){e.preventDefault();document.getElementById('in-password').focus();}});
@@ -2525,6 +2233,11 @@ try {
       supabaseAuthRequest('/recover?redirect_to='+encodeURIComponent(DESKTOPDIARY_APP_URL),{email:recoveryEmail}).then(function(){err.style.color='#2a7d2a';err.textContent='Password recovery email sent.';}).catch(function(e){err.style.color='';err.textContent=e.message;});
     }else document.getElementById('signon-error').textContent='Enter your account email first.';
   });
+
+  var signonLocalButton = document.getElementById('signon-local');
+  if(signonLocalButton){
+    signonLocalButton.addEventListener('click', function(){ continueOfflineFromSignon(); });
+  }
 
   bindAccessibleAction(document.getElementById('btn-help'), function(){
     openHelpWindow();
@@ -2579,7 +2292,6 @@ try {
       try {
         document.getElementById('connecting-wrap').style.display = 'none';
         showBuddyList();
-        renderAllStickyNotes();
       } catch (err) {
         try {
           if(typeof forceStartupSurface === 'function'){
@@ -2871,6 +2583,7 @@ try {
   document.getElementById('menu-editprofile').addEventListener('click', openEditProfileWindow);
   document.getElementById('menu-viewprofile').addEventListener('click', openViewProfileWindow);
   document.getElementById('menu-viewdiary').addEventListener('click', openDiaryEntriesWindow);
+  document.getElementById('menu-notebook').addEventListener('click', openNotebookWindow);
   document.getElementById('menu-friendrequests').addEventListener('click', openFriendRequestsWindow);
   document.getElementById('bl-status-edit').addEventListener('click', openSetStatusWindow);
   document.getElementById('bl-status-clear').addEventListener('click', function(){
@@ -2900,8 +2613,6 @@ try {
     document.getElementById('desktop-search-results').style.display = 'none';
     document.getElementById('desktop-search-input').value = '';
     document.getElementById('tb-search-toggle').setAttribute('aria-expanded','false');
-    var layer = document.getElementById('sticky-layer');
-    if(layer) layer.innerHTML = '';
     // Preserve only what the sign-on screen needs. Do not wipe the live diary
     // until any final cloud push has captured it.
     var prevEmail = state.account && state.account.email;
@@ -2962,7 +2673,8 @@ try {
 
   function createWindow(opts){
     // opts: title, bodyHtml, onMount(el), onClose(), extraClass, type, buddyId,
-    //       initialLeft/initialTop (optional desktop opening position)
+    //       initialLeft/initialTop (optional desktop opening position),
+    //       hideMinimize/hideMaximize/hideClose, addToTaskbar
     var id = uid();
     var el = document.createElement('div');
     el.className = 'win ' + (opts.extraClass || '');
@@ -2970,10 +2682,14 @@ try {
     el.style.zIndex = ++zCounter;
 
     var bodyHtml=opts.bodyHtml||'',hasOwnConstruction=/dtd-construction/.test(bodyHtml),constructionHtml=(opts.constructionBar===false||hasOwnConstruction)?'':constructionBar();
+    var titlebarButtons = '';
+    if(!opts.hideMinimize) titlebarButtons += '<button class="win-btn min-btn" title="Minimize">&#8211;</button>';
+    if(!opts.hideMaximize) titlebarButtons += '<button class="win-btn max-btn" title="Maximize">&#9723;</button>';
+    if(!opts.hideClose) titlebarButtons += '<button class="win-btn close-btn">X</button>';
     el.innerHTML =
       '<div class="titlebar">' +
         '<span class="t-title">' + mascotSVG(15) + '<span>' + escapeHtml(opts.title) + '</span></span>' +
-        '<span class="t-btns"><button class="win-btn min-btn" title="Minimize">&#8211;</button><button class="win-btn max-btn" title="Maximize">&#9723;</button><button class="win-btn close-btn">X</button></span>' +
+        '<span class="t-btns">' + titlebarButtons + '</span>' +
       '</div>' +
       (opts.menuHtml || '') +
       constructionHtml +
@@ -3005,17 +2721,28 @@ try {
 
     var record = { id: id, el: el, type: opts.type, buddyId: opts.buddyId, onClose: opts.onClose, maximized: false, prevRect: null, minimized: false };
     openWindows.push(record);
-    addTaskbarItem(record, opts.title);
+    if(opts.addToTaskbar !== false){
+      addTaskbarItem(record, opts.title);
+    }
 
-    el.querySelector('.close-btn').addEventListener('click', function(){ closeWindow(id); });
-    el.querySelector('.min-btn').addEventListener('click', function(e){
-      e.stopPropagation();
-      minimizeWindow(record);
-    });
-    el.querySelector('.max-btn').addEventListener('click', function(e){
-      e.stopPropagation();
-      toggleMaximize(record);
-    });
+    var closeBtn = el.querySelector('.close-btn');
+    var minBtn = el.querySelector('.min-btn');
+    var maxBtn = el.querySelector('.max-btn');
+    if(closeBtn){
+      closeBtn.addEventListener('click', function(){ closeWindow(id); });
+    }
+    if(minBtn){
+      minBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        minimizeWindow(record);
+      });
+    }
+    if(maxBtn){
+      maxBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        toggleMaximize(record);
+      });
+    }
     el.addEventListener('mousedown', function(){ focusWindow(id); });
     el.addEventListener('touchstart', function(){ focusWindow(id); }, { passive: true });
     makeDraggable(el, el.querySelector('.titlebar'));
@@ -3071,8 +2798,7 @@ try {
     var rec = openWindows.find(function(w){ return w.id === id; });
     if(!rec) return;
     if(rec.minimized){
-      rec.el.style.display = rec.type === 'sticky' ? 'flex' : '';
-      if(rec.type === 'sticky') rec.el.style.pointerEvents = 'all';
+      rec.el.style.display = '';
       rec.minimized = false;
       if(rec.tbEl) rec.tbEl.classList.remove('minimized');
     }
@@ -7057,7 +6783,7 @@ try {
           };
 
           var usageLoaded=false,usageLoading=false,usageStatus=el.querySelector('.usage-status'),usageResults=el.querySelector('.usage-results'),periodSelect=el.querySelector('#usage-period'),refreshButton=el.querySelector('.usage-refresh'),cleanupButton=el.querySelector('.usage-cleanup'),updated=el.querySelector('.usage-updated');
-          var usageLabels={diary_opened:'Diary opened',diary_entry_created:'Diary entry created',post_mail_opened:'Post Mail opened',letter_sent:'Letter sent',sudoku_started:'Sudoku started',sudoku_completed:'Sudoku completed',profile_editor_opened:'Profile editor opened',sticky_note_created:'Sticky note created',paint_opened:'Paint opened',arinet_opened:'AriNet opened',help_opened:'Help opened',koba_interacted:'Koba interaction'};
+    var usageLabels={diary_opened:'Diary opened',diary_entry_created:'Diary entry created',post_mail_opened:'Post Mail opened',letter_sent:'Letter sent',sudoku_started:'Sudoku started',sudoku_completed:'Sudoku completed',profile_editor_opened:'Profile editor opened',paint_opened:'Paint opened',arinet_opened:'AriNet opened',help_opened:'Help opened',koba_interacted:'Koba interaction'};
           function usageNumber(value){return Number(value||0).toLocaleString();}
           function usageDate(value,includeTime){
             if(!value)return'—';var date=new Date(value);if(!Number.isFinite(date.getTime()))return'—';
@@ -7161,7 +6887,7 @@ try {
                   document.getElementById('bl-title-text').textContent = state.account.screenName;
                   document.getElementById('bl-me-name').textContent = state.account.screenName;
                 }
-                renderBuddyList(); refreshMyStatus(); refreshProfilePic(); applyBackground(); applyTheme(); renderAllStickyNotes();
+                renderBuddyList(); refreshMyStatus(); refreshProfilePic(); applyBackground(); applyTheme();
               }).catch(function(e){ el.querySelector('#cs-status').style.color='#c0392b'; el.querySelector('#cs-status').textContent='Pull failed: '+(e&&e.message?e.message:String(e)); });
             });
             el.querySelector('#cs-signout').addEventListener('click', function(){
@@ -7610,6 +7336,200 @@ try {
       }
       wire();
     }});
+  }
+
+  function normalizeNotebookBackgroundImage(value){
+    var fallback = 'notepad1.png';
+    if(typeof value !== 'string') return fallback;
+
+    var trimmed = value.trim();
+    if(!trimmed || trimmed === 'notebook1.png' || trimmed === 'notepad1.png'){
+      return fallback;
+    }
+
+    try {
+      var currentUrl = new URL(window.location.href);
+      var candidate = new URL(trimmed, window.location.href);
+      if(candidate.protocol === 'file:' && candidate.pathname === currentUrl.pathname){
+        return fallback;
+      }
+      if(candidate.protocol === 'file:' && /\.html?$/.test(candidate.pathname)){
+        return fallback;
+      }
+      return candidate.href;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function openNotebookWindow(){
+    trackDtdUsage('notebook_opened');
+    var existing=openWindows.find(function(w){ return w.type === 'notebook'; });
+    if(existing){
+      focusWindow(existing.id);
+      return;
+    }
+
+    var currentPageIndex = Math.max(0, Math.min(state.notebook.pages.length - 1, Number(state.notebook.currentPageIndex) || 0));
+    var autosaveTimer = null;
+
+    function getPages(){
+      return Array.isArray(state.notebook.pages) ? state.notebook.pages : [];
+    }
+    function getCurrentPage(){
+      var pages = getPages();
+      if(!pages.length) return { id: 'page-' + uid(), text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' };
+      return pages[currentPageIndex] || pages[0];
+    }
+    function clampPageIndex(index){
+      var max = Math.max(0, getPages().length - 1);
+      if(!Number.isFinite(index)) return 0;
+      if(index < 0) return 0;
+      if(index > max) return max;
+      return Math.floor(index);
+    }
+  function buildBody(){
+      var pagePhotoUrl = normalizeNotebookBackgroundImage(state.notebook.backgroundImage);
+      var pagePhotoSafe = pagePhotoUrl.replace(/"/g, '\\"');
+        return '<div class="win-body notebook-win-body">' +
+        '<div class="notebook-controls-wrap">' +
+          '<div class="notebook-page-surface" style="--notebook-page-photo:url(\'' + pagePhotoSafe + '\')">' +
+            '<div class="notebook-page-edit-area">' +
+              '<input class="notebook-page-title" id="nb-page-title" type="text" placeholder="Title" maxlength="120">' +
+              '<textarea class="notebook-page-input" id="nb-page-input" placeholder="Start typing here…"></textarea>' +
+            '</div>' +
+            '<span class="notebook-page-label" id="nb-page-label"></span>' +
+          '</div>' +
+          '<div class="notebook-page-nav">' +
+            '<button class="notebook-nav-btn" id="nb-prev" title="Previous page" aria-label="Previous page">‹</button>' +
+            '<button class="notebook-nav-btn" id="nb-next" title="Next page" aria-label="Next page">›</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function normalizeCurrent(){
+      var pages=getPages();
+      if(!pages.length){
+        pages.push({ id: 'page-' + uid(), text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' });
+      }
+      currentPageIndex = clampPageIndex(currentPageIndex);
+      state.notebook.currentPageIndex = currentPageIndex;
+    }
+
+    normalizeCurrent();
+    var windowRef = createWindow({
+      title: 'Notepad',
+      extraClass: 'notebook-win notebook-toy',
+      bodyHtml: buildBody(),
+      type: 'notebook',
+      addToTaskbar: false,
+      hideMaximize: true,
+      hideClose: true,
+      constructionBar: false,
+      onClose: function(){
+        if(autosaveTimer) clearTimeout(autosaveTimer);
+        saveCurrentPage();
+      },
+      onMount: function(el){
+        var pageInput = el.querySelector('#nb-page-input');
+        var titleInput = el.querySelector('#nb-page-title');
+        var prevBtn = el.querySelector('#nb-prev');
+        var nextBtn = el.querySelector('#nb-next');
+        var label = el.querySelector('#nb-page-label');
+
+        function saveCurrentPage(){
+          var page = getCurrentPage();
+          if(!page) return;
+          page.title = titleInput ? titleInput.value.trim() : '';
+          page.text = pageInput.value;
+          page.updatedAt = Date.now();
+          state.notebook.currentPageIndex = currentPageIndex;
+          saveState();
+        }
+        function queueSave(){
+          if(autosaveTimer) clearTimeout(autosaveTimer);
+          autosaveTimer = setTimeout(saveCurrentPage, 350);
+        }
+        function refreshLabel(){
+          label.textContent = 'pg ' + (currentPageIndex + 1);
+        }
+        function refreshPageContent(focus){
+          var page = getCurrentPage();
+          pageInput.value = page.text || '';
+          if(titleInput) titleInput.value = page.title || '';
+          refreshLabel();
+          refreshNavButtons();
+          if(focus) pageInput.focus();
+          state.notebook.currentPageIndex = currentPageIndex;
+        }
+        function refreshNavButtons(){
+          prevBtn.disabled = getPages().length < 2 || currentPageIndex <= 0;
+        }
+        function createBlankPage(){
+          return {
+            id: uid(),
+            text: '',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            title: ''
+          };
+        }
+        function openPage(nextIndex){
+          saveCurrentPage();
+          currentPageIndex = clampPageIndex(nextIndex);
+          refreshPageContent();
+          pageInput.focus();
+        }
+        function gotoNext(){
+          var pages = getPages();
+          if(currentPageIndex >= pages.length - 1){
+            saveCurrentPage();
+            pages.push(createBlankPage());
+            currentPageIndex = pages.length - 1;
+            state.notebook.currentPageIndex = currentPageIndex;
+            refreshPageContent();
+            pageInput.focus();
+            saveState();
+            return;
+          }
+          openPage(currentPageIndex + 1);
+        }
+
+        function wireToolbar(){
+          pageInput.addEventListener('input', queueSave);
+          if(titleInput) titleInput.addEventListener('input', queueSave);
+          prevBtn.addEventListener('click', function(){ openPage(currentPageIndex - 1); });
+          nextBtn.addEventListener('click', gotoNext);
+          refreshNavButtons();
+        }
+
+        normalizeCurrent();
+        refreshPageContent(true);
+        pageInput.value = getCurrentPage().text || '';
+        if(titleInput) titleInput.value = getCurrentPage().title || '';
+        wireToolbar();
+      }
+    });
+
+    var nbWidth = Math.max(260, Math.min(340, Math.round(window.innerWidth * 0.34)));
+    var nbHeight = Math.max(210, Math.min(300, Math.round(window.innerHeight * 0.52)));
+    windowRef.el.style.width = nbWidth + 'px';
+    windowRef.el.style.height = nbHeight + 'px';
+
+    function saveCurrentPage(){
+      var rec = openWindows.find(function(w){ return w.el && w.el === windowRef.el; });
+      if(!rec) return;
+      var pageInput = rec.el && rec.el.querySelector ? rec.el.querySelector('#nb-page-input') : null;
+      var titleInput = rec.el && rec.el.querySelector ? rec.el.querySelector('#nb-page-title') : null;
+      if(!pageInput || !titleInput) return;
+      if(!Array.isArray(state.notebook.pages) || !state.notebook.pages[currentPageIndex]) return;
+      state.notebook.pages[currentPageIndex].title = titleInput.value.trim();
+      state.notebook.pages[currentPageIndex].text = pageInput.value;
+      state.notebook.pages[currentPageIndex].updatedAt = Date.now();
+      state.notebook.currentPageIndex = currentPageIndex;
+      saveState();
+    }
   }
 
   // ================= DIARY ENTRY EDITOR =================
