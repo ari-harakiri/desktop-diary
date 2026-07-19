@@ -58,6 +58,7 @@
     width: 30px; height: 30px;
     font-size: 15px;
     cursor: pointer;
+    transform: translateX(-4px);
   }
   #settings-btn:active { background: rgba(255,255,255,.35); }
   #notebook-stage {
@@ -109,6 +110,21 @@
     padding: 6px 12px; font-size: 12px; cursor: pointer;
   }
   .bg-pill.active { background: #0054e3; color: #fff; border-color: #0054e3; }
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .size-pill {
+    border: 1px solid #99a; background: #fff; border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer;
+  }
+  .size-pill.active { background: #0054e3; color: #fff; border-color: #0054e3; }
+  .color-pill {
+    width: 26px; height: 26px;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #99a;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+  }
+  .color-pill.active { box-shadow: 0 0 0 2px #0054e3; }
   #notebook {
     position: relative;
     width: 100%;
@@ -118,7 +134,7 @@
   }
   #save-btn {
     position: absolute;
-    top: 42px; right: 18px;
+    top: 40px; right: 18px;
     width: 34px; height: 30px;
     border: 1px solid rgba(0,0,0,.35);
     border-radius: 4px;
@@ -147,7 +163,7 @@
     font-family: Tahoma, Arial, sans-serif;
     padding: 2px 4px;
     color: #262626;
-    transform: translate(15px, 30px);
+    transform: translate(15px, 25px);
   }
   #title-input::placeholder { color: #7a7a7a; }
   #body-input {
@@ -162,7 +178,7 @@
     color: #262626;
     padding: 2px 4px;
     line-height: 1.4;
-    transform: translate(15px, 25px);
+    transform: translate(15px, 20px);
   }
   #footer {
     position: absolute;
@@ -178,7 +194,7 @@
   #nav button {
     border: none; background: transparent; cursor: pointer;
     font-size: 22px; color: #3f3f3f; padding: 4px 6px; line-height: 1;
-    transform: translateY(5px);
+    transform: translate(5px, 7px);
   }
   #trash-btn {
     border: none; background: transparent; cursor: pointer;
@@ -229,6 +245,22 @@
         <button class="bg-pill active" data-bg="notepad1.png">Plain</button>
         <button class="bg-pill" data-bg="notepad2.png">Curled corner</button>
       </div>
+      <label style="margin-top:10px;">Text size</label>
+      <div id="size-row" class="pill-row">
+        <button class="size-pill" data-size="13">Small</button>
+        <button class="size-pill active" data-size="16">Medium</button>
+        <button class="size-pill" data-size="20">Large</button>
+        <button class="size-pill" data-size="25">X-Large</button>
+      </div>
+      <label style="margin-top:10px;">Text color</label>
+      <div id="color-row" class="pill-row">
+        <button class="color-pill active" data-color="#262626" style="background:#262626;"></button>
+        <button class="color-pill" data-color="#0054e3" style="background:#0054e3;"></button>
+        <button class="color-pill" data-color="#1a7d1a" style="background:#1a7d1a;"></button>
+        <button class="color-pill" data-color="#c62828" style="background:#c62828;"></button>
+        <button class="color-pill" data-color="#8e24aa" style="background:#8e24aa;"></button>
+        <button class="color-pill" data-color="#e07b00" style="background:#e07b00;"></button>
+      </div>
     </div>
     <div id="font-row">
       <button class="font-pill" data-font="inherit">Default</button>
@@ -261,7 +293,7 @@
     return [{ id: 'page-1', title: '', text: '', createdAt: Date.now() }];
   }
 
-  var state = { pages: freshPages(), currentPageIndex: 0, font: 'DiaryComicSans', paper: 'notepad1.png' };
+  var state = { pages: freshPages(), currentPageIndex: 0, font: 'DiaryComicSans', paper: 'notepad1.png', fontSize: 16, fontColor: '#262626' };
   var cloudUser = null;
   var db = null;
   var saveTimer = null;
@@ -278,6 +310,8 @@
   var settingsBtn = document.getElementById('settings-btn');
   var settingsPanel = document.getElementById('settings-panel');
   var fontRow = document.getElementById('font-row');
+  var sizeRow = document.getElementById('size-row');
+  var colorRow = document.getElementById('color-row');
   var bgRow = document.getElementById('bg-row');
 
   function getCurrentPage(){
@@ -300,6 +334,18 @@
     notebookEl.style.backgroundImage = "url('" + paperValue + "')";
     Array.prototype.forEach.call(bgRow.querySelectorAll('.bg-pill'), function(btn){
       btn.classList.toggle('active', btn.getAttribute('data-bg') === paperValue);
+    });
+
+    var sizeValue = state.fontSize || 16;
+    bodyInput.style.fontSize = sizeValue + 'px';
+    Array.prototype.forEach.call(sizeRow.querySelectorAll('.size-pill'), function(btn){
+      btn.classList.toggle('active', Number(btn.getAttribute('data-size')) === sizeValue);
+    });
+
+    var colorValue = state.fontColor || '#262626';
+    bodyInput.style.color = colorValue;
+    Array.prototype.forEach.call(colorRow.querySelectorAll('.color-pill'), function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-color') === colorValue);
     });
   }
 
@@ -346,7 +392,7 @@
     setSyncStatus('saving');
     var metaRef = db.collection('users').doc(cloudUser.uid).collection('diary').doc('meta');
     metaRef.set({
-      notebook: { pages: state.pages, currentPageIndex: state.currentPageIndex, font: state.font, paper: state.paper },
+      notebook: { pages: state.pages, currentPageIndex: state.currentPageIndex, font: state.font, paper: state.paper, fontSize: state.fontSize, fontColor: state.fontColor },
       updatedAt: Date.now()
     }, { merge: true }).then(function(){
       setSyncStatus('online');
@@ -375,6 +421,8 @@
         state.currentPageIndex = Number.isFinite(nb.currentPageIndex) ? nb.currentPageIndex : 0;
         if(nb.font) state.font = nb.font;
         if(nb.paper) state.paper = nb.paper;
+        if(Number.isFinite(nb.fontSize)) state.fontSize = nb.fontSize;
+        if(nb.fontColor) state.fontColor = nb.fontColor;
         renderCurrentPage();
         applyPreferences();
       }
@@ -439,6 +487,24 @@
     });
   });
 
+  Array.prototype.forEach.call(sizeRow.querySelectorAll('.size-pill'), function(btn){
+    btn.addEventListener('click', function(){
+      state.fontSize = Number(btn.getAttribute('data-size'));
+      applyPreferences();
+      persistLocal();
+      pushToCloudIfSignedIn();
+    });
+  });
+
+  Array.prototype.forEach.call(colorRow.querySelectorAll('.color-pill'), function(btn){
+    btn.addEventListener('click', function(){
+      state.fontColor = btn.getAttribute('data-color');
+      applyPreferences();
+      persistLocal();
+      pushToCloudIfSignedIn();
+    });
+  });
+
   titleInput.addEventListener('input', queueSave);
   bodyInput.addEventListener('input', queueSave);
   titleInput.addEventListener('keydown', function(e){
@@ -492,9 +558,9 @@
       }
 
       var bodyY = titleY + titleFontSize + (10 * scale);
-      var bodyFontSize = 14 * scale;
+      var bodyFontSize = (state.fontSize || 14) * scale;
       var lineHeight = bodyFontSize * 1.3;
-      ctx.fillStyle = '#262626';
+      ctx.fillStyle = state.fontColor || '#262626';
       ctx.font = bodyFontSize + 'px "DiaryComicSans", "Comic Sans MS", "Comic Sans", cursive';
       ctx.textBaseline = 'top';
 
