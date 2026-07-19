@@ -943,6 +943,7 @@ var runtime={
   body:not(.signed-in) #trash-desktop-icon { display:none; }
   body:not(.signed-in) #arinet-desktop-icon { display:none; }
   #trash-desktop-icon { top:136px; left:16px; right:auto; bottom:auto; }
+  #signon-icon { top:16px; right:16px; left:auto; bottom:auto; }
   .trash-icon-art { position:relative; width:52px; height:52px; }
   .trash-icon-art img { position:absolute; width:auto; height:52px; left:50%; top:50%; max-width:none; transform:translate(-50%,-50%); image-rendering:pixelated; filter:drop-shadow(0 0 1px #18ef28) drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
   .trash-icon-art.is-wiggling { animation:trash-desktop-wiggle 420ms ease-in-out 1; transform-origin:50% 85%; }
@@ -983,6 +984,7 @@ var runtime={
   .signon-error { color:#c0392b; font-size:11px; min-height:14px; margin-bottom:4px; }
   .forgot-row { text-align:right; margin:-4px 0 8px; }
   .forgot-link { font-size:10.5px; color:#0850d0; text-decoration:underline; cursor:pointer; }
+  .forgot-link-test { color:#a15c00; font-style:italic; }
   .signon-bottom { display:flex; align-items:center; justify-content:flex-end; margin-top:12px; }
   .icon-btn { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:9.5px; color:#333;
     border:1px solid #b0aca0; border-radius:5px; background:linear-gradient(180deg,#fefefe,#e5e1d3); padding:4px 8px; cursor:pointer; }
@@ -1382,7 +1384,7 @@ var runtime={
   #tb-search-toggle > span { display:block; font-size:19px; line-height:22px; }
   #tb-search-toggle .companion-taskbar-sprite { width:23px; height:23px; background:var(--companion-puppy) no-repeat 0 0/800% 100%; image-rendering:pixelated; }
   #tb-notebook-taskbar { width:27px; height:27px; padding:2px; }
-  #tb-notebook-taskbar .notebook-taskbar-icon { width:20px; height:20px; border-radius:3px; background:url('notepad1.png') center / cover no-repeat; filter:drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
+  #tb-notebook-taskbar .notebook-taskbar-icon { width:20px; height:20px; border-radius:3px; background:url('notepad2.png') center / cover no-repeat; filter:drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
   #tb-notebook-taskbar[aria-expanded="true"] { filter:brightness(.88); border-style:inset; }
   body:not(.signed-in) #tb-search-wrap { display:none; }
   #desktop-search { position:absolute; right:0; bottom:34px; z-index:40; width:min(310px,calc(100vw - 20px)); display:none; font-size:11px; }
@@ -1594,8 +1596,7 @@ var runtime={
   body:not(.signed-in) #sm-arinet,
   body:not(.signed-in) #sm-txtmail,
   body:not(.signed-in) #sm-display,
-  body:not(.signed-in) #sm-showdesktop,
-  body:not(.signed-in) #sm-scrapbook { display:none; }
+  body:not(.signed-in) #sm-showdesktop { display:none; }
   #start-menu .sm-item { padding:9px 14px; font-size:12px; cursor:pointer; color:#000; }
   #start-menu .sm-item:hover { background:#316ac5; color:#fff; }
 
@@ -1975,10 +1976,10 @@ var runtime={
 
 </style>
 
-<style>
+<style data-bundled-from="styles/notebook.css">
   .notebook-win {
-    width: min(340px, 82vw);
-    height: min(300px, 56vh);
+    width: min(220px, 82vw);
+    aspect-ratio: 220 / 227;
   }
   .notebook-win.notebook-toy {
     background: transparent;
@@ -1988,10 +1989,8 @@ var runtime={
     overflow: hidden;
   }
   .notebook-win.notebook-toy .titlebar {
-    position: absolute;
-    top: 16px;
-    left: 0;
-    right: 0;
+    position: relative;
+    flex: 0 0 44px;
     height: 44px;
     min-height: 44px;
     padding: 0 52px 0 4px;
@@ -2001,7 +2000,6 @@ var runtime={
     pointer-events: auto;
     cursor: move;
     z-index: 8;
-    position: relative;
   }
   .notebook-win.notebook-toy .titlebar .t-title,
   .notebook-win.notebook-toy .titlebar .t-btns {
@@ -2010,7 +2008,7 @@ var runtime={
   .notebook-win.notebook-toy .win-body {
     padding: 0;
     background: transparent;
-    overflow: hidden;
+    overflow: visible;
   }
   .notebook-win-body {
     position: relative;
@@ -2025,19 +2023,20 @@ var runtime={
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
     padding: 0;
   }
   .notebook-page-surface {
     position: relative;
-    flex: 1;
-    min-height: 0;
+    flex: 0 0 213px;
+    width: 180px;
+    margin: -30px auto 0;
     background: var(--notebook-page-photo, url('notepad1.png')) center / cover no-repeat;
     border: 0;
   }
   .notebook-page-edit-area {
     position: absolute;
-    inset: 44px 18px 28px 34px !important;
+    inset: 23px 10px 30px 18px !important;
     display: flex;
     flex-direction: column;
     gap: 7px;
@@ -2055,12 +2054,14 @@ var runtime={
     appearance: none;
   }
   .notebook-page-title {
-    margin-left: 58px;
-    width: calc(100% - 112px);
+    border: none !important;
+    box-shadow: none !important;
+    margin-left: 14px;
+    width: calc(100% - 15px);
     background-color: transparent !important;
-    height: 20px;
+    height: 19px;
     padding: 1px 4px;
-    margin-top: 2px !important;
+    margin-top: 7px !important;
     margin-right: 0;
     margin-bottom: 0;
     box-sizing: border-box;
@@ -2069,21 +2070,25 @@ var runtime={
     font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
+    transform: translate(-5px, 3px);
     white-space: nowrap;
   }
   .notebook-page-input {
+    border: none !important;
+    box-shadow: none !important;
     flex: 1;
-    margin-left: 61px;
-    width: calc(100% - 124px);
+    margin-left: 14px;
+    width: calc(100% - 2px);
     min-width: 0;
     min-height: 0;
     box-sizing: border-box;
-    margin-top: -10px !important;
+    margin-top: -15px !important;
     margin-right: 0;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     padding: 2px 4px;
     resize: none;
     overflow: auto;
+    transform: translate(-6px, 5px);
     cursor: text;
     caret-color: #2f2f2f;
     line-height: 1.45;
@@ -2091,8 +2096,8 @@ var runtime={
   }
   .notebook-page-label {
     position: relative;
-    margin: 0 0 0 53px;
-    transform: translateY(-11px);
+    margin: 0 0 0 -4px;
+    transform: translateY(-5px);
     padding: 0;
     line-height: 1;
     color: #3f3f3f;
@@ -2106,9 +2111,9 @@ var runtime={
   }
   .notebook-page-footer {
     position: absolute;
-    left: 22px;
-    right: 38px;
-    bottom: 11px !important;
+    left: 12px;
+    right: 20px;
+    bottom: 6px !important;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
@@ -2126,7 +2131,7 @@ var runtime={
     padding: 0;
   }
   .notebook-page-nav .notebook-nav-btn {
-    transform: translate(-27px, -5px) !important;
+    transform: translate(0px, -3px) !important;
     width: 20px;
     height: 20px;
     min-width: 20px;
@@ -2162,7 +2167,7 @@ var runtime={
     color: #3b3b3b;
     font-size: 11px;
     line-height: 1;
-    transform: translate(-2px, -20px) !important;
+    transform: translate(9px, -6px) !important;
     box-shadow: none;
     border-radius: 2px;
     cursor: pointer;
@@ -2174,20 +2179,28 @@ var runtime={
     outline: 0;
     box-shadow: none;
   }
-  .notebook-mini-min-btn {
+  .notebook-save-btn {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 26px;
-    height: 16px;
+    inset: 14px 4px auto auto;
+    width: 22px;
+    height: 20px;
     cursor: pointer;
     padding: 0;
-    border: 0;
-    background: transparent;
-    opacity: 0;
-    cursor: pointer;
-    pointer-events: auto;
+    border: 1px solid rgba(0, 0, 0, .35);
+    border-radius: 2px;
+    background: rgba(255, 255, 255, .55);
+    opacity: 1;
+    font-size: 12px;
+    line-height: 1;
+    color: #333;
     z-index: 9;
+    pointer-events: auto;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+  }
+  .notebook-save-btn:hover,
+  .notebook-save-btn:focus {
+    background: rgba(255, 255, 255, .8);
+    outline: 0;
   }
   .notebook-mini-trash-btn {
     position: relative;
@@ -2207,19 +2220,6 @@ var runtime={
     z-index: 2147483647;
     pointer-events: auto;
     text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85);
-  }
-  @media (max-width: 560px) {
-    .notebook-page-edit-area {
-      inset: 56px 10px 42px;
-      gap: 7px;
-    }
-    .notebook-page-title {
-      font-size: 13px;
-      height: 26px;
-    }
-    .notebook-page-input {
-      font-size: 10px;
-    }
   }
 </style>
 
@@ -3399,7 +3399,7 @@ function forceLoaderInteractionRecovery(){
         <span class="icon-btn" id="btn-help" role="button" tabindex="0" title="Help" aria-label="Open Help"><b>?</b></span>
         <div class="signon-link-stack">
           <div class="forgot-row" id="forgot-row"><span class="forgot-link" id="forgot-link">Forgot Password?</span></div>
-          <div class="forgot-row" id="local-entry-row"><span class="forgot-link" id="signon-local">Continue without cloud</span></div>
+          <div class="forgot-row" id="local-entry-row"><span class="forgot-link forgot-link-test" id="signon-local" title="Test/dev only — your diary will not sync or save to the cloud in this mode.">Continue without email (test only)</span></div>
           <div class="forgot-row" id="account-switch-row"><span class="forgot-link" id="account-switch">Already have an account? Sign On</span></div>
         </div>
       </div>
@@ -3433,6 +3433,7 @@ function forceLoaderInteractionRecovery(){
         <div class="m-drop">
           <div id="menu-cloudsync">Cloud Sync</div>
           <div id="menu-account">Account Settings</div>
+          <div id="menu-scrapbook" style="display:none;">Scrapbook</div>
           <div id="menu-admin" style="display:none;">Administration</div>
           <div id="menu-signoff">Sign Off</div>
         </div>
@@ -3485,7 +3486,6 @@ function forceLoaderInteractionRecovery(){
       <div class="sm-item" id="sm-arinet">AriNet Browser</div>
       <div class="sm-item" id="sm-txtmail">DtD Post Mail</div>
       <div class="sm-item" id="sm-display">Personalize</div>
-      <div class="sm-item" id="sm-scrapbook">Scrapbook</div>
       <div class="sm-item" id="sm-showdesktop">Show Desktop</div>
       <div class="sm-item" id="sm-signoff">Log Off</div>
     </div>
@@ -3749,7 +3749,7 @@ try {
     trash: [],              // recoverable deleted content, retained for seven days
     customMoods: [],        // user-added moods: ['Grateful', 'Hopeful', ...]
     customMoodColors: {},   // mood name -> hex color override
-    groups: [ { id: 'default', name: 'Buddy Lists' } ],
+    groups: [ { id: 'default', name: 'Buddies' } ],
     buddies: [],            // { id, name, addedAt, groupId }
     entries: {},            // buddyId -> [ { id, html, ts, kind:'entry'|'prompt' } ]
     drafts: {},             // buddyId -> [ { id, html, ts }, ... ] saved draft log
@@ -3763,8 +3763,13 @@ try {
 
   function normalizeState(){
     if(!Array.isArray(state.groups) || !state.groups.length){
-      state.groups = [{ id: 'default', name: 'Buddy Lists' }];
+      state.groups = [{ id: 'default', name: 'Buddies' }];
     }
+    // One-time migration: the default category was briefly renamed to "Buddy Lists";
+    // restore the original "Buddies" name for anyone who already has that saved.
+    state.groups.forEach(function(g){
+      if(g.id === 'default' && g.name === 'Buddy Lists') g.name = 'Buddies';
+    });
     if(!Array.isArray(state.buddies)) state.buddies = [];
     state.buddies.forEach(function(b){ if(!b.groupId) b.groupId = 'default'; });
     if(!state.status) state.status = { label: '', html: '', ts: null };
@@ -4419,7 +4424,6 @@ try {
     var smAriNet = document.getElementById('sm-arinet');
     var smTxtMail = document.getElementById('sm-txtmail');
     var smDesktop = document.getElementById('sm-showdesktop');
-    var smScrapbook = document.getElementById('sm-scrapbook');
     var smSudoku = document.getElementById('sm-sudoku');
     var smSignoff = document.getElementById('sm-signoff');
     var tbNotepad = document.getElementById('tb-notebook-taskbar');
@@ -4464,9 +4468,15 @@ try {
         if(typeof showSignon === 'function') showSignon();
         return;
       }
+      function updateNotebookTaskbarIcon(){
+        var r = openWindows.find(function(w){ return w.type === 'notebook'; });
+        var isOpen = !!r && !r.minimized && r.el.style.display !== 'none';
+        if(tbNotepad) tbNotepad.setAttribute('aria-expanded', String(isOpen));
+      }
       var rec = openWindows.find(function(w){ return w.type === 'notebook'; });
       if(!rec){
         openNotebookWindow();
+        updateNotebookTaskbarIcon();
         return;
       }
       if(rec.minimized || rec.el.style.display === 'none'){
@@ -4476,7 +4486,7 @@ try {
       } else {
         focusWindow(rec.id);
       }
-      if(tbNotepad) tbNotepad.setAttribute('aria-expanded', String(rec.minimized || activeWindowId !== rec.id ? 'false' : 'true'));
+      updateNotebookTaskbarIcon();
     }
     if(tbNotepad){
       tbNotepad.addEventListener('click', function(e){
@@ -4594,9 +4604,6 @@ try {
     }
     if(smDesktop){
       smDesktop.addEventListener('click', runAndHide(showDesktop));
-    }
-    if(smScrapbook){
-      smScrapbook.addEventListener('click', runAndHide(openScrapbookWindow));
     }
     if(smSudoku){
       smSudoku.addEventListener('click', runAndHide(openSudokuWindow));
@@ -5770,14 +5777,16 @@ try {
       errEl.textContent = 'Entering offline mode…';
     }
     setSupabaseSession(null);
-    state = state || makeFreshState();
+    state = makeFreshState();
     state.savePassword = false;
     state.autoLogin = false;
+    if(!state.account) state.account = { screenName: 'Guest', email: '', password: '' };
     if(state.account){
       if(state.account.password) state.account.password = '';
       if(!state.account.screenName && state.account.email){
         state.account.screenName = state.account.email.split('@')[0];
       }
+      if(!state.account.screenName) state.account.screenName = 'Guest';
       delete state.account.pendingEmail;
     }
     return saveState().then(function(){ return enterDesktop(); }).catch(function(){ return enterDesktop(); });
@@ -5896,7 +5905,7 @@ try {
     if(!/^\S+@\S+\.\S+$/.test(loginEmail)){errEl.textContent='Please enter your account email.';return;}
     if(!loginPassword){errEl.textContent='Please enter your password.';return;}
     submit.style.pointerEvents='none';errEl.style.color='#555';errEl.textContent='Signing in securely…';
-    supabaseAuthRequest('/token?grant_type=password',{email:loginEmail,password:loginPassword}).then(function(auth){setSupabaseSession(auth);return activateAccountDiary(loginEmail,auth,loginPassword,false);}).then(function(){state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color=''; errEl.textContent = (err && err.message ? err.message : 'Unable to sign in right now.') + ' Click “Continue without cloud” to test offline.';}).then(function(){submit.style.pointerEvents='';});
+    supabaseAuthRequest('/token?grant_type=password',{email:loginEmail,password:loginPassword}).then(function(auth){setSupabaseSession(auth);return activateAccountDiary(loginEmail,auth,loginPassword,false);}).then(function(){state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color=''; errEl.textContent = (err && err.message ? err.message : 'Unable to sign in right now.') + ' Click “Continue without email” to test offline.';}).then(function(){submit.style.pointerEvents='';});
   });
 
   document.getElementById('in-email').addEventListener('keydown', function(e){if(e.key==='Enter'){e.preventDefault();document.getElementById('in-password').focus();}});
@@ -5954,6 +5963,8 @@ try {
     if(!dtdUsageSessionTracked){dtdUsageSessionTracked=true;trackDtdUsage('session_started');}
     syncAuthenticatedEmailFromServer().catch(function(){});
     refreshAdminAccess();
+    var scrapbookMenu = document.getElementById('menu-scrapbook');
+    if(scrapbookMenu) scrapbookMenu.style.display = (state.account && state.account.email) ? 'block' : 'none';
     refreshTrashIcon();
     startDesktopMailWatch();
     startPenPalNotificationWatch();
@@ -6038,8 +6049,8 @@ try {
       savedPosition.right = Math.max(0,window.innerWidth-startingPosition.x-w);
     }
     positionCompanionOverBuddyList();
-    document.getElementById('bl-title-text').textContent = state.account.screenName;
-    document.getElementById('bl-me-name').textContent = state.account.screenName;
+    document.getElementById('bl-title-text').textContent = (state.account && state.account.screenName) || 'Guest';
+    document.getElementById('bl-me-name').textContent = (state.account && state.account.screenName) || 'Guest';
     refreshMyStatus();
     refreshProfilePic();
     renderBuddyList();
@@ -6261,6 +6272,7 @@ try {
   document.getElementById('menu-logs').addEventListener('click', function(){ openLogsWindow('status'); });
   document.getElementById('menu-cloudsync').addEventListener('click', openCloudSyncWindow);
   document.getElementById('menu-account').addEventListener('click', openAccountSettingsWindow);
+  document.getElementById('menu-scrapbook').addEventListener('click', openScrapbookWindow);
   document.getElementById('menu-admin').addEventListener('click', openAdminWindow);
   document.getElementById('menu-editprofile').addEventListener('click', openEditProfileWindow);
   document.getElementById('menu-viewprofile').addEventListener('click', openViewProfileWindow);
@@ -6277,11 +6289,11 @@ try {
     try {
       window.close();
     } catch (e) {}
-    if(!window.closed){
-      try {
-        window.location.href = 'about:blank';
-      } catch (e) {}
-    }
+    setTimeout(function(){
+      if(!window.closed){
+        if(typeof showSignon === 'function') showSignon();
+      }
+    }, 300);
   }
 
   function logOffAndClose(){
@@ -11106,7 +11118,7 @@ try {
         return '<div class="win-body notebook-win-body">' +
         '<div class="notebook-controls-wrap">' +
           '<div class="notebook-page-surface" style="--notebook-page-photo:url(\'' + pagePhotoSafe + '\')">' +
-            '<button class="notebook-mini-min-btn" id="nb-min-btn" type="button" title="Minimize" aria-label="Minimize">_</button>' +
+            '<button class="notebook-save-btn" id="nb-save-btn" type="button" title="Save" aria-label="Save">💾</button>' +
             '<div class="notebook-page-edit-area">' +
               '<input class="notebook-page-title" id="nb-page-title" type="text" placeholder="Title" maxlength="120">' +
             '<textarea class="notebook-page-input" id="nb-page-input" placeholder=""></textarea>' +
@@ -11141,31 +11153,36 @@ try {
       if(!Number.isFinite(left) || !Number.isFinite(top)) return;
       state.notebook.windowRect = {
         left: left,
-        top: top,
-        width: Math.round(windowRef.el.offsetWidth),
-        height: Math.round(windowRef.el.offsetHeight)
+        top: top
       };
       saveState();
     }
     function clampNotebookRect(){
       var left = Number.isFinite(Number(savedRect.left)) ? Number(savedRect.left) : NaN;
       var top = Number.isFinite(Number(savedRect.top)) ? Number(savedRect.top) : NaN;
-      var width = Number.isFinite(Number(savedRect.width)) ? Number(savedRect.width) : NaN;
-      var height = Number.isFinite(Number(savedRect.height)) ? Number(savedRect.height) : NaN;
       return {
-        width: width,
-        height: height,
         left: left,
         top: top
       };
     }
     normalizeCurrent();
     var restoredRect = clampNotebookRect();
-    var nbWidth = Math.max(260, Math.min(340, Math.round(window.innerWidth * 0.34)));
-    var nbHeight = Math.max(210, Math.min(300, Math.round(window.innerHeight * 0.52)));
-    if(Number.isFinite(restoredRect.width)) nbWidth = Math.max(260, Math.min(340, Math.round(restoredRect.width)));
-    if(Number.isFinite(restoredRect.height)) nbHeight = Math.max(210, Math.min(300, Math.round(restoredRect.height)));
-    var nbPos = Number.isFinite(restoredRect.left) && Number.isFinite(restoredRect.top) ? clampToViewport(restoredRect.left, restoredRect.top, nbWidth, nbHeight) : null;
+    // Always derive width/height from a single scale factor so the notebook
+    // keeps the same 340:300 proportions on every screen, instead of scaling
+    // width and height independently (which distorted the page image).
+    var NB_BASE_WIDTH = 220;
+    var NB_BASE_HEIGHT = 227;
+    var nbScale = Math.min(1, (window.innerWidth * 0.82) / NB_BASE_WIDTH, (window.innerHeight * 0.56) / NB_BASE_HEIGHT);
+    var nbWidth = Math.round(NB_BASE_WIDTH * nbScale);
+    var nbHeight = Math.round(NB_BASE_HEIGHT * nbScale);
+    var nbPos = Number.isFinite(restoredRect.left) && Number.isFinite(restoredRect.top)
+      ? clampToViewport(restoredRect.left, restoredRect.top, nbWidth, nbHeight)
+      : (function(){
+          var iconEl = document.getElementById('tb-notebook-taskbar');
+          if(!iconEl) return null;
+          var rect = iconEl.getBoundingClientRect();
+          return clampToViewport(rect.left, rect.top - nbHeight - 10, nbWidth, nbHeight);
+        })();
 
     var windowRef = createWindow({
       title: 'Notepad',
@@ -11191,9 +11208,8 @@ try {
         var prevBtn = el.querySelector('#nb-prev');
         var nextBtn = el.querySelector('#nb-next');
         var addBtn = el.querySelector('#nb-add');
-        if(addBtn) addBtn.classList.add('notebook-mini-trash-btn');
         var label = el.querySelector('#nb-page-label');
-        var minBtn = el.querySelector('#nb-min-btn');
+        var saveBtn = el.querySelector('#nb-save-btn');
         var trashBtn = titlebar ? titlebar.querySelector('.notebook-mini-trash-btn') : null;
 
         function saveCurrentPage(){
@@ -11297,22 +11313,91 @@ try {
         function wireToolbar(){
           pageInput.addEventListener('input', queueSave);
           if(titleInput) titleInput.addEventListener('input', queueSave);
+          if(titleInput) titleInput.addEventListener('keydown', function(e){
+            if(e.key === 'Enter'){
+              e.preventDefault();
+              pageInput.focus();
+            }
+          });
           prevBtn.addEventListener('click', function(){ openPage(currentPageIndex - 1); });
           nextBtn.addEventListener('click', gotoNext);
           if(addBtn){
             addBtn.addEventListener('click', deleteCurrentPage);
           }
-          if(minBtn){
-            minBtn.addEventListener('click', function(e){
+          if(saveBtn){
+            saveBtn.addEventListener('click', function(e){
               if(e && e.preventDefault) e.preventDefault();
               if(e && e.stopPropagation) e.stopPropagation();
-              if(windowRef){
-                minimizeWindow(windowRef);
-                return;
-              }
-              var nbRec = openWindows.find(function(w){ return w.id === id || w.el === el; });
-              if(nbRec) minimizeWindow(nbRec);
+              exportPageAsImage();
             });
+          }
+          function exportPageAsImage(){
+            var bgUrl = normalizeNotebookBackgroundImage(state.notebook.backgroundImage);
+            var img = new Image();
+            img.onload = function(){
+              var canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              var ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+
+              // Scale factor: all our positioning was tuned against a 180px-wide
+              // reference paper, so scale up to whatever the real image size is.
+              var scale = img.naturalWidth / 180;
+              var editLeft = 18 * scale;
+              var editTop = 23 * scale;
+              var editRight = canvas.width - (10 * scale);
+              var editBottom = canvas.height - (30 * scale);
+              var editWidth = editRight - editLeft;
+
+              var title = (titleInput && titleInput.value || '').trim();
+              var titleX = editLeft + (14 * scale) - (5 * scale);
+              var titleY = editTop + (7 * scale) + (3 * scale);
+              var titleFontSize = 12 * scale;
+              if(title){
+                ctx.fillStyle = '#262626';
+                ctx.font = 'bold ' + titleFontSize + 'px Tahoma, Arial, sans-serif';
+                ctx.textBaseline = 'top';
+                ctx.fillText(title, titleX, titleY, editWidth - (14 * scale));
+              }
+
+              var bodyX = editLeft + (14 * scale) - (6 * scale);
+              var bodyY = titleY + titleFontSize + (10 * scale);
+              var bodyMaxWidth = editWidth - (16 * scale);
+              var bodyFontSize = 13 * scale;
+              var lineHeight = bodyFontSize * 1.25;
+              ctx.fillStyle = '#262626';
+              ctx.font = bodyFontSize + 'px "Comic Sans MS", "Comic Sans", cursive';
+              ctx.textBaseline = 'top';
+
+              var text = (pageInput && pageInput.value || '');
+              var y = bodyY;
+              text.split('\n').forEach(function(rawLine){
+                var words = rawLine.split(' ');
+                var line = '';
+                for(var i = 0; i < words.length; i++){
+                  var test = line ? line + ' ' + words[i] : words[i];
+                  if(ctx.measureText(test).width > bodyMaxWidth && line){
+                    if(y + lineHeight <= editBottom) ctx.fillText(line, bodyX, y);
+                    y += lineHeight;
+                    line = words[i];
+                  } else {
+                    line = test;
+                  }
+                }
+                if(y + lineHeight <= editBottom) ctx.fillText(line, bodyX, y);
+                y += lineHeight;
+              });
+
+              var titleForFile = title ? title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40) : 'page';
+              var a = document.createElement('a');
+              a.download = 'desktopdiary-notepad-' + titleForFile + '-' + new Date().toISOString().slice(0, 10) + '.png';
+              a.href = canvas.toDataURL('image/png');
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            };
+            img.src = bgUrl;
           }
           if(titlebar && trashBtn){
             trashBtn.parentNode.removeChild(trashBtn);

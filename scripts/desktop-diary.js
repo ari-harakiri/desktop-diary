@@ -147,7 +147,7 @@ try {
   }
   var DEFAULT_SITE_CONTENT={
     install_instructions:'iPhone / iPad (Safari)\n\n1. Open DesktopDiary in Safari (not Chrome).\n2. Tap the Share button at the bottom of the screen—the box with an arrow pointing up.\n3. Scroll down and tap “Add to Home Screen.”\n4. Give it a name and tap Add.\n5. DesktopDiary now lives on your home screen like a real app.\n\nAndroid / Samsung (Chrome)\n\n1. Open DesktopDiary in Chrome.\n2. Tap the three-dot menu in the top-right corner.\n3. Tap “Add to Home Screen” or “Install App.”\n4. Tap Add to confirm.\n5. DesktopDiary now lives on your home screen like a real app.',
-    help_instructions:'Every buddy on your Buddy List is someone—or something—you can spill your guts to.\n\nUse messages to save birthdays, random memories, gift ideas, inside jokes, rants, shopping lists, life updates, or whatever is on your mind. Add your own categories and organize things your own way.\n\nClick a buddy to open an IM window and leave them a note. Keep a running history of thoughts, plans, and memories all in one place.\n\nBuddy icons show how recently their diary was updated:\nOnline = This week\nAway = More than 7 days\nOffline = More than 30 days\n\nUpdate your vibe anytime by setting your Status. It will be saved in the Log.\n\nHead to your Diary and choose New Entry to write and save.\n\nCustomize your profile, edit the HTML, choose a background, and turn your desktop into your personal homepage.\n\nUse File → Cloud Sync to keep a backup through Google sign-in. Local storage also auto-saves on this device, but local data can be lost if the browser cache is cleared.\n\nBasically: it is like AIM, a diary, a notepad, and a personal homepage all rolled into one.'
+    help_instructions:'Every buddy on your Buddy List is someone—or something you can spill your thoughts to.\n\nUse messages to save birthdays, random memories, gift ideas, inside jokes, rants, shopping lists, life updates, or whatever is on your mind. Add your own categories and organize things your own way.\n\nClick a buddy to open an IM window and leave them a note. Keep a running history of thoughts, plans, and memories all in one place.\n\nBuddy icons show how recently their diary was updated:\nOnline = This week\nAway = More than 7 days\nOffline = More than 30 days\n\nUpdate your vibe anytime by setting your Status. It will be saved in the Log.\n\nHead to your Diary and choose New Entry to write and save.\n\nCustomize your profile, edit the HTML, choose a background, and turn your desktop into your personal homepage.\n\nUse File → Cloud Sync to keep a backup through Google sign-in. Local storage also auto-saves on this device, but local data can be lost if the browser cache is cleared.\n\nBasically: it is like AIM, a diary, a notepad, and a personal homepage all rolled into one.'
   };
   var dtdSiteContent={install_instructions:DEFAULT_SITE_CONTENT.install_instructions,help_instructions:DEFAULT_SITE_CONTENT.help_instructions};
   var dtdAdminAccess=false;
@@ -219,7 +219,7 @@ try {
     trash: [],              // recoverable deleted content, retained for seven days
     customMoods: [],        // user-added moods: ['Grateful', 'Hopeful', ...]
     customMoodColors: {},   // mood name -> hex color override
-    groups: [ { id: 'default', name: 'Buddy Lists' } ],
+    groups: [ { id: 'default', name: 'Buddies' } ],
     buddies: [],            // { id, name, addedAt, groupId }
     entries: {},            // buddyId -> [ { id, html, ts, kind:'entry'|'prompt' } ]
     drafts: {},             // buddyId -> [ { id, html, ts }, ... ] saved draft log
@@ -233,8 +233,13 @@ try {
 
   function normalizeState(){
     if(!Array.isArray(state.groups) || !state.groups.length){
-      state.groups = [{ id: 'default', name: 'Buddy Lists' }];
+      state.groups = [{ id: 'default', name: 'Buddies' }];
     }
+    // One-time migration: the default category was briefly renamed to "Buddy Lists";
+    // restore the original "Buddies" name for anyone who already has that saved.
+    state.groups.forEach(function(g){
+      if(g.id === 'default' && g.name === 'Buddy Lists') g.name = 'Buddies';
+    });
     if(!Array.isArray(state.buddies)) state.buddies = [];
     state.buddies.forEach(function(b){ if(!b.groupId) b.groupId = 'default'; });
     if(!state.status) state.status = { label: '', html: '', ts: null };
@@ -369,6 +374,21 @@ try {
     state.scrapbook.notes=state.scrapbook.notes.filter(function(note){return note&&typeof note.text==='string'&&note.text.trim();}).map(function(note){if(!note.id)note.id=uid();note.text=note.text.trim().slice(0,500);return note;}).slice(0,20);
     if(!state.notebook || typeof state.notebook !== 'object') state.notebook = { pages: [ { id: 'page-1', text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' } ], currentPageIndex: 0, backgroundImage: 'notepad1.png' };
     if(!Array.isArray(state.notebook.pages)) state.notebook.pages = [ { id: 'page-1', text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' } ];
+    if(Array.isArray(state.notebook.trashPages) && state.notebook.trashPages.length){
+      state.notebook.trashPages.forEach(function(page, index){
+        if(!page || typeof page !== 'object') return;
+        moveToTrash('notebookPage', (typeof page.title === 'string' && page.title.trim()) ? page.title.trim() : 'Notebook Page', {
+          id: page.id || ('page-' + uid()),
+          text: typeof page.text === 'string' ? page.text : '',
+          title: typeof page.title === 'string' ? page.title : '',
+          createdAt: Number.isFinite(Number(page.createdAt)) ? Number(page.createdAt) : Date.now(),
+          updatedAt: Number.isFinite(Number(page.updatedAt)) ? Number(page.updatedAt) : Date.now()
+        }, {
+          index: Number.isFinite(Number(index)) ? Number(index) : 0
+        });
+      });
+    }
+    state.notebook.trashPages = [];
     state.notebook.pages = state.notebook.pages.map(function(page, index){
       if(!page || typeof page !== 'object') return null;
       if(!page.id) page.id = 'page-' + uid();
@@ -380,6 +400,23 @@ try {
     }).filter(Boolean);
     if(!state.notebook.pages.length){
       state.notebook.pages = [ { id: 'page-' + uid(), text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' } ];
+    }
+    if(!state.notebook.windowRect || typeof state.notebook.windowRect !== 'object') state.notebook.windowRect = null;
+    if(state.notebook.windowRect){
+      var savedRect = state.notebook.windowRect;
+      if(!Number.isFinite(Number(savedRect.left)) || !Number.isFinite(Number(savedRect.top))){
+        state.notebook.windowRect = null;
+      } else {
+        state.notebook.windowRect.left = Number(savedRect.left);
+        state.notebook.windowRect.top = Number(savedRect.top);
+        if(!Number.isFinite(Number(savedRect.width)) || !Number.isFinite(Number(savedRect.height))){
+          delete state.notebook.windowRect.width;
+          delete state.notebook.windowRect.height;
+        } else {
+          state.notebook.windowRect.width = Number(savedRect.width);
+          state.notebook.windowRect.height = Number(savedRect.height);
+        }
+      }
     }
     if(!state.notebook.currentPageIndex && state.notebook.currentPageIndex !== 0) state.notebook.currentPageIndex = 0;
     if(!Number.isFinite(Number(state.notebook.currentPageIndex))) state.notebook.currentPageIndex = 0;
@@ -692,6 +729,27 @@ try {
       var maxY=Math.max(0,window.innerHeight-TASKBAR_H-icon.offsetHeight);
       return {x:Math.max(0,Math.min(x,maxX)),y:Math.max(0,Math.min(y,maxY))};
     }
+    function mailboxDefaultPos(){
+      var desktop = document.getElementById('desktop');
+      var desktopWidth = (desktop && desktop.clientWidth) || window.innerWidth;
+      var desktopHeight = (desktop && desktop.clientHeight) || window.innerHeight;
+      return {
+        x: Math.max(0, Math.min(100, Math.max(0, desktopWidth - 100))),
+        y: Math.max(0, Math.min(72, desktopHeight - 80))
+      };
+    }
+    function sanitizeSavedIconPoint(icon,saved){
+      if(!saved || typeof saved!=='object') return null;
+      var x = Number(saved.x), y = Number(saved.y);
+      if(!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      if(icon.id==='dtd-mailbox-icon' && !saved.userPlaced && x === 0 && y === 0) return null;
+      return {
+        x: x,
+        y: y,
+        overBuddyList: !!saved.overBuddyList,
+        userPlaced: saved.userPlaced === true
+      };
+    }
     function place(icon,x,y){
       var p=boundsFor(icon,x,y);
       icon.style.left=Math.round(p.x)+'px';
@@ -714,7 +772,25 @@ try {
         if(kennel&&Number(kennel.x)===0&&Number(kennel.y)===0)kennel=null;
         saved=kennel&&Number.isFinite(Number(kennel.x))&&Number.isFinite(Number(kennel.y))?kennel:null;
       }
-      if(saved&&Number.isFinite(Number(saved.x))&&Number.isFinite(Number(saved.y))) place(icon,Number(saved.x),Number(saved.y));
+      var normalized = sanitizeSavedIconPoint(icon, saved);
+      if(icon.id==='dtd-mailbox-icon' && !normalized){
+        var mailboxDefault = mailboxDefaultPos();
+        normalized = {
+          x: mailboxDefault.x,
+          y: mailboxDefault.y,
+          overBuddyList: false,
+          userPlaced: false
+        };
+      }
+      if(normalized){
+        place(icon, normalized.x, normalized.y);
+        state.desktopIconPositions[icon.id] = {
+          x: normalized.x,
+          y: normalized.y,
+          overBuddyList: normalized.overBuddyList,
+          userPlaced: normalized.userPlaced
+        };
+      }
       if(icon.id==='desktop-companion' && !saved){
         var companionWidth=icon.offsetWidth||92,companionHeight=icon.offsetHeight||92;
         saved = {
@@ -792,8 +868,19 @@ try {
     window.addEventListener('resize',function(){
       icons.forEach(function(icon){
         var saved=state.desktopIconPositions[icon.id];
-        if(!saved)return;
-        var p=place(icon,Number(saved.x)||0,Number(saved.y)||0);
+        if(!saved) return;
+        var normalized = sanitizeSavedIconPoint(icon, saved);
+        if(icon.id==='dtd-mailbox-icon' && !normalized){
+          var mailboxDefault = mailboxDefaultPos();
+          normalized = {
+            x: mailboxDefault.x,
+            y: mailboxDefault.y,
+            overBuddyList: false,
+            userPlaced: false
+          };
+        }
+        if(!normalized) return;
+        var p=place(icon,normalized.x,normalized.y);
         saved.x=p.x;saved.y=p.y;
       });
     });
@@ -806,11 +893,10 @@ try {
     var smPaint = document.getElementById('sm-paint');
     var smAriNet = document.getElementById('sm-arinet');
     var smTxtMail = document.getElementById('sm-txtmail');
-    var smNotebook = document.getElementById('sm-notebook');
     var smDesktop = document.getElementById('sm-showdesktop');
-    var smScrapbook = document.getElementById('sm-scrapbook');
     var smSudoku = document.getElementById('sm-sudoku');
     var smSignoff = document.getElementById('sm-signoff');
+    var tbNotepad = document.getElementById('tb-notebook-taskbar');
     var mailbox = document.getElementById('dtd-mailbox-icon');
     var trash = document.getElementById('trash-desktop-icon');
     var arinetIcon = document.getElementById('arinet-desktop-icon');
@@ -847,8 +933,43 @@ try {
     if(smTxtMail){
       smTxtMail.addEventListener('click', runAndHide(openDtdPostWindow));
     }
-    if(smNotebook){
-      smNotebook.addEventListener('click', runAndHide(openNotebookWindow));
+    function toggleNotebookWindow(){
+      if(!document.body.classList.contains('signed-in')){
+        if(typeof showSignon === 'function') showSignon();
+        return;
+      }
+      function updateNotebookTaskbarIcon(){
+        var r = openWindows.find(function(w){ return w.type === 'notebook'; });
+        var isOpen = !!r && !r.minimized && r.el.style.display !== 'none';
+        if(tbNotepad) tbNotepad.setAttribute('aria-expanded', String(isOpen));
+      }
+      var rec = openWindows.find(function(w){ return w.type === 'notebook'; });
+      if(!rec){
+        openNotebookWindow();
+        updateNotebookTaskbarIcon();
+        return;
+      }
+      if(rec.minimized || rec.el.style.display === 'none'){
+        focusWindow(rec.id);
+      } else if(activeWindowId === rec.id){
+        minimizeWindow(rec);
+      } else {
+        focusWindow(rec.id);
+      }
+      updateNotebookTaskbarIcon();
+    }
+    if(tbNotepad){
+      tbNotepad.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        toggleNotebookWindow();
+      });
+      tbNotepad.addEventListener('keydown', function(e){
+        if(e.key!=='Enter'&&e.key!==' ') return;
+        e.preventDefault();
+        e.stopPropagation();
+        toggleNotebookWindow();
+      });
     }
     if(mailbox){
       mailbox.addEventListener('click', function(e){
@@ -954,14 +1075,13 @@ try {
     if(smDesktop){
       smDesktop.addEventListener('click', runAndHide(showDesktop));
     }
-    if(smScrapbook){
-      smScrapbook.addEventListener('click', runAndHide(openScrapbookWindow));
-    }
     if(smSudoku){
       smSudoku.addEventListener('click', runAndHide(openSudokuWindow));
     }
     if(smSignoff){
-      smSignoff.addEventListener('click', runAndHide(signOff));
+      smSignoff.addEventListener('click', runAndHide(function(){
+        logOffAndClose();
+      }));
     }
   })();
 
@@ -1760,37 +1880,74 @@ try {
     if(item.type==='diaryPost'){
       var diary=openWindows.find(function(w){return w.type==='diaryentries';});if(diary&&diary.el&&diary.el._refreshDiaryEntries)diary.el._refreshDiaryEntries();
       var profile=openWindows.find(function(w){return w.type==='viewprofile';});if(profile&&profile.el&&profile.el._refreshProfile)profile.el._refreshProfile();
+      return;
+    }
+    if(item.type==='notebookPage'){
+      var notebook=openWindows.find(function(w){return w.type==='notebook';});
+      if(notebook && notebook.el && notebook.el._reloadNotebookPage){
+        notebook.el._reloadNotebookPage();
+      }
     }
   }
-    function restoreTrashItem(item){
+  function restoreTrashItem(item){
       if(!item || !item.type) return false;
       if(item.type==='buddy'){
-      var pack=item.data||{},restoredBuddy=pack.buddy;if(!restoredBuddy)return false;
-      if(!state.groups.some(function(g){return g.id===restoredBuddy.groupId;}))restoredBuddy.groupId='default';
-      if(!state.buddies.some(function(b){return b.id===restoredBuddy.id;}))state.buddies.push(restoredBuddy);
-      state.entries[restoredBuddy.id]=Array.isArray(pack.entries)?pack.entries:[];
-      state.drafts[restoredBuddy.id]=Array.isArray(pack.drafts)?pack.drafts:[];
-    }else if(item.type==='buddyEntry'){
-      var buddy=state.buddies.find(function(b){return b.id===item.meta.buddyId;});if(!buddy){openInfoWindow('That diary no longer exists, so this entry cannot be restored.');return false;}
-      state.entries[item.meta.buddyId]=state.entries[item.meta.buddyId]||[];
-      if(!state.entries[item.meta.buddyId].some(function(e){return e.id===item.data.id;}))state.entries[item.meta.buddyId].push(item.data);
-    }else if(item.type==='diaryPost'){
-      state.blogPosts=state.blogPosts||[];
-      if(!state.blogPosts.some(function(p){return p.id===item.data.id;}))state.blogPosts.push(item.data);
-      syncDtdPublicEntry(item.data).catch(function(){});
-    }else{
-      return false;
-    }
+        var pack=item.data||{},restoredBuddy=pack.buddy;if(!restoredBuddy)return false;
+        if(!state.groups.some(function(g){return g.id===restoredBuddy.groupId;}))restoredBuddy.groupId='default';
+        if(!state.buddies.some(function(b){return b.id===restoredBuddy.id;}))state.buddies.push(restoredBuddy);
+        state.entries[restoredBuddy.id]=Array.isArray(pack.entries)?pack.entries:[];
+        state.drafts[restoredBuddy.id]=Array.isArray(pack.drafts)?pack.drafts:[];
+      }else if(item.type==='buddyEntry'){
+        var buddy=state.buddies.find(function(b){return b.id===item.meta.buddyId;});if(!buddy){openInfoWindow('That diary no longer exists, so this entry cannot be restored.');return false;}
+        state.entries[item.meta.buddyId]=state.entries[item.meta.buddyId]||[];
+        if(!state.entries[item.meta.buddyId].some(function(e){return e.id===item.data.id;}))state.entries[item.meta.buddyId].push(item.data);
+      }else if(item.type==='notebookPage'){
+        state.notebook = state.notebook && typeof state.notebook === 'object' ? state.notebook : { pages: [], currentPageIndex: 0, backgroundImage: 'notepad1.png' };
+        if(!Array.isArray(state.notebook.pages)) state.notebook.pages = [];
+        var restoredPage = item.data || {};
+        var restored = {
+          id: restoredPage.id || ('page-' + uid()),
+          text: typeof restoredPage.text === 'string' ? restoredPage.text : '',
+          title: typeof restoredPage.title === 'string' ? restoredPage.title : '',
+          createdAt: Number.isFinite(Number(restoredPage.createdAt)) ? Number(restoredPage.createdAt) : Date.now(),
+          updatedAt: Number.isFinite(Number(restoredPage.updatedAt)) ? Number(restoredPage.updatedAt) : Date.now()
+        };
+        if(state.notebook.pages.some(function(page){ return page.id === restored.id; })){
+          restored.id = 'page-' + uid();
+        }
+        var restoreIndex = Number.isFinite(Number(item.meta && item.meta.index)) ? Number(item.meta.index) : state.notebook.pages.length;
+        if(restoreIndex < 0) restoreIndex = 0;
+        if(restoreIndex > state.notebook.pages.length) restoreIndex = state.notebook.pages.length;
+        state.notebook.pages.splice(restoreIndex, 0, restored);
+        state.notebook.currentPageIndex = restoreIndex;
+      }else if(item.type==='diaryPost'){
+        state.blogPosts=state.blogPosts||[];
+        if(!state.blogPosts.some(function(p){return p.id===item.data.id;}))state.blogPosts.push(item.data);
+        syncDtdPublicEntry(item.data).catch(function(){});
+      }else{
+        return false;
+      }
     state.trash=state.trash.filter(function(t){return t.id!==item.id;});
     saveState();refreshRecoveredContent(item);return true;
   }
-  function trashTypeName(type){return type==='buddy'?'Buddy':(type==='buddyEntry'?'Diary Entry':'Private Diary Entry');}
+  function trashTypeName(type){
+    if(type==='buddy') return 'Buddy';
+    if(type==='buddyEntry') return 'Diary Entry';
+    if(type==='notebookPage') return 'Notebook Page';
+    return 'Private Diary Entry';
+  }
   function openTrashWindow(){
     var existing=openWindows.find(function(w){return w.type==='trash';});if(existing){focusWindow(existing.id);if(existing.el._renderTrash)existing.el._renderTrash();return;}
     createWindow({title:'Trash',extraClass:'trash-win',bodyHtml:'<div class="win-body" style="padding:0"></div>',type:'trash',onMount:function(el){
       function render(){
         if(purgeExpiredTrash())saveState();refreshTrashIcon();
-      var rows=state.trash.length?state.trash.map(function(item){var itemAge=TRASH_RETENTION_MS-(Date.now()-item.deletedAt);var daysLeft=Math.ceil(itemAge/(24*60*60*1000));var left=Math.max(1,daysLeft);var icon=item.type==='buddy'?'👤':(item.type==='buddyEntry'?'📖':'📝');return '<div class="trash-row" data-trash-id="'+escapeHtml(item.id)+'"><div class="trash-row-icon">'+icon+'</div><div><div class="trash-row-title">'+escapeHtml(item.label)+'</div><div class="trash-row-meta">'+trashTypeName(item.type)+' · '+left+' day'+(left===1?'':'s')+' remaining</div></div><div class="trash-row-actions"><button class="btn trash-restore">Restore</button><button class="btn trash-delete-now" title="Delete permanently">×</button></div></div>';}).join(''):'<div class="vp-empty" style="padding:34px 12px">Trash is empty.</div>';
+        var rows=state.trash.length?state.trash.map(function(item){
+          var itemAge = TRASH_RETENTION_MS - (Date.now() - item.deletedAt);
+          var daysLeft = Math.ceil(itemAge / (24*60*60*1000));
+          var left = Math.max(1, daysLeft);
+          var icon = item.type==='buddy' ? '👤' : (item.type==='buddyEntry' ? '📖' : (item.type==='notebookPage' ? '📒' : '📝'));
+          return '<div class="trash-row" data-trash-id="'+escapeHtml(item.id)+'"><div class="trash-row-icon">'+icon+'</div><div><div class="trash-row-title">'+escapeHtml(item.label)+'</div><div class="trash-row-meta">'+trashTypeName(item.type)+' · '+left+' day'+(left===1?'':'s')+' remaining</div></div><div class="trash-row-actions"><button class="btn trash-restore">Restore</button><button class="btn trash-delete-now" title="Delete permanently">×</button></div></div>';
+        }).join(''):'<div class="vp-empty" style="padding:34px 12px">Trash is empty.</div>';
         el.querySelector('.win-body').innerHTML='<div class="trash-head"><div><b>Recently Deleted</b><small>Items are permanently removed after seven days.</small></div>'+(state.trash.length?'<button class="btn trash-empty">Empty Trash</button>':'')+'</div><div class="trash-list">'+rows+'</div>';
         el.querySelectorAll('[data-trash-id]').forEach(function(row){var item=state.trash.find(function(t){return t.id===row.dataset.trashId;});if(!item)return;row.querySelector('.trash-restore').onclick=function(){if(restoreTrashItem(item))render();};row.querySelector('.trash-delete-now').onclick=function(){appConfirm('Delete this item permanently?',function(ok){if(!ok)return;state.trash=state.trash.filter(function(t){return t.id!==item.id;});saveState();render();});};});
         var empty=el.querySelector('.trash-empty');if(empty)empty.onclick=function(){appConfirm('Permanently delete everything in Trash?',function(ok){if(!ok)return;state.trash=[];saveState();render();});};
@@ -2090,14 +2247,16 @@ try {
       errEl.textContent = 'Entering offline mode…';
     }
     setSupabaseSession(null);
-    state = state || makeFreshState();
+    state = makeFreshState();
     state.savePassword = false;
     state.autoLogin = false;
+    if(!state.account) state.account = { screenName: 'Guest', email: '', password: '' };
     if(state.account){
       if(state.account.password) state.account.password = '';
       if(!state.account.screenName && state.account.email){
         state.account.screenName = state.account.email.split('@')[0];
       }
+      if(!state.account.screenName) state.account.screenName = 'Guest';
       delete state.account.pendingEmail;
     }
     return saveState().then(function(){ return enterDesktop(); }).catch(function(){ return enterDesktop(); });
@@ -2216,7 +2375,7 @@ try {
     if(!/^\S+@\S+\.\S+$/.test(loginEmail)){errEl.textContent='Please enter your account email.';return;}
     if(!loginPassword){errEl.textContent='Please enter your password.';return;}
     submit.style.pointerEvents='none';errEl.style.color='#555';errEl.textContent='Signing in securely…';
-    supabaseAuthRequest('/token?grant_type=password',{email:loginEmail,password:loginPassword}).then(function(auth){setSupabaseSession(auth);return activateAccountDiary(loginEmail,auth,loginPassword,false);}).then(function(){state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color=''; errEl.textContent = (err && err.message ? err.message : 'Unable to sign in right now.') + ' Click “Continue without cloud” to test offline.';}).then(function(){submit.style.pointerEvents='';});
+    supabaseAuthRequest('/token?grant_type=password',{email:loginEmail,password:loginPassword}).then(function(auth){setSupabaseSession(auth);return activateAccountDiary(loginEmail,auth,loginPassword,false);}).then(function(){state.savePassword=savePw;state.autoLogin=autoLog;return saveState().then(enterDesktop);}).catch(function(err){errEl.style.color=''; errEl.textContent = (err && err.message ? err.message : 'Unable to sign in right now.') + ' Click “Continue without email” to test offline.';}).then(function(){submit.style.pointerEvents='';});
   });
 
   document.getElementById('in-email').addEventListener('keydown', function(e){if(e.key==='Enter'){e.preventDefault();document.getElementById('in-password').focus();}});
@@ -2236,7 +2395,9 @@ try {
 
   var signonLocalButton = document.getElementById('signon-local');
   if(signonLocalButton){
-    signonLocalButton.addEventListener('click', function(){ continueOfflineFromSignon(); });
+    signonLocalButton.addEventListener('click', function(){
+      continueOfflineFromSignon();
+    });
   }
 
   bindAccessibleAction(document.getElementById('btn-help'), function(){
@@ -2272,6 +2433,8 @@ try {
     if(!dtdUsageSessionTracked){dtdUsageSessionTracked=true;trackDtdUsage('session_started');}
     syncAuthenticatedEmailFromServer().catch(function(){});
     refreshAdminAccess();
+    var scrapbookMenu = document.getElementById('menu-scrapbook');
+    if(scrapbookMenu) scrapbookMenu.style.display = (state.account && state.account.email) ? 'block' : 'none';
     refreshTrashIcon();
     startDesktopMailWatch();
     startPenPalNotificationWatch();
@@ -2356,8 +2519,8 @@ try {
       savedPosition.right = Math.max(0,window.innerWidth-startingPosition.x-w);
     }
     positionCompanionOverBuddyList();
-    document.getElementById('bl-title-text').textContent = state.account.screenName;
-    document.getElementById('bl-me-name').textContent = state.account.screenName;
+    document.getElementById('bl-title-text').textContent = (state.account && state.account.screenName) || 'Guest';
+    document.getElementById('bl-me-name').textContent = (state.account && state.account.screenName) || 'Guest';
     refreshMyStatus();
     refreshProfilePic();
     renderBuddyList();
@@ -2579,11 +2742,11 @@ try {
   document.getElementById('menu-logs').addEventListener('click', function(){ openLogsWindow('status'); });
   document.getElementById('menu-cloudsync').addEventListener('click', openCloudSyncWindow);
   document.getElementById('menu-account').addEventListener('click', openAccountSettingsWindow);
+  document.getElementById('menu-scrapbook').addEventListener('click', openScrapbookWindow);
   document.getElementById('menu-admin').addEventListener('click', openAdminWindow);
   document.getElementById('menu-editprofile').addEventListener('click', openEditProfileWindow);
   document.getElementById('menu-viewprofile').addEventListener('click', openViewProfileWindow);
   document.getElementById('menu-viewdiary').addEventListener('click', openDiaryEntriesWindow);
-  document.getElementById('menu-notebook').addEventListener('click', openNotebookWindow);
   document.getElementById('menu-friendrequests').addEventListener('click', openFriendRequestsWindow);
   document.getElementById('bl-status-edit').addEventListener('click', openSetStatusWindow);
   document.getElementById('bl-status-clear').addEventListener('click', function(){
@@ -2592,7 +2755,31 @@ try {
     var profileWindow=openWindows.find(function(w){return w.type==='viewprofile';});if(profileWindow&&profileWindow.el&&profileWindow.el._refreshProfile)profileWindow.el._refreshProfile();
   });
 
-  function signOff(){
+  function closeWindowIfPossible(){
+    try {
+      window.close();
+    } catch (e) {}
+    setTimeout(function(){
+      if(!window.closed){
+        if(typeof showSignon === 'function') showSignon();
+      }
+    }, 300);
+  }
+
+  function logOffAndClose(){
+    var isSignedInNow = document.body && document.body.classList ? document.body.classList.contains('signed-in') : false;
+    if(!isSignedInNow){
+      closeWindowIfPossible();
+      return;
+    }
+    signOff({
+      suppressSignon: true,
+      onComplete: closeWindowIfPossible
+    });
+  }
+
+  function signOff(options){
+    options = options || {};
     setActiveSession(false);
     dtdUsageSessionTracked=false;
     setSupabaseSession(null);
@@ -2629,6 +2816,10 @@ try {
         state.autoLogin    = !!prevAuto;
       }
       activeStorageKey = STORAGE_KEY; // reset to generic key; sign-in will re-scope
+      if(options.suppressSignon){
+        if(typeof options.onComplete === 'function') options.onComplete();
+        return;
+      }
       setTimeout(function(){ showSignon(); }, 900);
     }
     // Never let a hung or failed network call strand the user with the buddy
@@ -2745,7 +2936,7 @@ try {
     }
     el.addEventListener('mousedown', function(){ focusWindow(id); });
     el.addEventListener('touchstart', function(){ focusWindow(id); }, { passive: true });
-    makeDraggable(el, el.querySelector('.titlebar'));
+    makeDraggable(el, el.querySelector('.titlebar'), opts.onDragEnd);
     focusWindow(id);
 
     if(opts.onMount) opts.onMount(el, id);
@@ -6783,7 +6974,7 @@ try {
           };
 
           var usageLoaded=false,usageLoading=false,usageStatus=el.querySelector('.usage-status'),usageResults=el.querySelector('.usage-results'),periodSelect=el.querySelector('#usage-period'),refreshButton=el.querySelector('.usage-refresh'),cleanupButton=el.querySelector('.usage-cleanup'),updated=el.querySelector('.usage-updated');
-    var usageLabels={diary_opened:'Diary opened',diary_entry_created:'Diary entry created',post_mail_opened:'Post Mail opened',letter_sent:'Letter sent',sudoku_started:'Sudoku started',sudoku_completed:'Sudoku completed',profile_editor_opened:'Profile editor opened',paint_opened:'Paint opened',arinet_opened:'AriNet opened',help_opened:'Help opened',koba_interacted:'Koba interaction'};
+          var usageLabels={diary_opened:'Diary opened',diary_entry_created:'Diary entry created',post_mail_opened:'Post Mail opened',letter_sent:'Letter sent',sudoku_started:'Sudoku started',sudoku_completed:'Sudoku completed',profile_editor_opened:'Profile editor opened',paint_opened:'Paint opened',arinet_opened:'AriNet opened',help_opened:'Help opened',koba_interacted:'Koba interaction'};
           function usageNumber(value){return Number(value||0).toLocaleString();}
           function usageDate(value,includeTime){
             if(!value)return'—';var date=new Date(value);if(!Number.isFinite(date.getTime()))return'—';
@@ -7343,7 +7534,7 @@ try {
     if(typeof value !== 'string') return fallback;
 
     var trimmed = value.trim();
-    if(!trimmed || trimmed === 'notebook1.png' || trimmed === 'notepad1.png'){
+    if(!trimmed || trimmed === 'notebook1.png' || trimmed === 'notebook1' || trimmed === 'notepad1.png'){
       return fallback;
     }
 
@@ -7363,8 +7554,13 @@ try {
   }
 
   function openNotebookWindow(){
+    if(!document.body.classList.contains('signed-in')){
+      if(typeof showSignon === 'function') showSignon();
+      return;
+    }
+
     trackDtdUsage('notebook_opened');
-    var existing=openWindows.find(function(w){ return w.type === 'notebook'; });
+    var existing = openWindows.find(function(w){ return w.type === 'notebook'; });
     if(existing){
       focusWindow(existing.id);
       return;
@@ -7373,9 +7569,7 @@ try {
     var currentPageIndex = Math.max(0, Math.min(state.notebook.pages.length - 1, Number(state.notebook.currentPageIndex) || 0));
     var autosaveTimer = null;
 
-    function getPages(){
-      return Array.isArray(state.notebook.pages) ? state.notebook.pages : [];
-    }
+    function getPages(){ return Array.isArray(state.notebook.pages) ? state.notebook.pages : []; }
     function getCurrentPage(){
       var pages = getPages();
       if(!pages.length) return { id: 'page-' + uid(), text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' };
@@ -7388,28 +7582,32 @@ try {
       if(index > max) return max;
       return Math.floor(index);
     }
-  function buildBody(){
+    function buildBody(){
       var pagePhotoUrl = normalizeNotebookBackgroundImage(state.notebook.backgroundImage);
       var pagePhotoSafe = pagePhotoUrl.replace(/"/g, '\\"');
         return '<div class="win-body notebook-win-body">' +
         '<div class="notebook-controls-wrap">' +
           '<div class="notebook-page-surface" style="--notebook-page-photo:url(\'' + pagePhotoSafe + '\')">' +
+            '<button class="notebook-save-btn" id="nb-save-btn" type="button" title="Save" aria-label="Save">💾</button>' +
             '<div class="notebook-page-edit-area">' +
               '<input class="notebook-page-title" id="nb-page-title" type="text" placeholder="Title" maxlength="120">' +
-              '<textarea class="notebook-page-input" id="nb-page-input" placeholder="Start typing here…"></textarea>' +
+            '<textarea class="notebook-page-input" id="nb-page-input" placeholder=""></textarea>' +
             '</div>' +
-            '<span class="notebook-page-label" id="nb-page-label"></span>' +
-          '</div>' +
-          '<div class="notebook-page-nav">' +
-            '<button class="notebook-nav-btn" id="nb-prev" title="Previous page" aria-label="Previous page">‹</button>' +
-            '<button class="notebook-nav-btn" id="nb-next" title="Next page" aria-label="Next page">›</button>' +
+            '<div class="notebook-page-footer">' +
+              '<span class="notebook-page-label" id="nb-page-label"></span>' +
+              '<div class="notebook-page-nav">' +
+                '<button class="notebook-nav-btn" id="nb-prev" title="Previous page" aria-label="Previous page">‹</button>' +
+                '<button class="notebook-nav-btn" id="nb-next" title="Next page" aria-label="Next page">›</button>' +
+              '</div>' +
+              '<button class="notebook-page-add-btn" id="nb-add" title="Delete current page" aria-label="Delete current page">🗑</button>' +
+            '</div>' +
           '</div>' +
         '</div>' +
       '</div>';
     }
 
     function normalizeCurrent(){
-      var pages=getPages();
+      var pages = getPages();
       if(!pages.length){
         pages.push({ id: 'page-' + uid(), text: '', createdAt: Date.now(), updatedAt: Date.now(), title: '' });
       }
@@ -7417,7 +7615,45 @@ try {
       state.notebook.currentPageIndex = currentPageIndex;
     }
 
+    var savedRect = state.notebook.windowRect || {};
+    function persistNotebookWindowRect(){
+      if(!windowRef || !windowRef.el) return;
+      var left = Math.round(windowRef.el.offsetLeft);
+      var top = Math.round(windowRef.el.offsetTop);
+      if(!Number.isFinite(left) || !Number.isFinite(top)) return;
+      state.notebook.windowRect = {
+        left: left,
+        top: top
+      };
+      saveState();
+    }
+    function clampNotebookRect(){
+      var left = Number.isFinite(Number(savedRect.left)) ? Number(savedRect.left) : NaN;
+      var top = Number.isFinite(Number(savedRect.top)) ? Number(savedRect.top) : NaN;
+      return {
+        left: left,
+        top: top
+      };
+    }
     normalizeCurrent();
+    var restoredRect = clampNotebookRect();
+    // Always derive width/height from a single scale factor so the notebook
+    // keeps the same 340:300 proportions on every screen, instead of scaling
+    // width and height independently (which distorted the page image).
+    var NB_BASE_WIDTH = 220;
+    var NB_BASE_HEIGHT = 227;
+    var nbScale = Math.min(1, (window.innerWidth * 0.82) / NB_BASE_WIDTH, (window.innerHeight * 0.56) / NB_BASE_HEIGHT);
+    var nbWidth = Math.round(NB_BASE_WIDTH * nbScale);
+    var nbHeight = Math.round(NB_BASE_HEIGHT * nbScale);
+    var nbPos = Number.isFinite(restoredRect.left) && Number.isFinite(restoredRect.top)
+      ? clampToViewport(restoredRect.left, restoredRect.top, nbWidth, nbHeight)
+      : (function(){
+          var iconEl = document.getElementById('tb-notebook-taskbar');
+          if(!iconEl) return null;
+          var rect = iconEl.getBoundingClientRect();
+          return clampToViewport(rect.left, rect.top - nbHeight - 10, nbWidth, nbHeight);
+        })();
+
     var windowRef = createWindow({
       title: 'Notepad',
       extraClass: 'notebook-win notebook-toy',
@@ -7427,16 +7663,24 @@ try {
       hideMaximize: true,
       hideClose: true,
       constructionBar: false,
+      initialLeft: nbPos ? nbPos.x : undefined,
+      initialTop: nbPos ? nbPos.y : undefined,
+      onDragEnd: persistNotebookWindowRect,
       onClose: function(){
         if(autosaveTimer) clearTimeout(autosaveTimer);
+        persistNotebookWindowRect();
         saveCurrentPage();
       },
-      onMount: function(el){
+      onMount: function(el, id){
+        var titlebar = el.querySelector('.titlebar');
         var pageInput = el.querySelector('#nb-page-input');
         var titleInput = el.querySelector('#nb-page-title');
         var prevBtn = el.querySelector('#nb-prev');
         var nextBtn = el.querySelector('#nb-next');
+        var addBtn = el.querySelector('#nb-add');
         var label = el.querySelector('#nb-page-label');
+        var saveBtn = el.querySelector('#nb-save-btn');
+        var trashBtn = titlebar ? titlebar.querySelector('.notebook-mini-trash-btn') : null;
 
         function saveCurrentPage(){
           var page = getCurrentPage();
@@ -7475,6 +7719,36 @@ try {
             title: ''
           };
         }
+        function deleteCurrentPage(){
+          var pages = getPages();
+          if(!pages.length) return;
+          appConfirm('Move this page to Trash?', function(ok){
+            if(!ok) return;
+            var removed = getCurrentPage();
+            if(removed){
+              moveToTrash('notebookPage', (removed.title || 'Notebook Page').trim() || 'Notebook Page', {
+                id: removed.id || ('page-' + uid()),
+                text: removed.text || '',
+                title: removed.title || '',
+                createdAt: removed.createdAt || Date.now(),
+                updatedAt: removed.updatedAt || Date.now()
+              }, {
+                index: currentPageIndex
+              });
+            }
+            if(pages.length <= 1){
+              pages[0] = createBlankPage();
+              refreshPageContent(true);
+              saveState();
+              return;
+            }
+            pages.splice(currentPageIndex, 1);
+            currentPageIndex = clampPageIndex(Math.max(0, currentPageIndex - 1));
+            state.notebook.currentPageIndex = currentPageIndex;
+            refreshPageContent(true);
+            saveState();
+          });
+        }
         function openPage(nextIndex){
           saveCurrentPage();
           currentPageIndex = clampPageIndex(nextIndex);
@@ -7495,14 +7769,116 @@ try {
           }
           openPage(currentPageIndex + 1);
         }
+        function addNewPage(){
+          saveCurrentPage();
+          var pages = getPages();
+          pages.push(createBlankPage());
+          currentPageIndex = pages.length - 1;
+          state.notebook.currentPageIndex = currentPageIndex;
+          refreshPageContent();
+          pageInput.focus();
+          saveState();
+        }
 
         function wireToolbar(){
           pageInput.addEventListener('input', queueSave);
           if(titleInput) titleInput.addEventListener('input', queueSave);
+          if(titleInput) titleInput.addEventListener('keydown', function(e){
+            if(e.key === 'Enter'){
+              e.preventDefault();
+              pageInput.focus();
+            }
+          });
           prevBtn.addEventListener('click', function(){ openPage(currentPageIndex - 1); });
           nextBtn.addEventListener('click', gotoNext);
+          if(addBtn){
+            addBtn.addEventListener('click', deleteCurrentPage);
+          }
+          if(saveBtn){
+            saveBtn.addEventListener('click', function(e){
+              if(e && e.preventDefault) e.preventDefault();
+              if(e && e.stopPropagation) e.stopPropagation();
+              exportPageAsImage();
+            });
+          }
+          function exportPageAsImage(){
+            var bgUrl = normalizeNotebookBackgroundImage(state.notebook.backgroundImage);
+            var img = new Image();
+            img.onload = function(){
+              var canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              var ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+
+              // Scale factor: all our positioning was tuned against a 180px-wide
+              // reference paper, so scale up to whatever the real image size is.
+              var scale = img.naturalWidth / 180;
+              var editLeft = 18 * scale;
+              var editTop = 23 * scale;
+              var editRight = canvas.width - (10 * scale);
+              var editBottom = canvas.height - (30 * scale);
+              var editWidth = editRight - editLeft;
+
+              var title = (titleInput && titleInput.value || '').trim();
+              var titleX = editLeft + (14 * scale) - (5 * scale);
+              var titleY = editTop + (7 * scale) + (3 * scale);
+              var titleFontSize = 12 * scale;
+              if(title){
+                ctx.fillStyle = '#262626';
+                ctx.font = 'bold ' + titleFontSize + 'px Tahoma, Arial, sans-serif';
+                ctx.textBaseline = 'top';
+                ctx.fillText(title, titleX, titleY, editWidth - (14 * scale));
+              }
+
+              var bodyX = editLeft + (14 * scale) - (6 * scale);
+              var bodyY = titleY + titleFontSize + (10 * scale);
+              var bodyMaxWidth = editWidth - (16 * scale);
+              var bodyFontSize = 13 * scale;
+              var lineHeight = bodyFontSize * 1.25;
+              ctx.fillStyle = '#262626';
+              ctx.font = bodyFontSize + 'px "Comic Sans MS", "Comic Sans", cursive';
+              ctx.textBaseline = 'top';
+
+              var text = (pageInput && pageInput.value || '');
+              var y = bodyY;
+              text.split('\n').forEach(function(rawLine){
+                var words = rawLine.split(' ');
+                var line = '';
+                for(var i = 0; i < words.length; i++){
+                  var test = line ? line + ' ' + words[i] : words[i];
+                  if(ctx.measureText(test).width > bodyMaxWidth && line){
+                    if(y + lineHeight <= editBottom) ctx.fillText(line, bodyX, y);
+                    y += lineHeight;
+                    line = words[i];
+                  } else {
+                    line = test;
+                  }
+                }
+                if(y + lineHeight <= editBottom) ctx.fillText(line, bodyX, y);
+                y += lineHeight;
+              });
+
+              var titleForFile = title ? title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40) : 'page';
+              var a = document.createElement('a');
+              a.download = 'desktopdiary-notepad-' + titleForFile + '-' + new Date().toISOString().slice(0, 10) + '.png';
+              a.href = canvas.toDataURL('image/png');
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            };
+            img.src = bgUrl;
+          }
+          if(titlebar && trashBtn){
+            trashBtn.parentNode.removeChild(trashBtn);
+          }
           refreshNavButtons();
         }
+
+        el._reloadNotebookPage = function(){
+          currentPageIndex = clampPageIndex(Number.isFinite(Number(state.notebook.currentPageIndex)) ? state.notebook.currentPageIndex : 0);
+          refreshPageContent(true);
+        };
 
         normalizeCurrent();
         refreshPageContent(true);
@@ -7512,8 +7888,6 @@ try {
       }
     });
 
-    var nbWidth = Math.max(260, Math.min(340, Math.round(window.innerWidth * 0.34)));
-    var nbHeight = Math.max(210, Math.min(300, Math.round(window.innerHeight * 0.52)));
     windowRef.el.style.width = nbWidth + 'px';
     windowRef.el.style.height = nbHeight + 'px';
 
@@ -8023,6 +8397,21 @@ try {
     } catch(e){}
     return false;
   }
+
+  window.addEventListener('keydown', function(e){
+    if(!e || !e.key) return;
+    var key = String(e.key).toLowerCase();
+    if(e.ctrlKey && e.shiftKey && key === 'l'){
+      e.preventDefault();
+      setActiveSession(false);
+      setSupabaseSession(null);
+      if(typeof showSignon === 'function'){
+        showSignon();
+      } else if(typeof forceSignonRevealNow === 'function'){
+        forceSignonRevealNow();
+      }
+    }
+  });
 
   function ensureStartupSurfaceVisible(){
     if(isStartupWindowReady()) return;

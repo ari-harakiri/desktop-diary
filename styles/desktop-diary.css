@@ -9,27 +9,27 @@
     --th-item-active-1:#1a4fc4; --th-item-active-2:#0d3aa8;
     --th-clock-1:#1a4fc4; --th-clock-2:#0d3aa8; --th-clock-border:#0a2e85;
     --th-start-1:#7ed957; --th-start-2:#3a9d23; --th-start-3:#237014; --th-start-border:#1f5e10;
-    --companion-puppy:url('../assets/embedded/companion-puppy.png');
+    --companion-puppy:url('assets/embedded/companion-puppy.png');
   }
     @font-face {
     font-family: 'DiaryMinecraft';
-    src: url(../assets/fonts/diary-minecraft.ttf) format('truetype');
+    src: url(assets/fonts/diary-minecraft.ttf) format('truetype');
     font-display: swap;
   }
         @font-face {
     font-family: 'DiaryComicSans';
-    src: url(../assets/fonts/diary-comic-sans.ttf) format('truetype');
+    src: url(assets/fonts/diary-comic-sans.ttf) format('truetype');
     font-display: swap;
   }
     @font-face {
     font-family: 'DiaryEmoji';
-    src: url(../assets/fonts/diary-emoji.ttf) format('truetype');
+    src: url(assets/fonts/diary-emoji.ttf) format('truetype');
     font-display: swap;
   }
 
   @font-face {
     font-family: 'DiaryOldEnglish';
-    src: url(../assets/fonts/diary-old-english.otf) format('opentype');
+    src: url(assets/fonts/diary-old-english.otf) format('opentype');
     font-display: swap;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -198,19 +198,19 @@
   #dtd-mailbox-icon.mail-window-open { z-index:auto !important; }
   #dtd-mailbox-icon.mail-window-open .dtd-pigeon { z-index:100000 !important; }
   #dtd-mailbox-icon .dtd-mailbox-art { display:block; width:62px; height:62px; object-fit:contain; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
-  #dtd-mailbox-icon .dtd-pigeon { position:absolute; top:-58px; right:-12px; width:68px; height:68px; display:none; padding:0; border-radius:0; pointer-events:none; transform-origin:50% 100%; background:url('../companions/sprites/pigeon/pigeon-perched.png') no-repeat center / contain; image-rendering:pixelated; }
+  #dtd-mailbox-icon .dtd-pigeon { position:absolute; top:-58px; right:-12px; width:68px; height:68px; display:none; padding:0; border-radius:0; pointer-events:none; transform-origin:50% 100%; background:url('companions/sprites/pigeon/pigeon-perched.png') no-repeat center / contain; image-rendering:pixelated; }
   #dtd-mailbox-icon:active .dtd-pigeon { background-color:transparent; }
   /* The 68px flight/compose sheet also lands on the mailbox-body baseline. */
   #dtd-mailbox-icon .dtd-pigeon { top:-46px; }
   #dtd-mailbox-icon.has-new-mail .dtd-pigeon, #dtd-mailbox-icon.pigeon-departing .dtd-pigeon, #dtd-mailbox-icon.pigeon-composing .dtd-pigeon { display:block; }
-  #dtd-mailbox-icon.pigeon-click-perched:not(.has-new-mail):not(.pigeon-arriving):not(.pigeon-departing):not(.pigeon-composing):not(.pigeon-sending) .dtd-pigeon { display:block; background-image:url('../companions/sprites/pigeon/pigeon-perched.png'); background-position:center; background-size:contain; }
-  #dtd-mailbox-icon.has-new-mail:not(.pigeon-arriving):not(.pigeon-departing) .dtd-pigeon { top:-43px; right:1px; width:54px; height:54px; background-image:url('../assets/embedded/pigeon-arriving.png'); background-repeat:no-repeat; background-position:center; background-size:contain; animation:dtd-pigeon-unread-idle 7.5s ease-in-out infinite; }
-  #dtd-mailbox-icon.pigeon-composing:not(.has-new-mail):not(.pigeon-arriving):not(.pigeon-departing):not(.pigeon-sending) .dtd-pigeon { background-image:url('../companions/sprites/pigeon/pigeon-perched.png'); background-position:center; background-size:contain; }
+  #dtd-mailbox-icon.pigeon-click-perched:not(.has-new-mail):not(.pigeon-arriving):not(.pigeon-departing):not(.pigeon-composing):not(.pigeon-sending) .dtd-pigeon { display:block; background-image:url('companions/sprites/pigeon/pigeon-perched.png'); background-position:center; background-size:contain; }
+  #dtd-mailbox-icon.has-new-mail:not(.pigeon-arriving):not(.pigeon-departing) .dtd-pigeon { top:-43px; right:1px; width:54px; height:54px; background-image:url('assets/embedded/pigeon-arriving.png'); background-repeat:no-repeat; background-position:center; background-size:contain; animation:dtd-pigeon-unread-idle 7.5s ease-in-out infinite; }
+  #dtd-mailbox-icon.pigeon-composing:not(.has-new-mail):not(.pigeon-arriving):not(.pigeon-departing):not(.pigeon-sending) .dtd-pigeon { background-image:url('companions/sprites/pigeon/pigeon-perched.png'); background-position:center; background-size:contain; }
   /* Align the unread pigeon's feet with the mailbox body instead of its flag. */
   #dtd-mailbox-icon.has-new-mail:not(.pigeon-arriving):not(.pigeon-departing) .dtd-pigeon { top:-32px; }
-  #dtd-mailbox-icon.pigeon-composing.pigeon-compose-arriving:not(.has-new-mail):not(.pigeon-arriving):not(.pigeon-departing):not(.pigeon-sending) .dtd-pigeon { background-image:url('../companions/sprites/pigeon/pigeon-flying-empty.png'); background-position:center; background-size:contain; animation:dtd-pigeon-arrive-move .9s ease-out forwards; }
-  #dtd-mailbox-icon.has-new-mail.pigeon-arriving .dtd-pigeon { background-image:url('../companions/sprites/pigeon/pigeon-flying-with-mail.png'); background-position:center; background-size:contain; animation:dtd-pigeon-arrive-move 1s ease-out forwards; }
-  #dtd-mailbox-icon.pigeon-departing .dtd-pigeon { background-image:url('../companions/sprites/pigeon/pigeon-flying-empty.png'); background-position:center; background-size:contain; animation:dtd-pigeon-fly-away-move .9s ease-in forwards; }
+  #dtd-mailbox-icon.pigeon-composing.pigeon-compose-arriving:not(.has-new-mail):not(.pigeon-arriving):not(.pigeon-departing):not(.pigeon-sending) .dtd-pigeon { background-image:url('companions/sprites/pigeon/pigeon-flying-empty.png'); background-position:center; background-size:contain; animation:dtd-pigeon-arrive-move .9s ease-out forwards; }
+  #dtd-mailbox-icon.has-new-mail.pigeon-arriving .dtd-pigeon { background-image:url('companions/sprites/pigeon/pigeon-flying-with-mail.png'); background-position:center; background-size:contain; animation:dtd-pigeon-arrive-move 1s ease-out forwards; }
+  #dtd-mailbox-icon.pigeon-departing .dtd-pigeon { background-image:url('companions/sprites/pigeon/pigeon-flying-empty.png'); background-position:center; background-size:contain; animation:dtd-pigeon-fly-away-move .9s ease-in forwards; }
   #dtd-mailbox-icon.pigeon-sending { overflow:visible; }
   #dtd-mailbox-icon.pigeon-sending .dtd-mailbox-art { position:relative; z-index:1; }
   #dtd-mailbox-icon .dtd-outgoing-envelope { position:absolute; top:15px; right:18px; width:20px; height:13px; display:none; box-sizing:border-box; padding:0; border:2px solid #744724; border-radius:1px; background:#f4d9a9; box-shadow:1px 1px 0 rgba(0,0,0,.28); pointer-events:none; image-rendering:pixelated; z-index:2; }
@@ -221,7 +221,7 @@
   #dtd-mailbox-icon.pigeon-sending .dtd-outgoing-envelope { display:block; animation:dtd-envelope-collect 2.2s ease-in forwards; }
   @keyframes dtd-pigeon-arrive-move { 0%{transform:translate(-220px,-70px) scale(.72);opacity:0} 10%{opacity:1} 74%{transform:translate(-8px,-4px) scale(1);opacity:1} 75%,100%{transform:translate(0,0) scale(1);opacity:1} }
   @keyframes dtd-pigeon-fly-away-move { 0%,5%{transform:translate(0,0) scale(1);opacity:1} 20%{transform:translate(22px,-18px) scale(1) rotate(-8deg);opacity:1} 100%{transform:translate(240px,-130px) scale(.6) rotate(10deg);opacity:0} }
-  @keyframes dtd-pigeon-send-bg { 0%,24%{background-image:url('../companions/sprites/pigeon/pigeon-perched.png')} 25%,100%{background-image:url('../companions/sprites/pigeon/pigeon-flying-with-mail.png')} }
+  @keyframes dtd-pigeon-send-bg { 0%,24%{background-image:url('companions/sprites/pigeon/pigeon-perched.png')} 25%,100%{background-image:url('companions/sprites/pigeon/pigeon-flying-with-mail.png')} }
   @keyframes dtd-pigeon-send-move { 0%,24%{transform:translate(0,0) scale(1);opacity:1} 42%{transform:translate(22px,-18px) scale(1) rotate(-8deg);opacity:1} 100%{transform:translate(240px,-130px) scale(.6) rotate(10deg);opacity:0} }
   @keyframes dtd-pigeon-unread-idle { 0%,64%,100%{transform:translate(0,0) rotate(0)} 68%{transform:translate(0,-2px) rotate(-2deg)} 72%{transform:translate(1px,0) rotate(2deg)} 76%{transform:translate(0,-1px) rotate(-1deg)} 80%{transform:translate(0,0) rotate(0)} }
   @keyframes dtd-envelope-collect { 0%{transform:translate(0,0) rotate(0);opacity:1;z-index:2} 18%,24%{transform:translate(3px,-20px) rotate(-8deg);opacity:1;z-index:3} 25%,100%{transform:translate(3px,-20px) rotate(-8deg);opacity:0;z-index:3} }
@@ -237,7 +237,7 @@
   #desktop-companion.happy .companion-dog-sprite { background-image:var(--companion-puppy-happyhop); background-size:400% 100%; animation:companion-puppy-happy-frames .9s step-end; }
   #desktop-companion.treat .companion-dog-sprite { background-image:var(--companion-puppy-treat); background-size:300% 100%; animation:companion-puppy-treat-frames 2s step-end; }
   #desktop-companion.pet .companion-dog-sprite { background-image:var(--companion-puppy-shake); background-size:600% 100%; animation:companion-puppy-pet-frames 1.6s step-end; }
-  #desktop-companion.barking .companion-dog-sprite { background-image:url('../companions/sprites/koba/koba-bark.png'); background-size:300% 100%; animation:koba-bark-frames 1.2s step-end forwards; }
+  #desktop-companion.barking .companion-dog-sprite { background-image:url('companions/sprites/koba/koba-bark.png'); background-size:300% 100%; animation:koba-bark-frames 1.2s step-end forwards; }
   #desktop-companion.barking.notification-barking .companion-dog-sprite { animation:none; background-position:50% 0; }
   #desktop-companion.barking.bark-flipped .companion-dog-sprite { transform:scaleX(-1); }
   #desktop-companion.waking .companion-dog-sprite { background-image:var(--companion-puppy-sleep); background-size:300% 100%; animation:companion-puppy-wake-frames 1.15s step-end forwards; }
@@ -249,11 +249,11 @@
   #desktop-companion.has-pending-notification.sleeping .companion-dog-sprite { background-image:var(--companion-puppy-bury); background-size:600% 100%; background-position:100% 0; animation:none; }
   #desktop-companion.roaming { z-index:120600; transition-property:left,top; transition-duration:var(--koba-roam-duration,3s); transition-timing-function:linear; will-change:transform; }
   #desktop-companion.roaming .companion-dog-sprite { background-size:600% 100%; background-position:0 0; }
-  #desktop-companion.roaming-walk .companion-dog-sprite { background-image:url('../assets/embedded/koba-roaming-walk.png'); animation:koba-roam-frames .78s step-end infinite; }
-  #desktop-companion.roaming-run .companion-dog-sprite { background-image:url('../assets/embedded/koba-roaming-run.png'); animation:koba-roam-frames .48s step-end infinite; }
-  #desktop-companion.roaming-dig-bone .companion-dog-sprite { background-image:url('../assets/embedded/koba-roaming-dig-bone.png'); background-size:600% 100%; animation:koba-roam-frames 4.2s step-end forwards; }
-  #desktop-companion.roaming-teddy .companion-dog-sprite { background-image:url('../assets/embedded/koba-roaming-teddy.png'); background-size:100% 100%; background-position:0 0; animation:none; }
-  #desktop-companion.roaming-rest-k1 .companion-dog-sprite { background-image:url('../assets/embedded/koba-roaming-rest.png'); background-size:100% 100%; background-position:0 0; animation:none; }
+  #desktop-companion.roaming-walk .companion-dog-sprite { background-image:url('assets/embedded/koba-roaming-walk.png'); animation:koba-roam-frames .78s step-end infinite; }
+  #desktop-companion.roaming-run .companion-dog-sprite { background-image:url('assets/embedded/koba-roaming-run.png'); animation:koba-roam-frames .48s step-end infinite; }
+  #desktop-companion.roaming-dig-bone .companion-dog-sprite { background-image:url('assets/embedded/koba-roaming-dig-bone.png'); background-size:600% 100%; animation:koba-roam-frames 4.2s step-end forwards; }
+  #desktop-companion.roaming-teddy .companion-dog-sprite { background-image:url('assets/embedded/koba-roaming-teddy.png'); background-size:100% 100%; background-position:0 0; animation:none; }
+  #desktop-companion.roaming-rest-k1 .companion-dog-sprite { background-image:url('assets/embedded/koba-roaming-rest.png'); background-size:100% 100%; background-position:0 0; animation:none; }
   #desktop-companion.roaming-dig-bone .companion-dog-sprite { animation-name:koba-dig-bone-frames; animation-duration:4.8s; }
   #desktop-companion.roaming-left .companion-dog-sprite { transform:scaleX(-1); }
   #companion-actions { position:absolute; left:50%; bottom:126px; transform:translateX(-50%); display:none; width:112px; padding:5px; gap:4px; flex-direction:column; border:1px solid #aaa58f; border-radius:8px; background:#f4f1e5; box-shadow:0 3px 10px rgba(0,0,0,.38); cursor:default; }
@@ -286,6 +286,7 @@
   body:not(.signed-in) #trash-desktop-icon { display:none; }
   body:not(.signed-in) #arinet-desktop-icon { display:none; }
   #trash-desktop-icon { top:136px; left:16px; right:auto; bottom:auto; }
+  #signon-icon { top:16px; right:16px; left:auto; bottom:auto; }
   .trash-icon-art { position:relative; width:52px; height:52px; }
   .trash-icon-art img { position:absolute; width:auto; height:52px; left:50%; top:50%; max-width:none; transform:translate(-50%,-50%); image-rendering:pixelated; filter:drop-shadow(0 0 1px #18ef28) drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
   .trash-icon-art.is-wiggling { animation:trash-desktop-wiggle 420ms ease-in-out 1; transform-origin:50% 85%; }
@@ -326,6 +327,7 @@
   .signon-error { color:#c0392b; font-size:11px; min-height:14px; margin-bottom:4px; }
   .forgot-row { text-align:right; margin:-4px 0 8px; }
   .forgot-link { font-size:10.5px; color:#0850d0; text-decoration:underline; cursor:pointer; }
+  .forgot-link-test { color:#a15c00; font-style:italic; }
   .signon-bottom { display:flex; align-items:center; justify-content:flex-end; margin-top:12px; }
   .icon-btn { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:9.5px; color:#333;
     border:1px solid #b0aca0; border-radius:5px; background:linear-gradient(180deg,#fefefe,#e5e1d3); padding:4px 8px; cursor:pointer; }
@@ -536,7 +538,7 @@
   #arinet-desktop-icon { top:8px; left:16px; }
   .arinet-desktop-icon-art {
     width:52px; height:52px;
-    background:url('../assets/embedded/arinet-globe-word-spin-clockwise-4-frame-transparent.png') no-repeat 0 0 / 400% 100%;
+    background:url('assets/embedded/arinet-globe-word-spin-clockwise-4-frame-transparent.png') no-repeat 0 0 / 400% 100%;
     image-rendering:pixelated;
     filter:drop-shadow(1px 2px 3px rgba(0,0,0,.65));
   }
@@ -701,140 +703,6 @@
     .admin-win{width:96vw;height:86vh}.admin-panel{padding:8px}.usage-card-grid{grid-template-columns:repeat(2,minmax(110px,1fr))}.usage-split{grid-template-columns:1fr}.usage-updated{width:100%;margin-left:0}.usage-table-wrap{max-height:330px}.usage-bar-row{grid-template-columns:minmax(105px,1fr) minmax(70px,1.4fr) 38px}
   }
   .profile-win { width: min(340px, 94vw); height: min(500px, 82vh); }
-.notebook-win { width: min(560px, 96vw); height: min(760px, 88vh); }
-.notebook-win .win-body { padding:0; display:flex; flex-direction:column; min-height:0; overflow:hidden; background:#f7f3e7; }
-  .notebook-win.notebook-toy {
-    background: transparent;
-    border: none;
-    border-radius: 12px;
-    box-shadow: none;
-    overflow: hidden;
-  }
-  .notebook-win.notebook-toy .titlebar {
-    background: transparent;
-    color: #222;
-    text-shadow: none;
-  }
-.notebook-win.notebook-toy .titlebar .t-title {
-  opacity: 0.9;
-}
-.notebook-win.notebook-toy .win-body { background: transparent; }
-.notebook-win.notebook-toy .notebook-page-surface {
-    background: var(--notebook-page-photo, url('../notepad1.png')) center / 100% 100% no-repeat;
-}
-.notebook-win.notebook-toy .notebook-toolbar { background: rgba(255, 255, 255, 0.86); }
-  .notebook-page-nav {
-    flex:none;
-    display:flex;
-    justify-content:center;
-    gap:6px;
-    padding:6px;
-    border:0;
-    background:transparent;
-  }
-  .notebook-page-nav .notebook-nav-btn {
-    width:18px;
-    height:18px;
-    min-width:18px;
-    padding:0;
-    line-height:16px;
-    font-size:14px;
-    text-align:center;
-    background:transparent;
-    border:0;
-    color:#3b3b3b;
-    font-weight:bold;
-    box-shadow:none;
-    border-radius:0;
-  }
-  .notebook-page-nav .notebook-nav-btn:hover {
-    background:transparent;
-    filter:none;
-  }
-  .notebook-controls-wrap { flex:1; min-height:0; display:flex; flex-direction:column; }
-  .notebook-page-label {
-    position:absolute;
-    left:auto;
-    right:6px;
-    bottom:6px;
-    margin:0;
-    font-size:8px;
-    color:#4a4841;
-    font-weight:600;
-    pointer-events:none;
-    text-transform:lowercase;
-    opacity:0.85;
-    z-index:2;
-  }
-.notebook-page-surface {
-  flex:1;
-  position:relative;
-  min-height:0;
-  background: var(--notebook-page-photo, none) center / 100% 100% no-repeat;
-  border:0;
-}
-.notebook-page-edit-area {
-    position:absolute;
-    inset:12px 14px 28px 14px;
-    height:auto;
-    min-height:0;
-    padding:0;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-}
-.notebook-page-title {
-    position:relative;
-    width:100%;
-    height:28px;
-    border:0;
-    outline:0;
-    margin:0;
-    padding:3px 4px;
-    background:transparent;
-    font:700 16px/1.2 "Comic Sans MS", "Comic Sans", "Comic Sans 3", "Marker Felt", cursive;
-    color:#222;
-    box-sizing:border-box;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    border-radius:0;
-    box-shadow:none;
-    appearance:none;
-    text-shadow:none;
-  }
-  .notebook-page-title::placeholder { color:#777; }
-  .notebook-page-input {
-    position:relative;
-    width:100%;
-    min-width:0;
-    min-height:260px;
-    border:0;
-    outline:0;
-    resize:none;
-    margin:0;
-    padding:0 4px;
-    background:transparent;
-    font:18px/1.55 "Comic Sans MS", "Comic Sans", "Comic Sans 3", "Marker Felt", cursive;
-    color:#222;
-    box-sizing:border-box;
-    overflow:auto;
-    cursor:text;
-    caret-color:#2f2f2f;
-    text-shadow:0 0 0.2px rgba(255,255,255,0.8);
-    border-radius:0;
-    box-shadow:none;
-    appearance:none;
-    flex:1;
-    display:block;
-  }
-  .notebook-page-input::placeholder { color:#888; }
-  @media(max-width:560px){
-    .notebook-win { width:96vw; height:88vh; }
-    .notebook-page-edit-area { inset:8px 10px 24px 10px; }
-    .notebook-page-input { font-size:16px; }
-    .notebook-page-title { font-size:15px; height:26px; }
-  }
   .blog-win { width: min(340px, 94vw); height: min(520px, 84vh); }
   .blog-win .rich-compose { min-height:150px; max-height:38vh; }
   .blog-posts-list { padding:8px 0; }
@@ -852,11 +720,15 @@
   .vp-header .vp-status { width:100%; margin:0; text-align:center; }
   #tb-tray { display:flex; align-items:center; gap:4px; margin-left:auto; flex:none; }
   #tb-search-wrap { position:relative; flex:none; }
+  .tb-mini-btn { width:27px; height:27px; padding:1px; display:flex; align-items:center; justify-content:center; border:1px solid var(--th-clock-border); border-radius:3px; background:linear-gradient(180deg,var(--th-clock-1),var(--th-clock-2)); color:var(--th-font-color,#fff); font-size:15px; line-height:1; cursor:pointer; box-sizing:border-box; }
+  .tb-mini-btn:active, .tb-mini-btn[aria-expanded="true"] { filter:brightness(.88); border-style:inset; }
   #tb-search-toggle { width:27px; height:27px; padding:1px; display:flex; align-items:center; justify-content:center; border:1px solid var(--th-clock-border); border-radius:3px; background:linear-gradient(180deg,var(--th-clock-1),var(--th-clock-2)); color:var(--th-font-color,#fff); font-size:15px; line-height:1; cursor:pointer; }
   #tb-search-toggle img { display:block; width:23px; height:23px; margin:auto; object-fit:contain; }
   #tb-search-toggle > span { display:block; font-size:19px; line-height:22px; }
   #tb-search-toggle .companion-taskbar-sprite { width:23px; height:23px; background:var(--companion-puppy) no-repeat 0 0/800% 100%; image-rendering:pixelated; }
-  #tb-search-toggle:active, #tb-search-toggle[aria-expanded="true"] { filter:brightness(.88); border-style:inset; }
+  #tb-notebook-taskbar { width:27px; height:27px; padding:2px; }
+  #tb-notebook-taskbar .notebook-taskbar-icon { width:20px; height:20px; border-radius:3px; background:url('notepad2.png') center / cover no-repeat; filter:drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
+  #tb-notebook-taskbar[aria-expanded="true"] { filter:brightness(.88); border-style:inset; }
   body:not(.signed-in) #tb-search-wrap { display:none; }
   #desktop-search { position:absolute; right:0; bottom:34px; z-index:40; width:min(310px,calc(100vw - 20px)); display:none; font-size:11px; }
   .desktop-search-bar { display:flex; gap:4px; padding:5px; background:linear-gradient(var(--th-title-angle,180deg),var(--th-title-1) 0%,var(--th-title-2) 16%,var(--th-title-3) 33%,var(--th-title-4) 50%,var(--th-title-5) 66%,var(--th-title-6) 83%,var(--th-title-7) 100%); border:1px solid var(--th-taskbar-border); border-radius:7px; box-shadow:0 2px 8px rgba(0,0,0,.35); color:var(--th-font-color,#fff); }
@@ -1063,12 +935,11 @@
     min-width:200px; z-index:120700; display:none;
   }
   #start-menu.open { display:block; }
+  body:not(.signed-in) #tb-notebook-taskbar { display:none; }
   body:not(.signed-in) #sm-arinet,
   body:not(.signed-in) #sm-txtmail,
   body:not(.signed-in) #sm-display,
-  body:not(.signed-in) #sm-showdesktop,
-  body:not(.signed-in) #sm-scrapbook,
-  body:not(.signed-in) #sm-signoff { display:none; }
+  body:not(.signed-in) #sm-showdesktop { display:none; }
   #start-menu .sm-item { padding:9px 14px; font-size:12px; cursor:pointer; color:#000; }
   #start-menu .sm-item:hover { background:#316ac5; color:#fff; }
 
@@ -1106,28 +977,28 @@
 /* Extracted DesktopDiary style section 2. */
 
 :root {
-    --companion-puppy-digup:url('../assets/embedded/companion-puppy-digup.png');
-    --companion-puppy-bury:url('../assets/embedded/companion-puppy-bury.png');
-    --companion-puppy-withbox:url('../assets/embedded/companion-puppy-withbox.png');
-    --companion-puppy-liedown:url('../assets/embedded/companion-puppy-liedown.png');
-    --companion-puppy-spin:url('../assets/embedded/companion-puppy-spin.png');
-    --companion-puppy-confused:url('../assets/embedded/companion-puppy-confused.png');
-    --companion-puppy-happyhop:url('../assets/embedded/companion-puppy-happyhop.png');
-    --companion-puppy-idlealt:url('../assets/embedded/companion-puppy-idlealt.png');
-    --companion-puppy-treat:url('../assets/embedded/companion-puppy-treat.png');
-    --companion-puppy-shake:url('../assets/embedded/companion-puppy-shake.png');
-    --companion-puppy-loading:url('../companions/sprites/koba/New-loading-nobg.PNG');
-    --companion-puppy-sleep:url('../assets/embedded/companion-puppy-sleep.png');
+    --companion-puppy-digup:url('assets/embedded/companion-puppy-digup.png');
+    --companion-puppy-bury:url('assets/embedded/companion-puppy-bury.png');
+    --companion-puppy-withbox:url('assets/embedded/companion-puppy-withbox.png');
+    --companion-puppy-liedown:url('assets/embedded/companion-puppy-liedown.png');
+    --companion-puppy-spin:url('assets/embedded/companion-puppy-spin.png');
+    --companion-puppy-confused:url('assets/embedded/companion-puppy-confused.png');
+    --companion-puppy-happyhop:url('assets/embedded/companion-puppy-happyhop.png');
+    --companion-puppy-idlealt:url('assets/embedded/companion-puppy-idlealt.png');
+    --companion-puppy-treat:url('assets/embedded/companion-puppy-treat.png');
+    --companion-puppy-shake:url('assets/embedded/companion-puppy-shake.png');
+    --companion-puppy-loading:url('companions/sprites/koba/New-loading-nobg.PNG');
+    --companion-puppy-sleep:url('assets/embedded/companion-puppy-sleep.png');
   }
 
 /* Extracted DesktopDiary style section 3. */
 
 :root {
-    --koba-custom-speech-bubble:url('../assets/embedded/koba-custom-speech-bubble.png');
-    --koba-eat-bone:url('../assets/embedded/koba-eat-bone.png');
-    --koba-eat-treat:url('../assets/embedded/koba-eat-treat.png');
-    --koba-eat-from-bowl:url('../assets/embedded/koba-eat-from-bowl.png');
-    --koba-go-to-sleep:url('../assets/embedded/koba-go-to-sleep.png');
+    --koba-custom-speech-bubble:url('assets/embedded/koba-custom-speech-bubble.png');
+    --koba-eat-bone:url('assets/embedded/koba-eat-bone.png');
+    --koba-eat-treat:url('assets/embedded/koba-eat-treat.png');
+    --koba-eat-from-bowl:url('assets/embedded/koba-eat-from-bowl.png');
+    --koba-go-to-sleep:url('assets/embedded/koba-go-to-sleep.png');
   }
   #desktop-companion.treat .companion-dog-sprite,
   #desktop-companion.bone .companion-dog-sprite {
@@ -1278,7 +1149,7 @@
   #koba-play-ball .koba-ball-sprite {
     position:absolute;
     inset:0;
-    background-image:url('../companions/sprites/koba/play-ball/ball-rest.png');
+    background-image:url('companions/sprites/koba/play-ball/ball-rest.png');
     background-repeat:no-repeat;
     background-position:0 0;
     background-size:100% 100%;
@@ -1287,13 +1158,13 @@
   }
   #koba-play-ball.ball-flying { width:28px; height:28px; pointer-events:none; }
   #koba-play-ball.ball-flying .koba-ball-sprite {
-    background-image:url('../companions/sprites/koba/play-ball/ball-flight.png');
+    background-image:url('companions/sprites/koba/play-ball/ball-flight.png');
     background-size:400% 100%;
     animation:koba-ball-flight-frames .86s step-end forwards;
   }
   #koba-play-ball.ball-bouncing { width:55px; height:88px; pointer-events:none; }
   #koba-play-ball.ball-bouncing .koba-ball-sprite {
-    background-image:url('../companions/sprites/koba/play-ball/ball-bounce.png');
+    background-image:url('companions/sprites/koba/play-ball/ball-bounce.png');
     background-size:400% 100%;
     animation:koba-ball-bounce-frames .92s step-end forwards;
   }
@@ -1313,22 +1184,22 @@
     75%,100%{background-position:100% 0}
   }
   #desktop-companion.roaming-walk .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/koba-new-walk.png');
+    background-image:url('companions/sprites/koba/koba-new-walk.png');
     background-size:400% 100%;
     animation:koba-new-four-frames .72s step-end infinite;
   }
   #desktop-companion.roaming-run .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/koba-new-run.png');
+    background-image:url('companions/sprites/koba/koba-new-run.png');
     background-size:300% 100%;
     animation:koba-new-three-frames .48s step-end infinite;
   }
   #desktop-companion.waking .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/koba-new-wake.png');
+    background-image:url('companions/sprites/koba/koba-new-wake.png');
     background-size:300% 100%;
     animation:koba-new-three-frames 1.15s step-end forwards;
   }
   #desktop-companion.barking .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/koba-new-speak.png');
+    background-image:url('companions/sprites/koba/koba-new-speak.png');
     background-size:300% 100%;
     animation:koba-new-three-frames 1.2s step-end forwards;
   }
@@ -1355,7 +1226,7 @@
     width:92px;
     height:92px;
     margin-top:0;
-    background-image:url('../companions/sprites/koba/koba-new-run.png');
+    background-image:url('companions/sprites/koba/koba-new-run.png');
     background-size:300% 100%;
     animation:koba-new-three-frames .48s step-end infinite;
   }
@@ -1363,7 +1234,7 @@
     width:118px;
     height:98px;
     flex:0 0 auto;
-    background-image:url('../companions/sprites/koba/play-ball/koba-clicked-idle.png');
+    background-image:url('companions/sprites/koba/play-ball/koba-clicked-idle.png');
     background-size:400% 100%;
     background-position:0 0;
     background-repeat:no-repeat;
@@ -1382,33 +1253,33 @@
     animation:none;
   }
   #desktop-companion.koba-ball-intrigued .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/play-ball/koba-ball-intrigue.png');
+    background-image:url('companions/sprites/koba/play-ball/koba-ball-intrigue.png');
   }
   #desktop-companion.koba-ball-excited .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/play-ball/koba-ball-excited.png');
+    background-image:url('companions/sprites/koba/play-ball/koba-ball-excited.png');
   }
   #desktop-companion.koba-fetch-pickup .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/play-ball/koba-pick-up-ball.png');
+    background-image:url('companions/sprites/koba/play-ball/koba-pick-up-ball.png');
     background-size:400% 100%;
     animation:koba-fetch-four-frames 1.28s step-end forwards;
   }
   #desktop-companion.koba-fetch-carry .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/play-ball/koba-carry-ball.png');
+    background-image:url('companions/sprites/koba/play-ball/koba-carry-ball.png');
     background-size:400% 100%;
     animation:koba-fetch-four-frames .68s step-end infinite;
   }
   #desktop-companion.koba-fetch-drop .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/play-ball/koba-drop-ball.png');
+    background-image:url('companions/sprites/koba/play-ball/koba-drop-ball.png');
     background-size:400% 100%;
     animation:koba-fetch-four-frames 1.3s step-end forwards;
   }
   #desktop-companion.koba-fetch-roll .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/play-ball/koba-roll-with-ball.png');
+    background-image:url('companions/sprites/koba/play-ball/koba-roll-with-ball.png');
     background-size:400% 100%;
     animation:koba-fetch-four-frames 1.8s step-end forwards;
   }
   #desktop-companion.koba-fetch-happy .companion-dog-sprite {
-    background-image:url('../companions/sprites/koba/play-ball/koba-happy-ball-idle.png');
+    background-image:url('companions/sprites/koba/play-ball/koba-happy-ball-idle.png');
     background-size:400% 100%;
     animation:koba-fetch-four-frames 1.4s step-end infinite;
   }

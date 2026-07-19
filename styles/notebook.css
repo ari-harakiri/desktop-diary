@@ -1,0 +1,244 @@
+.notebook-win {
+    width: min(220px, 82vw);
+    aspect-ratio: 220 / 227;
+  }
+  .notebook-win.notebook-toy {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+  }
+  .notebook-win.notebook-toy .titlebar {
+    position: relative;
+    flex: 0 0 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 52px 0 4px;
+    border: 0;
+    background: transparent;
+    overflow: hidden;
+    pointer-events: auto;
+    cursor: move;
+    z-index: 8;
+  }
+  .notebook-win.notebook-toy .titlebar .t-title,
+  .notebook-win.notebook-toy .titlebar .t-btns {
+    display: none;
+  }
+  .notebook-win.notebook-toy .win-body {
+    padding: 0;
+    background: transparent;
+    overflow: visible;
+  }
+  .notebook-win-body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+  .notebook-controls-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+  }
+  .notebook-page-surface {
+    position: relative;
+    flex: 0 0 213px;
+    width: 180px;
+    margin: -30px auto 0;
+    background: var(--notebook-page-photo, url('notepad1.png')) center / cover no-repeat;
+    border: 0;
+  }
+  .notebook-page-edit-area {
+    position: absolute;
+    inset: 23px 10px 30px 18px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    box-sizing: border-box;
+  }
+  .notebook-page-title,
+  .notebook-page-input {
+    border: 0;
+    outline: 0;
+    background: transparent !important;
+    box-shadow: none;
+    color: #262626;
+    font-family: "Comic Sans MS", "Comic Sans", "Marker Felt", cursive;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .notebook-page-title {
+    border: none !important;
+    box-shadow: none !important;
+    margin-left: 14px;
+    width: calc(100% - 15px);
+    background-color: transparent !important;
+    height: 19px;
+    padding: 1px 4px;
+    margin-top: 7px !important;
+    margin-right: 0;
+    margin-bottom: 0;
+    box-sizing: border-box;
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transform: translate(-5px, 3px);
+    white-space: nowrap;
+  }
+  .notebook-page-input {
+    border: none !important;
+    box-shadow: none !important;
+    flex: 1;
+    margin-left: 14px;
+    width: calc(100% - 2px);
+    min-width: 0;
+    min-height: 0;
+    box-sizing: border-box;
+    margin-top: -15px !important;
+    margin-right: 0;
+    margin-bottom: 5px;
+    padding: 2px 4px;
+    resize: none;
+    overflow: auto;
+    transform: translate(-6px, 5px);
+    cursor: text;
+    caret-color: #2f2f2f;
+    line-height: 1.45;
+    font-size: 10px;
+  }
+  .notebook-page-label {
+    position: relative;
+    margin: 0 0 0 -4px;
+    transform: translateY(-5px);
+    padding: 0;
+    line-height: 1;
+    color: #3f3f3f;
+    font-family: Tahoma, Arial, sans-serif;
+    font-size: 10px;
+    text-transform: lowercase;
+    opacity: .75;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .notebook-page-footer {
+    position: absolute;
+    left: 12px;
+    right: 20px;
+    bottom: 6px !important;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .notebook-page-nav {
+    position: relative;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    flex: none;
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+    padding: 0;
+  }
+  .notebook-page-nav .notebook-nav-btn {
+    transform: translate(0px, -3px) !important;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    padding: 0;
+    line-height: 1;
+    font-size: 18px;
+    border: 0;
+    background: transparent;
+    color: #3b3b3b;
+    box-shadow: none;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .notebook-page-nav .notebook-nav-btn:disabled {
+    opacity: .4;
+    cursor: default;
+  }
+  .notebook-page-nav .notebook-nav-btn:hover,
+  .notebook-page-nav .notebook-nav-btn:focus,
+  .notebook-page-nav .notebook-nav-btn:active {
+    background: rgba(255, 255, 255, .26);
+    outline: 0;
+    box-shadow: none;
+  }
+  .notebook-page-add-btn {
+    position: relative;
+    width: 13px;
+    height: 13px;
+    min-width: 13px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #3b3b3b;
+    font-size: 11px;
+    line-height: 1;
+    transform: translate(9px, -6px) !important;
+    box-shadow: none;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .notebook-page-add-btn:hover,
+  .notebook-page-add-btn:focus,
+  .notebook-page-add-btn:active {
+    background: rgba(255, 255, 255, .26);
+    outline: 0;
+    box-shadow: none;
+  }
+  .notebook-save-btn {
+    position: absolute;
+    inset: 14px 4px auto auto;
+    width: 22px;
+    height: 20px;
+    cursor: pointer;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, .35);
+    border-radius: 2px;
+    background: rgba(255, 255, 255, .55);
+    opacity: 1;
+    font-size: 12px;
+    line-height: 1;
+    color: #333;
+    z-index: 9;
+    pointer-events: auto;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+  }
+  .notebook-save-btn:hover,
+  .notebook-save-btn:focus {
+    background: rgba(255, 255, 255, .8);
+    outline: 0;
+  }
+  .notebook-mini-trash-btn {
+    position: relative;
+    top: auto;
+    right: auto;
+    transform: translate(-52px, -10px) !important;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    line-height: 1;
+    font-size: 14px;
+    color: #222;
+    opacity: 1;
+    cursor: pointer;
+    z-index: 2147483647;
+    pointer-events: auto;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85);
+  }
