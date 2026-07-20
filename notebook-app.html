@@ -50,16 +50,6 @@
     text-shadow: 0 1px 2px rgba(0,0,0,.35);
   }
   #app-title { font-size: 15px; font-weight: 700; letter-spacing: .3px; }
-  #settings-btn {
-    border: 1px solid rgba(255,255,255,.6);
-    background: rgba(255,255,255,.18);
-    color: #fff;
-    border-radius: 6px;
-    width: 30px; height: 30px;
-    font-size: 15px;
-    cursor: pointer;
-  }
-  #settings-btn:active { background: rgba(255,255,255,.35); }
   #sync-panel {
     display: none;
     margin: 0 16px 8px;
@@ -91,28 +81,23 @@
   }
   #app-footer {
     flex: 0 0 auto;
-    margin: 0 12px calc(8px + env(safe-area-inset-bottom, 0px));
-    padding: 10px 12px;
-    background: rgba(20,30,50,.35);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-radius: 14px;
+    padding: 4px 10px calc(4px + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
   }
   .dock-section-label {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
-    letter-spacing: .6px;
+    letter-spacing: .5px;
     text-transform: uppercase;
-    color: rgba(255,255,255,.65);
-    margin: 0 0 4px;
+    color: rgba(255,255,255,.55);
+    margin: 0;
+    text-shadow: 0 1px 2px rgba(0,0,0,.4);
   }
-  .dock-section { display: flex; flex-direction: column; }
+  .dock-section { display: flex; flex-direction: column; gap: 3px; }
   .dock-section + .dock-section {
-    padding-top: 8px;
-    border-top: 1px solid rgba(255,255,255,.15);
+    padding-top: 2px;
   }
   .dock-row {
     display: flex; align-items: center; gap: 8px; overflow-x: auto;
@@ -289,16 +274,10 @@
     top: 35px; right: 16px;
     z-index: 5;
     width: 34px; height: 30px;
-    border: 1px solid rgba(0,0,0,.35);
-    border-radius: 4px;
-    background: rgba(255,255,255,.6);
-    font-size: 17px;
-    line-height: 1;
-    color: #333;
+    border: none;
+    background: transparent;
     cursor: pointer;
-    z-index: 5;
   }
-  #save-btn:active { background: rgba(255,255,255,.85); }
   #edit-area {
     position: absolute;
     z-index: 5;
@@ -342,12 +321,7 @@
     color: #8a8a8a;
     pointer-events: none;
   }
-  #format-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    transform: translate(15px, 6px);
-  }
+
   .fmt-btn {
     width: 22px; height: 20px;
     border: 1px solid #99a;
@@ -409,10 +383,12 @@
 <div id="stage">
   <div id="app-header">
     <span id="app-title">My Notepad</span>
-    <button id="settings-btn" title="Sync settings">⚙</button>
   </div>
   <div id="sync-panel">
     <div id="sync-panel-status">Not signed in — local only</div>
+    <div id="sync-panel-actions">
+      <button id="export-image-btn" class="sync-action-btn">💾 Save as Image</button>
+    </div>
     <div id="sync-panel-actions">
       <button id="push-btn" class="sync-action-btn">⬆ Push to Cloud</button>
       <button id="pull-btn" class="sync-action-btn">⬇ Pull from Cloud</button>
@@ -422,18 +398,9 @@
     <div id="notebook">
       <div id="paper-hue-overlay"></div>
       <div id="sticker-layer"></div>
-      <button id="save-btn" title="Save as image">💾</button>
+      <button id="save-btn" title="Save & settings"></button>
       <div id="edit-area">
         <input id="title-input" type="text" placeholder="Title" maxlength="120" autocomplete="off" />
-        <div id="format-toolbar">
-          <button class="fmt-btn" data-cmd="bold" title="Bold"><b>B</b></button>
-          <button class="fmt-btn" data-cmd="italic" title="Italic"><i>I</i></button>
-          <button class="fmt-btn" data-cmd="underline" title="Underline"><u>U</u></button>
-          <button class="fmt-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
-          <button class="fmt-btn" id="fmt-highlight-btn" title="Highlight">🖍</button>
-          <input type="color" id="highlight-color-picker" value="#fff59d" title="Highlight color" />
-          <button class="fmt-btn" id="fmt-date-btn" title="Insert date">📅</button>
-        </div>
         <div id="body-input" contenteditable="true" data-placeholder=""></div>
       </div>
       <div id="footer">
@@ -448,6 +415,18 @@
     </div>
   </div>
   <div id="app-footer">
+    <div class="dock-section">
+      <div class="dock-section-label">Format</div>
+      <div id="format-toolbar" class="dock-row">
+        <button class="fmt-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+        <button class="fmt-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+        <button class="fmt-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+        <button class="fmt-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+        <button class="fmt-btn" id="fmt-highlight-btn" title="Highlight">🖍</button>
+        <input type="color" id="highlight-color-picker" value="#fff59d" title="Highlight color" />
+        <button class="fmt-btn" id="fmt-date-btn" title="Insert date">📅</button>
+      </div>
+    </div>
     <div class="dock-section">
       <div class="dock-section-label">Font</div>
       <div id="font-row" class="dock-row">
@@ -537,7 +516,6 @@
   var saveBtn = document.getElementById('save-btn');
   var syncDot = document.getElementById('sync-dot');
   var notebookEl = document.getElementById('notebook');
-  var settingsBtn = document.getElementById('settings-btn');
   var syncPanel = document.getElementById('sync-panel');
   var syncPanelStatus = document.getElementById('sync-panel-status');
   var pushBtn = document.getElementById('push-btn');
@@ -986,7 +964,7 @@
     hueSaveTimer = setTimeout(pushToCloudIfSignedIn, 800);
   });
 
-  settingsBtn.addEventListener('click', function(){
+  saveBtn.addEventListener('click', function(){
     syncPanel.classList.toggle('open');
   });
 
@@ -1073,7 +1051,9 @@
   bodyInput.addEventListener('focus', function(){ setTimeout(scrollAboveKeyboard, 60); });
 
   // --- Save as image ---
-  saveBtn.addEventListener('click', function(){
+  var exportImageBtn = document.getElementById('export-image-btn');
+  exportImageBtn.addEventListener('click', function(){
+    syncPanel.classList.remove('open');
     captureCurrentPage();
     var fontReady = (document.fonts && document.fonts.load)
       ? document.fonts.load('16px DiaryComicSans').catch(function(){})
