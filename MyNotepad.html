@@ -299,9 +299,6 @@
     padding-top: 3px;
   }
   #sticker-picker.open { display: block; }
-  /* Kept in the app for later, but not shown in the public editor yet. */
-  #sticker-border-row,
-  #sticker-picker { display: none !important; }
   #sticker-grid {
     display: grid;
     grid-auto-flow: column;
@@ -323,6 +320,27 @@
     cursor: pointer;
   }
   .sticker-grid-item img { width: 100%; height: 100%; object-fit: contain; }
+  #desktop-sticker-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .loose-sticker {
+    position: fixed;
+    width: 64px;
+    touch-action: none;
+    pointer-events: auto;
+    cursor: grab;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.3));
+  }
+  .loose-sticker.dragging { cursor: grabbing; z-index: 31; }
+  #trash-btn.sticker-drop-target {
+    border-radius: 5px;
+    background: rgba(198,40,40,.2);
+    outline: 1px dashed #c62828;
+  }
   #hue-row { gap: 10px; }
   #hue-slider {
     flex: 1;
@@ -511,6 +529,7 @@
       <div id="sync-dot" title="Sync status"></div>
     </div>
   </div>
+  <div id="desktop-sticker-layer" aria-hidden="true"></div>
   <div id="app-footer">
     <div class="dock-section">
       <div class="dock-section-label">Format</div>
@@ -525,12 +544,11 @@
         <button class="fmt-btn" id="fmt-date-btn" title="Insert date">📅</button>
       </div>
       <select id="font-select" class="dock-select">
-        <option value="inherit">Default font</option>
+        <option value="inherit" selected>Default font</option>
         <option value="Arial">Arial</option>
         <option value="Times New Roman">Times</option>
         <option value="Georgia">Georgia</option>
         <option value="Courier New">Courier</option>
-        <option value="DiaryComicSans" selected>Comic Sans</option>
         <option value="DiaryOldEnglish">Old English</option>
         <option value="DiaryMinecraft">Minecraft</option>
         <option value="DiaryEmoji">Artsy Cypher</option>
@@ -618,6 +636,7 @@
   var stickerPicker = document.getElementById('sticker-picker');
   var stickerGrid = document.getElementById('sticker-grid');
   var stickerLayer = document.getElementById('sticker-layer');
+  var desktopStickerLayer = document.getElementById('desktop-sticker-layer');
   var fontSelect = document.getElementById('font-select');
   var sizeSelect = document.getElementById('size-select');
   var bgRow = document.getElementById('hue-row');
@@ -639,7 +658,7 @@
     bodyInput.style.fontFamily = fontValue === 'inherit'
       ? ''
       : '"' + fontValue + '", "Comic Sans MS", "Comic Sans", cursive';
-    fontSelect.value = fontValue;
+    fontSelect.value = fontValue === 'DiaryComicSans' ? 'inherit' : fontValue;
 
     var paperValue = state.paper || 'notepad1.png';
     notebookEl.style.backgroundImage = "url('" + paperValue + "')";
@@ -764,12 +783,31 @@
       st.y = Math.max(0, Math.min(90, startTop + dyPct));
       wrap.style.left = st.x + '%';
       wrap.style.top = st.y + '%';
+      updateTrashDropTarget(e.clientX, e.clientY);
     });
 
-    function endDrag(){
+    function endDrag(e){
       if(!dragging) return;
       dragging = false;
       wrap.classList.remove('dragging');
+      trashBtn.classList.remove('sticker-drop-target');
+      if(e && isOverTrash(e.clientX, e.clientY)){
+        var page = getCurrentPage();
+        page.stickers = page.stickers.filter(function(s){ return s.id !== st.id; });
+        renderStickers();
+        persistLocal();
+        pushToCloudIfSignedIn();
+        return;
+      }
+      if(e && !isOverNotebook(e.clientX, e.clientY)){
+        var currentPage = getCurrentPage();
+        currentPage.stickers = currentPage.stickers.filter(function(s){ return s.id !== st.id; });
+        renderStickers();
+        addLooseSticker(st.src, e.clientX - (wrap.offsetWidth / 2), e.clientY - (wrap.offsetHeight / 2), wrap.offsetWidth);
+        persistLocal();
+        pushToCloudIfSignedIn();
+        return;
+      }
       persistLocal();
       pushToCloudIfSignedIn();
     }
@@ -777,19 +815,84 @@
     wrap.addEventListener('pointercancel', endDrag);
   }
 
-  function addStickerToPage(src){
-    var page = getCurrentPage();
-    if(!Array.isArray(page.stickers)) page.stickers = [];
-    page.stickers.push({
-      id: 'st-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      src: src,
-      x: 35 + Math.random() * 10,
-      y: 35 + Math.random() * 10,
-      size: 15
+  function isOverNotebook(x, y){
+    var rect = notebookEl.getBoundingClientRect();
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  }
+
+  function isOverTrash(x, y){
+    var rect = trashBtn.getBoundingClientRect();
+    return x >= rect.left - 12 && x <= rect.right + 12 && y >= rect.top - 12 && y <= rect.bottom + 12;
+  }
+
+  function updateTrashDropTarget(x, y){
+    trashBtn.classList.toggle('sticker-drop-target', isOverTrash(x, y));
+  }
+
+  function addLooseSticker(src, left, top, width){
+    var wrap = document.createElement('div');
+    wrap.className = 'loose-sticker';
+    wrap.style.left = (Number.isFinite(left) ? left : ((window.innerWidth - 64) / 2)) + 'px';
+    wrap.style.top = (Number.isFinite(top) ? top : ((window.innerHeight - 64) / 2)) + 'px';
+    if(width) wrap.style.width = width + 'px';
+
+    var img = document.createElement('img');
+    img.src = src;
+    img.style.width = '100%';
+    img.style.display = 'block';
+    img.draggable = false;
+    wrap.appendChild(img);
+    desktopStickerLayer.appendChild(wrap);
+
+    var dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    wrap.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      dragging = true;
+      wrap.classList.add('dragging');
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = parseFloat(wrap.style.left) || 0;
+      startTop = parseFloat(wrap.style.top) || 0;
+      wrap.setPointerCapture(e.pointerId);
     });
-    renderStickers();
-    persistLocal();
-    pushToCloudIfSignedIn();
+    wrap.addEventListener('pointermove', function(e){
+      if(!dragging) return;
+      wrap.style.left = (startLeft + e.clientX - startX) + 'px';
+      wrap.style.top = (startTop + e.clientY - startY) + 'px';
+      updateTrashDropTarget(e.clientX, e.clientY);
+    });
+    function finishLooseDrag(e){
+      if(!dragging) return;
+      dragging = false;
+      wrap.classList.remove('dragging');
+      trashBtn.classList.remove('sticker-drop-target');
+      if(e && isOverTrash(e.clientX, e.clientY)){
+        wrap.remove();
+        return;
+      }
+      if(e && isOverNotebook(e.clientX, e.clientY)){
+        var rect = notebookEl.getBoundingClientRect();
+        var page = getCurrentPage();
+        if(!Array.isArray(page.stickers)) page.stickers = [];
+        page.stickers.push({
+          id: 'st-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          src: src,
+          x: Math.max(0, Math.min(90, ((e.clientX - rect.left) / rect.width * 100) - 7)),
+          y: Math.max(0, Math.min(90, ((e.clientY - rect.top) / rect.height * 100) - 7)),
+          size: Math.max(6, Math.min(35, (wrap.offsetWidth / rect.width) * 100))
+        });
+        wrap.remove();
+        renderStickers();
+        persistLocal();
+        pushToCloudIfSignedIn();
+      }
+    }
+    wrap.addEventListener('pointerup', finishLooseDrag);
+    wrap.addEventListener('pointercancel', finishLooseDrag);
+  }
+
+  function addStickerToPage(src){
+    addLooseSticker(src);
   }
 
   function populateStickerGrid(){
@@ -911,6 +1014,7 @@
     persistLocal();
   });
   trashBtn.addEventListener('click', function(){
+    if(!window.confirm('Delete this page and its saved stickers?')) return;
     if(state.pages.length <= 1){
       state.pages = freshPages();
       state.currentPageIndex = 0;
@@ -1170,17 +1274,39 @@
     }
   });
 
-  // --- Mobile keyboard avoidance ---
-  var savedScrollBeforeKeyboard = null;
-  function scrollAboveKeyboard(){
-    if(window.visualViewport){
-      window.scrollTo(0, 0);
-      notebookEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  // --- Mobile keyboard positioning ---
+  // Keep the paper at the exact rendered size while the keyboard is open;
+  // only the viewport position may move so typed text matches the page view.
+  var lockedNotebookSize = null;
+  function positionNotebookForKeyboard(){
+    if(!lockedNotebookSize){
+      var rect = notebookEl.getBoundingClientRect();
+      lockedNotebookSize = { width: rect.width, height: rect.height };
+      notebookEl.style.width = lockedNotebookSize.width + 'px';
+      notebookEl.style.height = lockedNotebookSize.height + 'px';
+      notebookEl.style.maxWidth = 'none';
     }
+    notebookEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
-  titleInput.addEventListener('focus', function(){ setTimeout(scrollAboveKeyboard, 60); });
-  if(menuTitleInput) menuTitleInput.addEventListener('focus', function(){ setTimeout(scrollAboveKeyboard, 60); });
-  bodyInput.addEventListener('focus', function(){ setTimeout(scrollAboveKeyboard, 60); });
+  function releaseNotebookSizeAfterKeyboard(){
+    setTimeout(function(){
+      var typing = document.activeElement === titleInput || document.activeElement === bodyInput || document.activeElement === menuTitleInput;
+      if(!typing && lockedNotebookSize){
+        notebookEl.style.width = '';
+        notebookEl.style.height = '';
+        notebookEl.style.maxWidth = '';
+        lockedNotebookSize = null;
+      }
+    }, 120);
+  }
+  titleInput.addEventListener('focus', function(){ setTimeout(positionNotebookForKeyboard, 60); });
+  titleInput.addEventListener('blur', releaseNotebookSizeAfterKeyboard);
+  bodyInput.addEventListener('focus', function(){ setTimeout(positionNotebookForKeyboard, 60); });
+  bodyInput.addEventListener('blur', releaseNotebookSizeAfterKeyboard);
+  if(menuTitleInput){
+    menuTitleInput.addEventListener('focus', function(){ setTimeout(positionNotebookForKeyboard, 60); });
+    menuTitleInput.addEventListener('blur', releaseNotebookSizeAfterKeyboard);
+  }
 
   // --- Save as image ---
   var exportImageBtn = document.getElementById('export-image-btn');
