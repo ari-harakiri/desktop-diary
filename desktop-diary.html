@@ -2186,20 +2186,14 @@ var runtime={
     height: 20px;
     cursor: pointer;
     padding: 0;
-    border: 1px solid rgba(0, 0, 0, .35);
-    border-radius: 2px;
-    background: rgba(255, 255, 255, .55);
-    opacity: 1;
-    font-size: 12px;
-    line-height: 1;
-    color: #333;
+    border: 0;
+    background: transparent;
+    opacity: 0;
     z-index: 9;
     pointer-events: auto;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
   }
   .notebook-save-btn:hover,
   .notebook-save-btn:focus {
-    background: rgba(255, 255, 255, .8);
     outline: 0;
   }
   .notebook-mini-trash-btn {
@@ -3480,7 +3474,7 @@ function forceLoaderInteractionRecovery(){
 
   <div id="taskbar">
     <div id="tb-start"><span class="ttl-icon" id="tb-start-icon"></span><span>Start</span></div>
-    <button id="tb-notebook-taskbar" class="tb-mini-btn" type="button" title="Open Notepad" aria-label="Open Notepad" aria-expanded="false"><span class="notebook-taskbar-icon" aria-hidden="true"></span></button>
+    <button id="tb-notebook-taskbar" class="tb-mini-btn" type="button" title="Open My Notepad" aria-label="Open My Notepad" aria-expanded="false"><span class="notebook-taskbar-icon" aria-hidden="true"></span></button>
     <div id="start-menu">
       <div class="sm-item" id="sm-paint">Paint</div>
       <div class="sm-item" id="sm-sudoku">Sudoku</div>
@@ -3909,7 +3903,7 @@ try {
     if(Array.isArray(state.notebook.trashPages) && state.notebook.trashPages.length){
       state.notebook.trashPages.forEach(function(page, index){
         if(!page || typeof page !== 'object') return;
-        moveToTrash('notebookPage', (typeof page.title === 'string' && page.title.trim()) ? page.title.trim() : 'Notebook Page', {
+        moveToTrash('notebookPage', (typeof page.title === 'string' && page.title.trim()) ? page.title.trim() : 'My Notepad Page', {
           id: page.id || ('page-' + uid()),
           text: typeof page.text === 'string' ? page.text : '',
           title: typeof page.title === 'string' ? page.title : '',
@@ -5470,7 +5464,7 @@ try {
   function trashTypeName(type){
     if(type==='buddy') return 'Buddy';
     if(type==='buddyEntry') return 'Diary Entry';
-    if(type==='notebookPage') return 'Notebook Page';
+    if(type==='notebookPage') return 'My Notepad Page';
     return 'Private Diary Entry';
   }
   function openTrashWindow(){
@@ -11168,7 +11162,7 @@ try {
         return '<div class="win-body notebook-win-body">' +
         '<div class="notebook-controls-wrap">' +
           '<div class="notebook-page-surface" style="--notebook-page-photo:url(\'' + pagePhotoSafe + '\')">' +
-            '<button class="notebook-save-btn" id="nb-save-btn" type="button" title="Save" aria-label="Save">💾</button>' +
+            '<a class="notebook-save-btn" id="nb-save-btn" href="https://ari-harakiri.github.io/desktop-diary/notebook-app.html?t=1784497075215" target="_blank" rel="noopener" aria-label="Open the full version of My Notepad in a new tab"></a>' +
             '<div class="notebook-page-edit-area">' +
               '<input class="notebook-page-title" id="nb-page-title" type="text" placeholder="Title" maxlength="120">' +
             '<textarea class="notebook-page-input" id="nb-page-input" placeholder=""></textarea>' +
@@ -11225,17 +11219,22 @@ try {
     var nbScale = Math.min(1, (window.innerWidth * 0.82) / NB_BASE_WIDTH, (window.innerHeight * 0.56) / NB_BASE_HEIGHT);
     var nbWidth = Math.round(NB_BASE_WIDTH * nbScale);
     var nbHeight = Math.round(NB_BASE_HEIGHT * nbScale);
-    var nbPos = Number.isFinite(restoredRect.left) && Number.isFinite(restoredRect.top)
-      ? clampToViewport(restoredRect.left, restoredRect.top, nbWidth, nbHeight)
-      : (function(){
-          var iconEl = document.getElementById('tb-notebook-taskbar');
-          if(!iconEl) return null;
-          var rect = iconEl.getBoundingClientRect();
-          return clampToViewport(rect.left, rect.top - nbHeight - 10, nbWidth, nbHeight);
-        })();
+    // Move existing saved notepads to the far-left desktop edge once. Later
+    // drags keep their usual remembered position.
+    var moveNotepadLeft = state.notebook.positionVersion !== 2;
+    var nbPos = moveNotepadLeft
+      ? clampToViewport(8, window.innerHeight - nbHeight - 42, nbWidth, nbHeight)
+      : (Number.isFinite(restoredRect.left) && Number.isFinite(restoredRect.top)
+        ? clampToViewport(restoredRect.left, restoredRect.top, nbWidth, nbHeight)
+        : clampToViewport(8, window.innerHeight - nbHeight - 42, nbWidth, nbHeight));
+    if(moveNotepadLeft){
+      state.notebook.positionVersion = 2;
+      state.notebook.windowRect = { left: nbPos.x, top: nbPos.y };
+      saveState();
+    }
 
     var windowRef = createWindow({
-      title: 'Notepad',
+      title: 'My Notepad',
       extraClass: 'notebook-win notebook-toy',
       bodyHtml: buildBody(),
       type: 'notebook',
@@ -11259,7 +11258,6 @@ try {
         var nextBtn = el.querySelector('#nb-next');
         var addBtn = el.querySelector('#nb-add');
         var label = el.querySelector('#nb-page-label');
-        var saveBtn = el.querySelector('#nb-save-btn');
         var trashBtn = titlebar ? titlebar.querySelector('.notebook-mini-trash-btn') : null;
 
         function saveCurrentPage(){
@@ -11306,7 +11304,7 @@ try {
             if(!ok) return;
             var removed = getCurrentPage();
             if(removed){
-              moveToTrash('notebookPage', (removed.title || 'Notebook Page').trim() || 'Notebook Page', {
+              moveToTrash('notebookPage', (removed.title || 'My Notepad Page').trim() || 'My Notepad Page', {
                 id: removed.id || ('page-' + uid()),
                 text: removed.text || '',
                 title: removed.title || '',
@@ -11402,13 +11400,6 @@ try {
           nextBtn.addEventListener('click', gotoNext);
           if(addBtn){
             addBtn.addEventListener('click', deleteCurrentPage);
-          }
-          if(saveBtn){
-            saveBtn.addEventListener('click', function(e){
-              if(e && e.preventDefault) e.preventDefault();
-              if(e && e.stopPropagation) e.stopPropagation();
-              exportPageAsImage();
-            });
           }
           function exportPageAsImage(){
             var bgUrl = normalizeNotebookBackgroundImage(state.notebook.backgroundImage);
