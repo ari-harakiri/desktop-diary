@@ -50,6 +50,39 @@
     text-shadow: 0 1px 2px rgba(0,0,0,.35);
   }
   #app-title { font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+  #settings-btn {
+    border: 1px solid rgba(255,255,255,.6);
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    border-radius: 6px;
+    width: 30px; height: 30px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  #settings-btn:active { background: rgba(255,255,255,.35); }
+  #sync-panel {
+    display: none;
+    margin: 0 16px 8px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,.92);
+    border-radius: 10px;
+    font-size: 12px;
+    color: #1a3350;
+  }
+  #sync-panel.open { display: block; }
+  #sync-panel-status { margin-bottom: 8px; font-weight: 600; }
+  #sync-panel-actions { display: flex; gap: 8px; }
+  .sync-action-btn {
+    flex: 1;
+    border: 1px solid #99a;
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .sync-action-btn:active { background: #eef2fb; }
+  .sync-action-btn:disabled { opacity: .5; cursor: default; }
   #notebook-stage {
     flex: 1;
     display: flex; align-items: center; justify-content: center;
@@ -141,6 +174,79 @@
     z-index: 1;
     border-radius: 6px;
   }
+  #sticker-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .placed-sticker {
+    position: absolute;
+    width: 15%;
+    touch-action: none;
+    pointer-events: auto;
+    cursor: grab;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.3));
+  }
+  .placed-sticker.dragging { cursor: grabbing; z-index: 999; }
+  .placed-sticker .sticker-remove {
+    position: absolute;
+    top: -8px; right: -8px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #c62828;
+    color: #fff;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+    display: none;
+    border: 1px solid #fff;
+  }
+  .placed-sticker.selected .sticker-remove { display: block; }
+  #sticker-picker {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0,0,0,.55);
+    flex-direction: column;
+  }
+  #sticker-picker.open { display: flex; }
+  #sticker-picker-header {
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  #close-stickers-btn {
+    border: 1px solid rgba(255,255,255,.6);
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    border-radius: 6px;
+    width: 32px; height: 32px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  #sticker-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .sticker-grid-item {
+    background: rgba(255,255,255,.9);
+    border-radius: 10px;
+    padding: 8px;
+    display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 1;
+    cursor: pointer;
+  }
+  .sticker-grid-item img { width: 100%; height: 100%; object-fit: contain; }
   #hue-row { gap: 10px; }
   #hue-slider {
     flex: 1;
@@ -182,7 +288,11 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    border-radius: 4px;
   }
+  #edit-area.border-solid { outline: 3px solid rgba(38,38,38,.55); outline-offset: 4px; }
+  #edit-area.border-dashed { outline: 3px dashed rgba(38,38,38,.55); outline-offset: 4px; }
+  #edit-area.border-dots { outline: 3px dotted rgba(38,38,38,.6); outline-offset: 4px; }
   #title-input {
     border: none !important;
     box-shadow: none !important;
@@ -202,7 +312,9 @@
     background: transparent !important;
     outline: none;
     flex: 1;
-    resize: none;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
     font-size: 16px;
     font-family: "DiaryComicSans", "Comic Sans MS", "Comic Sans", cursive;
     color: #262626;
@@ -210,6 +322,39 @@
     line-height: 1.4;
     transform: translate(15px, 16px);
   }
+  #body-input[data-placeholder]:empty:before {
+    content: attr(data-placeholder);
+    color: #8a8a8a;
+    pointer-events: none;
+  }
+  #format-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transform: translate(15px, 6px);
+  }
+  .fmt-btn {
+    width: 22px; height: 20px;
+    border: 1px solid #99a;
+    background: #fff;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+  }
+  .fmt-btn.active { background: #cfe0ff; border-color: #0054e3; }
+  #highlight-color-picker {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px; height: 20px;
+    border: 1px solid #99a;
+    border-radius: 4px;
+    padding: 0;
+    cursor: pointer;
+  }
+  #highlight-color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+  #highlight-color-picker::-webkit-color-swatch { border: none; border-radius: 3px; }
   #footer {
     position: absolute;
     z-index: 5;
@@ -249,14 +394,32 @@
 <div id="stage">
   <div id="app-header">
     <span id="app-title">My Notepad</span>
+    <button id="settings-btn" title="Sync settings">⚙</button>
+  </div>
+  <div id="sync-panel">
+    <div id="sync-panel-status">Not signed in — local only</div>
+    <div id="sync-panel-actions">
+      <button id="push-btn" class="sync-action-btn">⬆ Push to Cloud</button>
+      <button id="pull-btn" class="sync-action-btn">⬇ Pull from Cloud</button>
+    </div>
   </div>
   <div id="notebook-stage">
     <div id="notebook">
       <div id="paper-hue-overlay"></div>
+      <div id="sticker-layer"></div>
       <button id="save-btn" title="Save as image">💾</button>
       <div id="edit-area">
         <input id="title-input" type="text" placeholder="Title" maxlength="120" autocomplete="off" />
-        <textarea id="body-input" placeholder=""></textarea>
+        <div id="format-toolbar">
+          <button class="fmt-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+          <button class="fmt-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+          <button class="fmt-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+          <button class="fmt-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+          <button class="fmt-btn" id="fmt-highlight-btn" title="Highlight">🖍</button>
+          <input type="color" id="highlight-color-picker" value="#fff59d" title="Highlight color" />
+          <button class="fmt-btn" id="fmt-date-btn" title="Insert date">📅</button>
+        </div>
+        <div id="body-input" contenteditable="true" data-placeholder=""></div>
       </div>
       <div id="footer">
         <span id="page-label"></span>
@@ -289,11 +452,28 @@
       <span style="color:#fff;font-size:12px;text-shadow:0 1px 2px rgba(0,0,0,.4);">Paper hue</span>
       <input type="range" id="hue-slider" min="0" max="360" value="0" />
     </div>
+    <div id="sticker-open-row" class="dock-row">
+      <button id="open-stickers-btn" class="sync-action-btn">🏷 Stickers</button>
+    </div>
+    <div id="border-row" class="dock-row">
+      <button class="bg-pill active" data-border="none">No border</button>
+      <button class="bg-pill" data-border="solid">Solid</button>
+      <button class="bg-pill" data-border="dashed">Dashed</button>
+      <button class="bg-pill" data-border="dots">Dotted</button>
+    </div>
     <div id="color-dock" class="dock-row">
       <input type="color" id="color-picker" value="#262626" title="Pick a text color" />
       <div id="recent-colors"></div>
     </div>
   </div>
+</div>
+
+<div id="sticker-picker">
+  <div id="sticker-picker-header">
+    <span>Pick a sticker</span>
+    <button id="close-stickers-btn">✕</button>
+  </div>
+  <div id="sticker-grid"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -314,10 +494,16 @@
   };
 
   function freshPages(){
-    return [{ id: 'page-1', title: '', text: '', createdAt: Date.now() }];
+    return [{ id: 'page-1', title: '', text: '', createdAt: Date.now(), stickers: [] }];
   }
 
-  var state = { pages: freshPages(), currentPageIndex: 0, font: 'DiaryComicSans', paper: 'notepad1.png', fontSize: 16, fontColor: '#262626', recentColors: ['#262626', '#0054e3', '#1a7d1a', '#c62828', '#8e24aa'], paperHue: 0 };
+  var STICKER_COUNT = 83;
+  var STICKER_FILES = [];
+  for (var si = 1; si <= STICKER_COUNT; si++) {
+    STICKER_FILES.push('stickers/s' + (si < 10 ? '0' + si : si) + '.png');
+  }
+
+  var state = { pages: freshPages(), currentPageIndex: 0, font: 'DiaryComicSans', paper: 'notepad1.png', fontSize: 16, fontColor: '#262626', recentColors: ['#262626', '#0054e3', '#1a7d1a', '#c62828', '#8e24aa'], paperHue: 0, pageBorder: 'none' };
   var cloudUser = null;
   var db = null;
   var saveTimer = null;
@@ -331,6 +517,16 @@
   var saveBtn = document.getElementById('save-btn');
   var syncDot = document.getElementById('sync-dot');
   var notebookEl = document.getElementById('notebook');
+  var settingsBtn = document.getElementById('settings-btn');
+  var syncPanel = document.getElementById('sync-panel');
+  var syncPanelStatus = document.getElementById('sync-panel-status');
+  var pushBtn = document.getElementById('push-btn');
+  var pullBtn = document.getElementById('pull-btn');
+  var openStickersBtn = document.getElementById('open-stickers-btn');
+  var closeStickersBtn = document.getElementById('close-stickers-btn');
+  var stickerPicker = document.getElementById('sticker-picker');
+  var stickerGrid = document.getElementById('sticker-grid');
+  var stickerLayer = document.getElementById('sticker-layer');
   var fontRow = document.getElementById('font-row');
   var sizeRow = document.getElementById('paper-size-row');
   var bgRow = document.getElementById('paper-size-row');
@@ -339,6 +535,8 @@
   var paperHueOverlay = document.getElementById('paper-hue-overlay');
   var hueSaveTimer = null;
   var recentColorsEl = document.getElementById('recent-colors');
+  var editAreaEl = document.getElementById('edit-area');
+  var borderRow = document.getElementById('border-row');
 
   function getCurrentPage(){
     if(!state.pages.length) state.pages = freshPages();
@@ -376,6 +574,12 @@
     var hueValue = Number.isFinite(state.paperHue) ? state.paperHue : 0;
     hueSlider.value = hueValue;
     paperHueOverlay.style.background = hueValue === 0 ? 'transparent' : 'hsl(' + hueValue + ', 65%, 55%)';
+
+    var borderValue = state.pageBorder || 'none';
+    editAreaEl.className = borderValue === 'none' ? '' : 'border-' + borderValue;
+    Array.prototype.forEach.call(borderRow.querySelectorAll('.bg-pill'), function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-border') === borderValue);
+    });
   }
 
   function renderRecentColors(){
@@ -385,8 +589,14 @@
       swatch.className = 'recent-swatch';
       swatch.style.background = c;
       swatch.title = c;
+      swatch.addEventListener('mousedown', function(e){ if(hasTextSelection()) e.preventDefault(); });
       swatch.addEventListener('click', function(){
-        setColor(c);
+        if(hasTextSelection()){
+          document.execCommand('foreColor', false, c);
+          queueSave();
+        } else {
+          setColor(c);
+        }
       });
       recentColorsEl.appendChild(swatch);
     });
@@ -404,16 +614,123 @@
   function renderCurrentPage(){
     var page = getCurrentPage();
     titleInput.value = page.title || '';
-    bodyInput.value = page.text || '';
+    bodyInput.innerHTML = page.text || '';
     pageLabel.textContent = 'pg ' + (state.currentPageIndex + 1);
     if(prevBtn) prevBtn.disabled = state.currentPageIndex === 0;
     if(nextBtn) nextBtn.disabled = false;
+    renderStickers();
+  }
+
+  function renderStickers(){
+    var page = getCurrentPage();
+    if(!Array.isArray(page.stickers)) page.stickers = [];
+    stickerLayer.innerHTML = '';
+    page.stickers.forEach(function(st){
+      var wrap = document.createElement('div');
+      wrap.className = 'placed-sticker';
+      wrap.style.left = st.x + '%';
+      wrap.style.top = st.y + '%';
+      wrap.style.width = (st.size || 15) + '%';
+
+      var img = document.createElement('img');
+      img.src = st.src;
+      img.style.width = '100%';
+      img.style.display = 'block';
+      img.draggable = false;
+      wrap.appendChild(img);
+
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'sticker-remove';
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        page.stickers = page.stickers.filter(function(s){ return s.id !== st.id; });
+        renderStickers();
+        persistLocal();
+        pushToCloudIfSignedIn();
+      });
+      wrap.appendChild(removeBtn);
+
+      wireStickerDrag(wrap, st);
+      stickerLayer.appendChild(wrap);
+    });
+  }
+
+  function wireStickerDrag(wrap, st){
+    var dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+    wrap.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      Array.prototype.forEach.call(stickerLayer.querySelectorAll('.placed-sticker'), function(el){
+        el.classList.remove('selected');
+      });
+      wrap.classList.add('selected');
+      dragging = true;
+      wrap.classList.add('dragging');
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = st.x;
+      startTop = st.y;
+      wrap.setPointerCapture(e.pointerId);
+    });
+
+    wrap.addEventListener('pointermove', function(e){
+      if(!dragging) return;
+      var rect = notebookEl.getBoundingClientRect();
+      var dxPct = ((e.clientX - startX) / rect.width) * 100;
+      var dyPct = ((e.clientY - startY) / rect.height) * 100;
+      st.x = Math.max(0, Math.min(90, startLeft + dxPct));
+      st.y = Math.max(0, Math.min(90, startTop + dyPct));
+      wrap.style.left = st.x + '%';
+      wrap.style.top = st.y + '%';
+    });
+
+    function endDrag(){
+      if(!dragging) return;
+      dragging = false;
+      wrap.classList.remove('dragging');
+      persistLocal();
+      pushToCloudIfSignedIn();
+    }
+    wrap.addEventListener('pointerup', endDrag);
+    wrap.addEventListener('pointercancel', endDrag);
+  }
+
+  function addStickerToPage(src){
+    var page = getCurrentPage();
+    if(!Array.isArray(page.stickers)) page.stickers = [];
+    page.stickers.push({
+      id: 'st-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      src: src,
+      x: 35 + Math.random() * 10,
+      y: 35 + Math.random() * 10,
+      size: 15
+    });
+    renderStickers();
+    persistLocal();
+    pushToCloudIfSignedIn();
+  }
+
+  function populateStickerGrid(){
+    stickerGrid.innerHTML = '';
+    STICKER_FILES.forEach(function(src){
+      var cell = document.createElement('div');
+      cell.className = 'sticker-grid-item';
+      var img = document.createElement('img');
+      img.src = src;
+      img.loading = 'lazy';
+      cell.appendChild(img);
+      cell.addEventListener('click', function(){
+        addStickerToPage(src);
+      });
+      stickerGrid.appendChild(cell);
+    });
   }
 
   function captureCurrentPage(){
     var page = getCurrentPage();
     page.title = titleInput.value;
-    page.text = bodyInput.value;
+    page.text = bodyInput.innerHTML;
   }
 
   function persistLocal(){
@@ -437,6 +754,11 @@
   function setSyncStatus(mode){
     syncDot.className = mode;
     syncDot.title = mode === 'online' ? 'Synced to cloud' : (mode === 'saving' ? 'Saving…' : 'Local only (not signed in)');
+    if(syncPanelStatus){
+      if(mode === 'online') syncPanelStatus.textContent = cloudUser ? 'Signed in — synced to cloud' : 'Synced to cloud';
+      else if(mode === 'saving') syncPanelStatus.textContent = 'Saving…';
+      else syncPanelStatus.textContent = cloudUser ? 'Signed in — sync issue' : 'Not signed in — local only';
+    }
   }
 
   function pushToCloudIfSignedIn(){
@@ -444,7 +766,7 @@
     setSyncStatus('saving');
     var metaRef = db.collection('users').doc(cloudUser.uid).collection('diary').doc('meta');
     metaRef.set({
-      notebook: { pages: state.pages, currentPageIndex: state.currentPageIndex, font: state.font, paper: state.paper, fontSize: state.fontSize, fontColor: state.fontColor, recentColors: state.recentColors, paperHue: state.paperHue },
+      notebook: { pages: state.pages, currentPageIndex: state.currentPageIndex, font: state.font, paper: state.paper, fontSize: state.fontSize, fontColor: state.fontColor, recentColors: state.recentColors, paperHue: state.paperHue, pageBorder: state.pageBorder },
       updatedAt: Date.now()
     }, { merge: true }).then(function(){
       setSyncStatus('online');
@@ -477,6 +799,7 @@
         if(nb.fontColor) state.fontColor = nb.fontColor;
         if(Array.isArray(nb.recentColors)) state.recentColors = nb.recentColors;
         if(Number.isFinite(nb.paperHue)) state.paperHue = nb.paperHue;
+        if(nb.pageBorder) state.pageBorder = nb.pageBorder;
         renderCurrentPage();
         applyPreferences();
       }
@@ -500,7 +823,7 @@
     if(state.currentPageIndex < state.pages.length - 1){
       state.currentPageIndex++;
     } else {
-      state.pages.push({ id: 'page-' + (state.pages.length + 1) + '-' + Date.now(), title: '', text: '', createdAt: Date.now() });
+      state.pages.push({ id: 'page-' + (state.pages.length + 1) + '-' + Date.now(), title: '', text: '', createdAt: Date.now(), stickers: [] });
       state.currentPageIndex = state.pages.length - 1;
     }
     renderCurrentPage();
@@ -519,12 +842,25 @@
     pushToCloudIfSignedIn();
   });
 
+  function hasTextSelection(){
+    var sel = window.getSelection();
+    if(!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
+    return bodyInput.contains(sel.anchorNode);
+  }
+
   Array.prototype.forEach.call(fontRow.querySelectorAll('.font-pill'), function(btn){
+    btn.addEventListener('mousedown', function(e){ if(hasTextSelection()) e.preventDefault(); });
     btn.addEventListener('click', function(){
-      state.font = btn.getAttribute('data-font');
-      applyPreferences();
-      persistLocal();
-      pushToCloudIfSignedIn();
+      var fontValue = btn.getAttribute('data-font');
+      if(hasTextSelection()){
+        document.execCommand('fontName', false, fontValue === 'inherit' ? 'inherit' : fontValue);
+        queueSave();
+      } else {
+        state.font = fontValue;
+        applyPreferences();
+        persistLocal();
+        pushToCloudIfSignedIn();
+      }
     });
   });
 
@@ -537,17 +873,97 @@
     });
   });
 
+  function wrapSelectionInSpan(styleProp, styleValue){
+    var sel = window.getSelection();
+    if(!sel.rangeCount) return;
+    var range = sel.getRangeAt(0);
+    var span = document.createElement('span');
+    span.style[styleProp] = styleValue;
+    try {
+      range.surroundContents(span);
+    } catch(e){
+      var frag = range.extractContents();
+      span.appendChild(frag);
+      range.insertNode(span);
+    }
+    sel.removeAllRanges();
+    var newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    sel.addRange(newRange);
+  }
+
   Array.prototype.forEach.call(sizeRow.querySelectorAll('.size-pill'), function(btn){
+    btn.addEventListener('mousedown', function(e){ if(hasTextSelection()) e.preventDefault(); });
     btn.addEventListener('click', function(){
-      state.fontSize = Number(btn.getAttribute('data-size'));
-      applyPreferences();
-      persistLocal();
-      pushToCloudIfSignedIn();
+      var sizeValue = Number(btn.getAttribute('data-size'));
+      if(hasTextSelection()){
+        wrapSelectionInSpan('fontSize', sizeValue + 'px');
+        queueSave();
+      } else {
+        state.fontSize = sizeValue;
+        applyPreferences();
+        persistLocal();
+        pushToCloudIfSignedIn();
+      }
     });
   });
 
+  Array.prototype.forEach.call(document.querySelectorAll('.fmt-btn[data-cmd]'), function(btn){
+    btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+    btn.addEventListener('click', function(){
+      bodyInput.focus();
+      document.execCommand(btn.getAttribute('data-cmd'), false, null);
+      updateFormatButtonStates();
+      queueSave();
+    });
+  });
+
+  var highlightBtn = document.getElementById('fmt-highlight-btn');
+  var highlightColorPicker = document.getElementById('highlight-color-picker');
+  highlightBtn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+  highlightBtn.addEventListener('click', function(){
+    bodyInput.focus();
+    document.execCommand('hiliteColor', false, highlightColorPicker.value);
+    queueSave();
+  });
+
+  function updateFormatButtonStates(){
+    Array.prototype.forEach.call(document.querySelectorAll('.fmt-btn[data-cmd]'), function(btn){
+      try {
+        btn.classList.toggle('active', document.queryCommandState(btn.getAttribute('data-cmd')));
+      } catch(e){}
+    });
+  }
+  document.addEventListener('selectionchange', function(){
+    if(document.activeElement === bodyInput) updateFormatButtonStates();
+  });
+
+  var dateBtn = document.getElementById('fmt-date-btn');
+  dateBtn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+  dateBtn.addEventListener('click', function(){
+    bodyInput.focus();
+    var dateStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    document.execCommand('insertHTML', false, '<i>' + dateStr + '</i> ');
+    queueSave();
+  });
+
+  openStickersBtn.addEventListener('click', function(){
+    stickerPicker.classList.add('open');
+  });
+  closeStickersBtn.addEventListener('click', function(){
+    stickerPicker.classList.remove('open');
+  });
+
   colorPicker.addEventListener('input', function(){
-    setColor(colorPicker.value);
+    if(hasTextSelection()){
+      document.execCommand('foreColor', false, colorPicker.value);
+      if(!state.recentColors) state.recentColors = [];
+      state.recentColors = [colorPicker.value].concat(state.recentColors.filter(function(x){ return x !== colorPicker.value; })).slice(0, 6);
+      renderRecentColors();
+      queueSave();
+    } else {
+      setColor(colorPicker.value);
+    }
   });
 
   hueSlider.addEventListener('input', function(){
@@ -557,6 +973,82 @@
     persistLocal();
     if(hueSaveTimer) clearTimeout(hueSaveTimer);
     hueSaveTimer = setTimeout(pushToCloudIfSignedIn, 800);
+  });
+
+  Array.prototype.forEach.call(borderRow.querySelectorAll('.bg-pill'), function(btn){
+    btn.addEventListener('click', function(){
+      state.pageBorder = btn.getAttribute('data-border');
+      applyPreferences();
+      persistLocal();
+      pushToCloudIfSignedIn();
+    });
+  });
+
+  settingsBtn.addEventListener('click', function(){
+    syncPanel.classList.toggle('open');
+  });
+
+  pushBtn.addEventListener('click', function(){
+    if(!cloudUser){
+      syncPanelStatus.textContent = 'Sign in on the main app first to push.';
+      return;
+    }
+    captureCurrentPage();
+    pushBtn.disabled = true;
+    syncPanelStatus.textContent = 'Pushing…';
+    var metaRef = db.collection('users').doc(cloudUser.uid).collection('diary').doc('meta');
+    metaRef.set({
+      notebook: { pages: state.pages, currentPageIndex: state.currentPageIndex, font: state.font, paper: state.paper, fontSize: state.fontSize, fontColor: state.fontColor, recentColors: state.recentColors, paperHue: state.paperHue, pageBorder: state.pageBorder },
+      updatedAt: Date.now()
+    }, { merge: true }).then(function(){
+      persistLocal();
+      setSyncStatus('online');
+      syncPanelStatus.textContent = 'Pushed just now.';
+      pushBtn.disabled = false;
+    }).catch(function(){
+      setSyncStatus('offline');
+      syncPanelStatus.textContent = 'Push failed — try again.';
+      pushBtn.disabled = false;
+    });
+  });
+
+  pullBtn.addEventListener('click', function(){
+    if(!cloudUser){
+      syncPanelStatus.textContent = 'Sign in on the main app first to pull.';
+      return;
+    }
+    pullBtn.disabled = true;
+    syncPanelStatus.textContent = 'Pulling…';
+    var metaRef = db.collection('users').doc(cloudUser.uid).collection('diary').doc('meta');
+    metaRef.get().then(function(snap){
+      pullBtn.disabled = false;
+      if(!snap.exists){
+        syncPanelStatus.textContent = 'Nothing found in the cloud yet.';
+        return;
+      }
+      var data = snap.data() || {};
+      var nb = data.notebook;
+      if(nb && Array.isArray(nb.pages) && nb.pages.length){
+        state.pages = nb.pages;
+        state.currentPageIndex = Number.isFinite(nb.currentPageIndex) ? nb.currentPageIndex : 0;
+        if(nb.font) state.font = nb.font;
+        if(nb.paper) state.paper = nb.paper;
+        if(Number.isFinite(nb.fontSize)) state.fontSize = nb.fontSize;
+        if(nb.fontColor) state.fontColor = nb.fontColor;
+        if(Array.isArray(nb.recentColors)) state.recentColors = nb.recentColors;
+        if(Number.isFinite(nb.paperHue)) state.paperHue = nb.paperHue;
+        if(nb.pageBorder) state.pageBorder = nb.pageBorder;
+        renderCurrentPage();
+        applyPreferences();
+        persistLocal();
+      }
+      setSyncStatus('online');
+      syncPanelStatus.textContent = 'Pulled just now.';
+    }).catch(function(){
+      pullBtn.disabled = false;
+      setSyncStatus('offline');
+      syncPanelStatus.textContent = 'Pull failed — try again.';
+    });
   });
 
   titleInput.addEventListener('input', queueSave);
@@ -612,37 +1104,123 @@
       }
 
       var bodyY = titleY + titleFontSize + (10 * scale);
-      var bodyFontSize = (state.fontSize || 14) * scale;
-      var lineHeight = bodyFontSize * 1.3;
-      ctx.fillStyle = state.fontColor || '#262626';
-      ctx.font = bodyFontSize + 'px "DiaryComicSans", "Comic Sans MS", "Comic Sans", cursive';
+      var defaultFontSize = state.fontSize || 16;
+      var defaultColor = state.fontColor || '#262626';
+
+      function extractRuns(node, style, runs){
+        Array.prototype.forEach.call(node.childNodes, function(child){
+          if(child.nodeType === 3){
+            if(child.textContent) runs.push({ text: child.textContent, style: style });
+          } else if(child.nodeType === 1){
+            var tag = child.tagName;
+            if(tag === 'BR'){ runs.push({ brk: true }); return; }
+            var cs = window.getComputedStyle(child);
+            var s = {
+              bold: style.bold || tag === 'B' || tag === 'STRONG' || parseInt(cs.fontWeight, 10) >= 600,
+              italic: style.italic || tag === 'I' || tag === 'EM' || cs.fontStyle === 'italic',
+              underline: style.underline || tag === 'U' || (cs.textDecorationLine || '').indexOf('underline') > -1,
+              strike: style.strike || tag === 'S' || tag === 'STRIKE' || (cs.textDecorationLine || '').indexOf('line-through') > -1,
+              color: (cs.color && cs.color !== 'rgb(0, 0, 0)') ? cs.color : style.color,
+              bg: (cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== 'transparent') ? cs.backgroundColor : style.bg,
+              size: style.size
+            };
+            extractRuns(child, s, runs);
+            if(tag === 'DIV' || tag === 'P'){ runs.push({ brk: true }); }
+          }
+        });
+      }
+
+      var runs = [];
+      extractRuns(bodyInput, { bold:false, italic:false, underline:false, strike:false, color: defaultColor, bg: null, size: defaultFontSize }, runs);
+
+      var words = [];
+      runs.forEach(function(run){
+        if(run.brk){ words.push({ brk: true }); return; }
+        run.text.split(/(\s+)/).forEach(function(tok){
+          if(tok) words.push({ word: tok, style: run.style });
+        });
+      });
+
+      function fontStringFor(style){
+        var sz = (style.size || defaultFontSize) * scale;
+        var weight = style.bold ? 'bold ' : '';
+        var styleStr = style.italic ? 'italic ' : '';
+        return styleStr + weight + sz + 'px "DiaryComicSans", "Comic Sans MS", "Comic Sans", cursive';
+      }
+
+      var x = editLeft, y = bodyY;
+      var lineHeight = defaultFontSize * scale * 1.3;
       ctx.textBaseline = 'top';
 
-      var y = bodyY;
-      (page.text || '').split('\n').forEach(function(rawLine){
-        var words = rawLine.split(' ');
-        var line = '';
-        for(var i = 0; i < words.length; i++){
-          var test = line ? line + ' ' + words[i] : words[i];
-          if(ctx.measureText(test).width > editWidth && line){
-            if(y + lineHeight <= editBottom) ctx.fillText(line, editLeft, y);
-            y += lineHeight;
-            line = words[i];
-          } else {
-            line = test;
+      words.forEach(function(w){
+        if(w.brk){
+          x = editLeft;
+          y += lineHeight;
+          return;
+        }
+        ctx.font = fontStringFor(w.style);
+        var wordWidth = ctx.measureText(w.word).width;
+        if(x + wordWidth > editLeft + editWidth && w.word.trim()){
+          x = editLeft;
+          y += lineHeight;
+        }
+        if(y + lineHeight <= editBottom){
+          var sz = (w.style.size || defaultFontSize) * scale;
+          if(w.style.bg){
+            ctx.fillStyle = w.style.bg;
+            ctx.fillRect(x, y, wordWidth, sz * 1.2);
+          }
+          ctx.fillStyle = w.style.color || defaultColor;
+          ctx.fillText(w.word, x, y);
+          if(w.style.underline){
+            ctx.beginPath();
+            ctx.moveTo(x, y + sz);
+            ctx.lineTo(x + wordWidth, y + sz);
+            ctx.strokeStyle = ctx.fillStyle;
+            ctx.lineWidth = Math.max(1, sz * 0.06);
+            ctx.stroke();
+          }
+          if(w.style.strike){
+            ctx.beginPath();
+            ctx.moveTo(x, y + sz * 0.55);
+            ctx.lineTo(x + wordWidth, y + sz * 0.55);
+            ctx.strokeStyle = ctx.fillStyle;
+            ctx.lineWidth = Math.max(1, sz * 0.06);
+            ctx.stroke();
           }
         }
-        if(y + lineHeight <= editBottom) ctx.fillText(line, editLeft, y);
-        y += lineHeight;
+        x += wordWidth;
       });
 
       var titleForFile = title ? title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 40) : 'page';
-      var a = document.createElement('a');
-      a.download = 'notebook-' + titleForFile + '-' + new Date().toISOString().slice(0, 10) + '.png';
-      a.href = canvas.toDataURL('image/png');
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+
+      var stickers = Array.isArray(page.stickers) ? page.stickers : [];
+      var stickerLoads = stickers.map(function(st){
+        return new Promise(function(resolve){
+          var sImg = new Image();
+          sImg.onload = function(){ resolve({ img: sImg, st: st }); };
+          sImg.onerror = function(){ resolve(null); };
+          sImg.src = st.src;
+        });
+      });
+
+      Promise.all(stickerLoads).then(function(loaded){
+        loaded.forEach(function(entry){
+          if(!entry) return;
+          var sw = (entry.st.size || 15) / 100 * canvas.width;
+          var sh = sw * (entry.img.naturalHeight / entry.img.naturalWidth);
+          var sx = (entry.st.x / 100) * canvas.width;
+          var sy = (entry.st.y / 100) * canvas.height;
+          ctx.drawImage(entry.img, sx, sy, sw, sh);
+        });
+
+        var a = document.createElement('a');
+        a.download = 'notebook-' + titleForFile + '-' + new Date().toISOString().slice(0, 10) + '.png';
+        a.href = canvas.toDataURL('image/png');
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
     };
     img.src = 'notepad1.png';
     });
@@ -652,6 +1230,7 @@
   loadLocal();
   renderCurrentPage();
   applyPreferences();
+  populateStickerGrid();
   setSyncStatus('offline');
 
   try {
