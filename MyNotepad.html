@@ -98,6 +98,7 @@
     min-height: 0;
   }
   #app-footer {
+    position: relative;
     flex: 0 0 auto;
     width: 100%;
     max-width: none;
@@ -295,10 +296,26 @@
   .placed-sticker.selected .sticker-remove { display: block; }
   #sticker-picker {
     display: none;
-    width: 100%;
-    padding-top: 3px;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    padding: 32px 8px 8px;
+    background: rgba(20,30,50,.92);
+    border-radius: 10px 10px 0 0;
   }
   #sticker-picker.open { display: block; }
+  #close-stickers-btn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 24px;
+    height: 22px;
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 5px;
+    background: rgba(255,255,255,.16);
+    color: #fff;
+    cursor: pointer;
+  }
   #sticker-grid {
     display: grid;
     grid-auto-flow: column;
@@ -579,6 +596,7 @@
       </div>
     </div>
     <div id="sticker-picker" aria-label="Sticker picker">
+      <button id="close-stickers-btn" type="button" title="Close stickers">✕</button>
       <div id="sticker-grid"></div>
     </div>
   </div>
@@ -633,6 +651,7 @@
   var pullBtn = document.getElementById('pull-btn');
   var signinBtn = document.getElementById('signin-btn');
   var openStickersBtn = document.getElementById('open-stickers-btn');
+  var closeStickersBtn = document.getElementById('close-stickers-btn');
   var stickerPicker = document.getElementById('sticker-picker');
   var stickerGrid = document.getElementById('sticker-grid');
   var stickerLayer = document.getElementById('sticker-layer');
@@ -1161,6 +1180,10 @@
   openStickersBtn.addEventListener('click', function(){
     stickerPicker.classList.toggle('open');
     openStickersBtn.classList.toggle('active', stickerPicker.classList.contains('open'));
+  });
+  closeStickersBtn.addEventListener('click', function(){
+    stickerPicker.classList.remove('open');
+    openStickersBtn.classList.remove('active');
   });
 
   colorPicker.addEventListener('input', function(){
