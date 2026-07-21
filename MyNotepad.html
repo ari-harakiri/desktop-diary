@@ -513,7 +513,7 @@
   <div id="sync-panel">
     <div id="sync-panel-status">Not signed in — local only</div>
     <label class="menu-title-field">Page title
-      <input id="menu-title-input" type="text" placeholder="Title" maxlength="120" autocomplete="off" />
+      <input id="menu-title-input" type="text" maxlength="120" autocomplete="off" />
     </label>
     <div id="sync-panel-actions">
       <button id="export-image-btn" class="sync-action-btn">💾 Save as Image</button>
@@ -532,7 +532,7 @@
       <div id="sticker-layer"></div>
       <button id="save-btn" title="Save & settings"></button>
       <div id="edit-area">
-        <input id="title-input" type="text" placeholder="Title" maxlength="120" autocomplete="off" />
+        <input id="title-input" type="text" maxlength="120" autocomplete="off" />
         <div id="body-input" contenteditable="true" data-placeholder=""></div>
       </div>
       <div id="footer">
@@ -625,8 +625,43 @@
 
   var STICKER_COUNT = 83;
   var STICKER_FILES = [];
+  var HIDDEN_STICKER_FILES = {
+    's01.png': true, // Plant
+    's04.png': true, // Paw print
+    's05.png': true, // Nest
+    's06.png': true, // Nest with egg
+    's07.png': true, // Paw print
+    's08.png': true, // Tree
+    's21.png': true, // Paint splatter
+    's23.png': true, // Extra bubble removed by request
+    's25.png': true, // Speech/words
+    's26.png': true, // Blink
+    's28.png': true, // Alarm clock
+    's40.png': true, // Bookshelf
+    's41.png': true, // Clover
+    's45.png': true, // Chainsaw word
+    's46.png': true, // Machine word
+    's47.png': true, // Gun word
+    's48.png': true, // Flamethrower word
+    's52.png': true, // Removed by request
+    's53.png': true, // Removed by request
+    's54.png': true, // Removed by request
+    's55.png': true, // Removed by request
+    's56.png': true, // Removed by request
+    's57.png': true  // Removed by request
+  };
+  var FIRST_STICKER_FILES = [];
+  for (var fi = 58; fi <= 73; fi++) {
+    FIRST_STICKER_FILES.push('s' + fi + '.png');
+  }
+  FIRST_STICKER_FILES.forEach(function(stickerFile){
+    if(!HIDDEN_STICKER_FILES[stickerFile]) STICKER_FILES.push('stickers/' + stickerFile);
+  });
   for (var si = 1; si <= STICKER_COUNT; si++) {
-    STICKER_FILES.push('stickers/s' + (si < 10 ? '0' + si : si) + '.png');
+    var stickerFile = 's' + (si < 10 ? '0' + si : si) + '.png';
+    if(!HIDDEN_STICKER_FILES[stickerFile] && FIRST_STICKER_FILES.indexOf(stickerFile) === -1) {
+      STICKER_FILES.push('stickers/' + stickerFile);
+    }
   }
 
   var state = { pages: freshPages(), currentPageIndex: 0, font: 'DiaryComicSans', paper: 'notepad1.png', fontSize: 16, fontColor: '#262626', recentColors: ['#262626', '#0054e3', '#1a7d1a', '#c62828', '#8e24aa'], paperHue: 0 };
@@ -744,19 +779,41 @@
     var page = getCurrentPage();
     if(!Array.isArray(page.stickers)) page.stickers = [];
     stickerLayer.innerHTML = '';
-    page.stickers.forEach(function(st){
+    page.stickers.forEach(function(st, index){
+      // The retired third bubble is also hidden if it was placed before removal.
+      if((st.src || '').split('?')[0].endsWith('/s23.png')) return;
+      // Keep older saved stickers within the same usable size and position range
+      // as newly placed stickers.
+      var savedSize = Number(st.size);
+      st.size = Number.isFinite(savedSize) ? Math.max(6, Math.min(35, savedSize)) : 15;
+      var savedX = Number(st.x);
+      var savedY = Number(st.y);
+      st.x = Number.isFinite(savedX) ? Math.max(0, Math.min(90, savedX)) : 43;
+      st.y = Number.isFinite(savedY) ? Math.max(0, Math.min(90, savedY)) : 43;
       var wrap = document.createElement('div');
       wrap.className = 'placed-sticker';
       wrap.style.left = st.x + '%';
       wrap.style.top = st.y + '%';
-      wrap.style.width = (st.size || 15) + '%';
+      wrap.style.width = st.size + '%';
+      var savedLayer = Number(st.zIndex);
+      wrap.style.zIndex = Number.isFinite(savedLayer) ? savedLayer : (index + 1);
 
       var img = document.createElement('img');
       img.src = st.src;
       img.style.width = '100%';
       img.style.display = 'block';
+      img.style.transform = st.flipX ? 'scaleX(-1)' : '';
       img.draggable = false;
       wrap.appendChild(img);
+
+      wrap.addEventListener('dblclick', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        st.flipX = !st.flipX;
+        img.style.transform = st.flipX ? 'scaleX(-1)' : '';
+        persistLocal();
+        pushToCloudIfSignedIn();
+      });
 
       var removeBtn = document.createElement('button');
       removeBtn.className = 'sticker-remove';
@@ -780,6 +837,8 @@
 
     wrap.addEventListener('pointerdown', function(e){
       e.preventDefault();
+      st.zIndex = getNextStickerLayer(getCurrentPage());
+      wrap.style.zIndex = st.zIndex;
       Array.prototype.forEach.call(stickerLayer.querySelectorAll('.placed-sticker'), function(el){
         el.classList.remove('selected');
       });
@@ -822,7 +881,7 @@
         var currentPage = getCurrentPage();
         currentPage.stickers = currentPage.stickers.filter(function(s){ return s.id !== st.id; });
         renderStickers();
-        addLooseSticker(st.src, e.clientX - (wrap.offsetWidth / 2), e.clientY - (wrap.offsetHeight / 2), wrap.offsetWidth);
+        addLooseSticker(st.src, e.clientX - (wrap.offsetWidth / 2), e.clientY - (wrap.offsetHeight / 2), wrap.offsetWidth, st.flipX);
         persistLocal();
         pushToCloudIfSignedIn();
         return;
@@ -832,6 +891,24 @@
     }
     wrap.addEventListener('pointerup', endDrag);
     wrap.addEventListener('pointercancel', endDrag);
+  }
+
+  // A sticker's delete control is only shown while that sticker is selected.
+  // Clicking anywhere else on the page clears the selection again.
+  document.addEventListener('pointerdown', function(e){
+    if(e.target.closest && e.target.closest('.placed-sticker')) return;
+    Array.prototype.forEach.call(stickerLayer.querySelectorAll('.placed-sticker.selected'), function(el){
+      el.classList.remove('selected');
+    });
+  });
+
+  function getNextStickerLayer(page){
+    var highest = 0;
+    (page.stickers || []).forEach(function(st, index){
+      var layer = Number(st.zIndex);
+      highest = Math.max(highest, Number.isFinite(layer) ? layer : (index + 1));
+    });
+    return highest + 1;
   }
 
   function isOverNotebook(x, y){
@@ -848,7 +925,7 @@
     trashBtn.classList.toggle('sticker-drop-target', isOverTrash(x, y));
   }
 
-  function addLooseSticker(src, left, top, width){
+  function addLooseSticker(src, left, top, width, flipX){
     var wrap = document.createElement('div');
     wrap.className = 'loose-sticker';
     wrap.style.left = (Number.isFinite(left) ? left : ((window.innerWidth - 64) / 2)) + 'px';
@@ -859,13 +936,22 @@
     img.src = src;
     img.style.width = '100%';
     img.style.display = 'block';
+    img.style.transform = flipX ? 'scaleX(-1)' : '';
     img.draggable = false;
     wrap.appendChild(img);
     desktopStickerLayer.appendChild(wrap);
 
     var dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    var isFlipped = !!flipX;
+    wrap.addEventListener('dblclick', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      isFlipped = !isFlipped;
+      img.style.transform = isFlipped ? 'scaleX(-1)' : '';
+    });
     wrap.addEventListener('pointerdown', function(e){
       e.preventDefault();
+      desktopStickerLayer.appendChild(wrap);
       dragging = true;
       wrap.classList.add('dragging');
       startX = e.clientX;
@@ -898,7 +984,9 @@
           src: src,
           x: Math.max(0, Math.min(90, ((e.clientX - rect.left) / rect.width * 100) - 7)),
           y: Math.max(0, Math.min(90, ((e.clientY - rect.top) / rect.height * 100) - 7)),
-          size: Math.max(6, Math.min(35, (wrap.offsetWidth / rect.width) * 100))
+          size: Math.max(6, Math.min(35, (wrap.offsetWidth / rect.width) * 100)),
+          flipX: isFlipped,
+          zIndex: getNextStickerLayer(page)
         });
         wrap.remove();
         renderStickers();
@@ -1474,7 +1562,15 @@
           var sh = sw * (entry.img.naturalHeight / entry.img.naturalWidth);
           var sx = (entry.st.x / 100) * canvas.width;
           var sy = (entry.st.y / 100) * canvas.height;
-          ctx.drawImage(entry.img, sx, sy, sw, sh);
+          if(entry.st.flipX){
+            ctx.save();
+            ctx.translate(sx + sw, sy);
+            ctx.scale(-1, 1);
+            ctx.drawImage(entry.img, 0, 0, sw, sh);
+            ctx.restore();
+          } else {
+            ctx.drawImage(entry.img, sx, sy, sw, sh);
+          }
         });
 
         var a = document.createElement('a');
