@@ -844,6 +844,24 @@ var runtime={
   #desktop-companion.over-buddy-list { z-index:999998; }
   #desktop-companion.searching, #desktop-companion.waking, #desktop-companion.digging, #desktop-companion.burying, #desktop-companion.actions-open, #desktop-companion.interacting { z-index:120600; }
   .desktop-icon img { display:block; filter:drop-shadow(1px 1px 2px rgba(0,0,0,.6)); pointer-events:none; -webkit-user-drag:none; user-drag:none; }
+  #suggestion-desktop-icon {
+    right:8px;
+    left:auto;
+    top:auto;
+    bottom:72px;
+  }
+  #suggestion-desktop-icon .suggestion-desktop-art {
+    width:52px;
+    height:52px;
+    display:block;
+    object-fit:contain;
+    padding:0;
+    filter:none;
+    background:transparent;
+    border:none;
+    box-shadow:none;
+    box-sizing:border-box;
+  }
   .desktop-icon span {
     color:#fff; font-size:11px; text-align:center; text-shadow:1px 1px 2px rgba(0,0,0,.8);
     padding:1px 3px; border-radius:2px;
@@ -1177,6 +1195,16 @@ var runtime={
   .arinet-bookmark { display:flex; align-items:center; gap:3px; padding:4px 12px; border-right:1px solid #b0a898; background:transparent; font-size:11px; cursor:pointer; color:#1a1a1a; white-space:nowrap; font-family:Arial,sans-serif; }
   .arinet-bookmark:hover { background:#c4d8f0; }
   .arinet-bookmark:active { background:#a8c4e8; }
+  .arinet-add-favorite { font-weight:bold; color:#1a4fc4; }
+  .arinet-favorites { margin-bottom:16px; text-align:left; }
+  .arinet-favorites-title { font-size:12px; font-weight:bold; color:#31547c; margin:0 0 7px; }
+  .arinet-favorites-empty { font-size:11px; color:#777; }
+  .arinet-favorite-strip { display:contents; }
+  .arinet-favorite { padding-right:5px; }
+  .arinet-favorite-open { border:0; background:transparent; padding:0; color:#1a1a1a; font:inherit; cursor:pointer; white-space:nowrap; }
+  .arinet-favorite-open:hover { text-decoration:underline; }
+  .arinet-favorite-remove { border:0; background:transparent; color:#8b4b4b; font-size:14px; line-height:1; cursor:pointer; padding:0 3px; }
+  .arinet-favorite-remove:hover { color:#b00000; }
   .arinet-content { position:relative; flex:1; background:#fff; }
   .arinet-frame { position:absolute; inset:0; width:100%; height:100%; border:none; display:none; }
   .arinet-home { position:absolute; inset:0; overflow:auto; text-align:center; padding:0; background:linear-gradient(180deg,#c8dcf0,#f0f6ff 40%,#fff); }
@@ -1356,6 +1384,26 @@ var runtime={
   .privacy-usage-box { margin:10px 0; padding:10px; border:1px solid #9b9b86; background:#fffdf0; font-size:10px; line-height:1.45; }
   .privacy-usage-box label { display:flex; align-items:flex-start; gap:7px; font-weight:bold; }
   .privacy-usage-status { min-height:14px; margin:5px 0 0 23px; color:#666; }
+  .suggest-win { width:min(360px,96vw); height:min(460px,80vh); }
+  .suggestion-win { padding:12px; display:flex; flex-direction:column; gap:10px; box-sizing:border-box; }
+  .suggestion-intro { padding:8px 10px; background:#edf4ff; border:1px solid #95a5c4; font-size:10px; line-height:1.45; color:#333; }
+  .suggestion-field { display:flex; flex-direction:column; gap:4px; }
+  .suggestion-field input,.suggestion-field textarea { border:1px solid #8f8f8f; width:100%; box-sizing:border-box; font:12px/1.45 Arial,sans-serif; }
+  .suggestion-field input { padding:6px 7px; }
+  .suggestion-field textarea { min-height:150px; resize:vertical; padding:6px 7px; }
+  .suggestion-actions { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+  .suggestion-status { min-height:14px; color:#555; font-size:10px; flex:1; min-width:125px; }
+  .suggestion-buttons { display:flex; gap:7px; }
+  .suggestion-submit { min-width:72px; }
+  .suggestion-honeypot { position:fixed !important; left:-10000px !important; top:auto !important; width:1px !important; height:1px !important; overflow:hidden !important; }
+  .admin-suggestion-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .admin-suggestion-status { min-height:14px; color:#555; font-size:10px; }
+  .admin-suggestion-list { display:grid; gap:8px; }
+  .admin-suggestion-card { padding:9px 10px; border:1px solid #aaa58f; background:#fffdf4; box-shadow:inset 0 0 0 1px #fff; }
+  .admin-suggestion-head { display:flex; justify-content:space-between; gap:10px; margin-bottom:5px; }
+  .admin-suggestion-head b { color:#263f70; }
+  .admin-suggestion-meta { color:#777; font-size:9px; white-space:nowrap; }
+  .admin-suggestion-message { color:#29271f; font-size:11px; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; }
   @media(max-width:700px){
     .admin-win{width:96vw;height:86vh}.admin-panel{padding:8px}.usage-card-grid{grid-template-columns:repeat(2,minmax(110px,1fr))}.usage-split{grid-template-columns:1fr}.usage-updated{width:100%;margin-left:0}.usage-table-wrap{max-height:330px}.usage-bar-row{grid-template-columns:minmax(105px,1fr) minmax(70px,1.4fr) 38px}
   }
@@ -2515,10 +2563,12 @@ var runtime={
 @keyframes dtd-pigeon-annoyed-motion{
   0%{opacity:0;transform:translate(0,6px) rotate(-4deg)}
   18%{opacity:1;transform:translate(0,2px) rotate(-2deg)}
-  36%{transform:translate(0,1px) rotate(-1deg)}
-  64%{transform:translate(0,0) rotate(0)}
-  78%,88%{transform:translate(0,0.4px) rotate(0)}
-  94%{transform:translate(0,-0.4px) rotate(-1deg)}
+  36%{transform:translate(-2px,1px) rotate(-3deg)}
+  50%{transform:translate(2px,0) rotate(3deg)}
+  64%{transform:translate(-1px,0) rotate(-2deg)}
+  78%,88%{transform:translate(1px,0.4px) rotate(1deg)}
+  90%{opacity:1;transform:translate(-1px,0.4px) rotate(-1deg)}
+  94%{opacity:1;transform:translate(1px,-0.4px) rotate(1deg)}
   100%{opacity:0;transform:translate(0,1.6px) rotate(0)}
 }
 #dtd-mailbox-icon.pigeon-mailbox-furious .dtd-pigeon{
@@ -3372,6 +3422,11 @@ function forceLoaderInteractionRecovery(){
     <div class="trash-icon-art"><img src="assets/embedded/trash-icon.png" alt=""><b id="trash-count"></b></div>
     <span>Trash</span>
   </div>
+
+    <div id="suggestion-desktop-icon" class="desktop-icon" role="button" tabindex="0" title="Open anonymous suggestion box?">
+      <img class="suggestion-desktop-art" src="assets/embedded/suggestion-box-icon.png" alt="" aria-hidden="true" />
+      <span>Suggestion?</span>
+    </div>
   <!-- SIGN ON -->
   <div id="signon-wrap" class="win" style="display:none;">
     <div class="titlebar"><span class="t-title"><span class="ttl-icon"></span><span>Sign On</span></span><span class="t-btns"><button class="win-btn" id="signon-close" type="button" title="Close Sign On" aria-label="Close Sign On">X</button></span></div>
@@ -3444,7 +3499,6 @@ function forceLoaderInteractionRecovery(){
       <div class="m-item">Edit
         <div class="m-drop">
           <div id="menu-editprofile">Profile</div>
-          <div id="menu-buddies">Buddy Lists</div>
           <div id="menu-categories">Categories</div>
           <div id="menu-alldrafts">Drafts</div>
         </div>
@@ -3485,7 +3539,7 @@ function forceLoaderInteractionRecovery(){
       <div class="sm-item" id="sm-signoff">Log Off</div>
     </div>
     <div id="tb-items" style="display:flex; gap:4px;"></div>
-    <div id="tb-tray">
+      <div id="tb-tray">
       <div id="tb-search-wrap">
       <button id="tb-search-toggle" type="button" title="Open your desktop companion" aria-label="Open your desktop companion and search" aria-expanded="false"><span class="companion-taskbar-sprite" aria-hidden="true"></span></button>
       <div id="desktop-search" role="search">
@@ -3507,7 +3561,9 @@ function forceLoaderInteractionRecovery(){
         <div id="desktop-search-results" aria-live="polite"></div>
       </div>
       </div>
-      <div id="tb-clock"></div>
+      <div id="tb-tray-right">
+        <div id="tb-clock"></div>
+      </div>
     </div>
   </div>
 
@@ -3752,6 +3808,7 @@ try {
     mail: { address: '', inbox: [], sent: [], scheduled: [], contacts: [] }, // DtD Post Mail account, messages, and address book
     companion: { animal: 'puppy', memories: [], lastOpened: null, toys: { ball: { x: null, y: null, throwCount: 0 } }, penPalNotifications: { knownIncoming: [], pendingOutgoing: [], unreadAlerts: [] } }, // private desktop-companion memory, toys, and notification state
     scrapbook: { backgroundPreset: 'computer', backgroundColor: '#f1f3f5', backgroundPattern: 'none', border: 'simple', fontFamily: 'system', headingFont: 'system', fontSize: 'medium', stickers: [], notes: [] },
+    arinetFavorites: [], // private bookmarks saved on this device
     notebook: { pages: [ { id: 'page-1', text: '', createdAt: Date.now() } ], currentPageIndex: 0, backgroundImage: 'notepad1.png' } // notebook: plain-text pages, unlimited length
   };
   var EMPTY_STATE_TEMPLATE=JSON.stringify(state);
@@ -3817,6 +3874,17 @@ try {
     }
     if(!Array.isArray(state.customThemePresets)) state.customThemePresets = [];
     if(!Array.isArray(state.customFonts)) state.customFonts = [];
+    if(!Array.isArray(state.arinetFavorites)) state.arinetFavorites = [];
+    var favoriteUrls = {};
+    state.arinetFavorites = state.arinetFavorites.filter(function(favorite){
+      if(!favorite || typeof favorite.url !== 'string') return false;
+      favorite.url = favorite.url.trim();
+      if(!/^https?:\/\/[^\s]+$/i.test(favorite.url) || favoriteUrls[favorite.url]) return false;
+      favoriteUrls[favorite.url] = true;
+      favorite.id = typeof favorite.id === 'string' && favorite.id ? favorite.id : uid();
+      favorite.name = typeof favorite.name === 'string' && favorite.name.trim() ? favorite.name.trim().slice(0,60) : favorite.url;
+      return true;
+    }).slice(0,30);
     if(!state.desktopIconPositions || typeof state.desktopIconPositions !== 'object') state.desktopIconPositions = {};
     if(!state.buddyListPosition || !Number.isFinite(Number(state.buddyListPosition.x)) || !Number.isFinite(Number(state.buddyListPosition.y))) state.buddyListPosition = null;
     if(!Array.isArray(state.trash)) state.trash = [];
@@ -3979,7 +4047,7 @@ try {
 
   function applyBackground(){
     var desktop = document.getElementById('desktop');
-    var fallbackBackground = typeof DEFAULT_BG_B64 === 'string' ? DEFAULT_BG_B64 : 'app-background.jpg';
+    var fallbackBackground = typeof DEFAULT_BG_B64 === 'string' ? DEFAULT_BG_B64 : 'assets/embedded/dreamy-green-hills-background.png';
     if(!desktop) return;
     if(state.background && state.background.image){
       desktop.style.background = 'center / cover no-repeat url("' + state.background.image + '")';
@@ -4426,6 +4494,7 @@ try {
     var mailbox = document.getElementById('dtd-mailbox-icon');
     var trash = document.getElementById('trash-desktop-icon');
     var arinetIcon = document.getElementById('arinet-desktop-icon');
+    var suggestionIcon = document.getElementById('suggestion-desktop-icon');
     function hideStartMenu(){
       if(startMenu) startMenu.classList.remove('open');
     }
@@ -4458,6 +4527,11 @@ try {
     }
     if(smTxtMail){
       smTxtMail.addEventListener('click', runAndHide(openDtdPostWindow));
+    }
+    if(suggestionIcon){
+      suggestionIcon.addEventListener('click', function(e){e.stopPropagation();openSuggestionBoxWindow();});
+      suggestionIcon.addEventListener('dblclick', function(e){e.preventDefault();e.stopPropagation();openSuggestionBoxWindow();});
+      suggestionIcon.addEventListener('keydown', function(e){if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();e.stopPropagation();openSuggestionBoxWindow();});
     }
     function toggleNotebookWindow(){
       if(!document.body.classList.contains('signed-in')){
@@ -5287,7 +5361,7 @@ try {
   }
 
   // ---------------- mascot: yellow smiley on a blue square badge ----------------
-  var DEFAULT_BG_B64 = 'app-background.jpg';
+  var DEFAULT_BG_B64 = 'assets/embedded/dreamy-green-hills-background.png';
   var SIGNON_ICON_B64 = 'assets/embedded/signon-icon.png';
   var SMILEY_B64 = 'assets/embedded/smiley-mascot.png';
   var DIARY_B64  = 'assets/embedded/diary-icon.jpg';
@@ -5782,7 +5856,9 @@ try {
     document.getElementById('signon-wrap').style.display = 'none';
     document.getElementById('signon-icon').style.display = 'flex';
     setSupabaseSession(null);
-    state = makeFreshState();
+    // Keep an existing guest diary when this device returns to guest mode.
+    // Starting a guest session from an email account still begins separately.
+    if(!state || !state.account || state.account.email) state = makeFreshState();
     state.savePassword = false;
     state.autoLogin = false;
     if(!state.account) state.account = { screenName: 'Guest', email: '', password: '' };
@@ -5794,6 +5870,7 @@ try {
       if(!state.account.screenName) state.account.screenName = 'Guest';
       delete state.account.pendingEmail;
     }
+    normalizeState();
     return saveState().then(function(){ return enterDesktop(); }).catch(function(){ return enterDesktop(); });
   }
 
@@ -5845,7 +5922,7 @@ try {
         var connectingExisting = isConnect;
         supabaseAuthRequest('/signup?redirect_to='+encodeURIComponent(DESKTOPDIARY_APP_URL),{email:email,password:pass,data:{screen_name:name}}).then(function(auth){
           if(auth.access_token)setSupabaseSession(auth);
-          if(connectingExisting){var _fresh=makeFreshState();_fresh.account={screenName:name,password:pass,email:email};state=_fresh;activeStorageKey=accountStorageKey(email);return saveState();}
+          if(connectingExisting){state.account={screenName:name,password:pass,email:email};activeStorageKey=accountStorageKey(email);return saveState();}
           return activateAccountDiary(email,auth,pass,true);
         }).then(function(){
           state.savePassword = document.getElementById('in-savepw').checked;
@@ -5882,6 +5959,32 @@ try {
     }
 
     return win;
+  }
+
+  function requireOnlineAccount(featureName){
+    if(getSupabaseSession()) return true;
+    if(state.account && state.account.email){
+      showSignon();
+      document.getElementById('signon-error').textContent = featureName+' requires you to sign on to your online account.';
+    } else if(featureName === 'Cloud Sync'){
+      openCloudAccountRequiredWindow();
+    } else {
+      openInfoWindow('Create an account first to use '+featureName+'.');
+    }
+    return false;
+  }
+
+  function openCloudAccountRequiredWindow(){
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999999;display:flex;align-items:center;justify-content:center;';
+    var box=document.createElement('div');
+    box.style.cssText='background:#ece9d8;border:2px solid #0054e3;border-radius:6px;padding:18px 20px;max-width:300px;width:90%;font-size:13px;box-shadow:0 4px 18px rgba(0,0,0,.5);';
+    box.innerHTML='<div style="margin-bottom:14px;">Oops! You have to make an account first to use cloud sync.</div><div style="display:flex;gap:8px;justify-content:flex-end;"><button class="btn" id="cloud-account-no" autofocus>No thanks</button><button class="btn" id="cloud-account-ok">OK</button></div>';
+    overlay.appendChild(box);document.body.appendChild(overlay);
+    function close(){if(overlay.parentNode)overlay.parentNode.removeChild(overlay);}
+    box.querySelector('#cloud-account-no').onclick=close;
+    box.querySelector('#cloud-account-ok').onclick=function(){close();openCreateAccountWindow('connect');};
+    overlay.onclick=function(event){if(event.target===overlay)close();};
   }
 
   document.getElementById('in-password').addEventListener('click', function(){
@@ -6277,7 +6380,6 @@ try {
   document.getElementById('bl-close').addEventListener('click', signOff);
   document.getElementById('menu-signoff').addEventListener('click', signOff);
   document.getElementById('bl-addbuddy-btn').addEventListener('click', openBuddiesWindow);
-  document.getElementById('menu-buddies').addEventListener('click', openBuddiesWindow);
   document.getElementById('menu-categories').addEventListener('click', openCategoriesWindow);
   document.getElementById('menu-alldrafts').addEventListener('click', openAllDraftsWindow);
   document.getElementById('bl-sendim-btn').addEventListener('click', function(){ openNewMessageWindow(); });
@@ -7424,7 +7526,7 @@ try {
         var clockRect=clock.getBoundingClientRect();
         if(clockRect.width&&clockRect.height){
           return this.clampBall({
-            x:clockRect.left-desktopRect.left+(clockRect.width-this.config.restSize)/2,
+            x:clockRect.left-desktopRect.left+(clockRect.width-this.config.restSize)/2-(this.config.homeOffsetX||0),
             y:clockRect.top-desktopRect.top-this.config.restSize-(this.config.homeGap||6)
           });
         }
@@ -7872,7 +7974,8 @@ try {
       mouthOffset:38,
       kobaGroundOffset:108,
       returnNestOffsetX:5,
-      homeGap:6
+      homeGap:6,
+      homeOffsetX:76
     });
     function hideKobaBallThought(){
       clearTimeout(kobaBallThoughtEndTimer);kobaBallThoughtEndTimer=null;
@@ -10042,6 +10145,13 @@ try {
         if(main.querySelector('.dtd-reply-send'))main.querySelector('.dtd-reply-send').onclick=function(){var body=main.querySelector('.dtd-inline-reply-body').value,text=body.trim(),recipient=folder==='inbox'?msg.from:msg.to,subjectField=main.querySelector('.dtd-inline-reply-subject'),subject=subjectField?subjectField.value.trim():(msg.subject||'');if(!text){main.querySelector('.dtd-reply-error').textContent='Write your reply first.';return;}var reply={id:uid(),from:localAddress(),to:recipient,subject:subject,body:body,ts:Date.now(),read:true};state.mail.sent.push(reply);if(recipient.toLowerCase()===localAddress()||recipient.toLowerCase()==='self')state.mail.inbox.push({id:uid(),from:reply.from,to:reply.to,subject:reply.subject,body:reply.body,ts:reply.ts,read:false});saveState();trackDtdUsage('letter_sent');endPigeonComposing(true);openInfoWindow('Your reply is sealed and will be delivered at the next 8:00am.');renderList();};
       }
       function showCompose(to,subject){
+        if(!getSupabaseSession()){
+          endPigeonComposing(false);
+          main.innerHTML='<div class="dtd-heading">New Message</div><div class="dtd-compose" style="text-align:center"><p style="font-size:11px;line-height:1.5;text-align:left;margin:0 0 12px">Oops! Please make an account to send outgoing mail!</p><span class="forgot-link" id="dtd-create-account">Create an account</span><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Back</button></div></div>';
+          main.querySelector('#dtd-create-account').onclick=function(){openCreateAccountWindow('connect');};
+          main.querySelector('.dtd-compose-cancel').onclick=renderList;
+          return;
+        }
         beginPigeonComposing();
         main.innerHTML='<div class="dtd-heading">New Message</div><div class="dtd-compose"><label><span>From</span><input type="text" value="'+escapeHtml(localAddress())+'" readonly></label><label><span>To</span><input id="dtd-to" type="text" value="'+escapeHtml(to||'')+'" placeholder="name@desktopdiary.local"></label><label><span>Subject</span><input id="dtd-subject" type="text" value="'+escapeHtml(subject||'')+'"></label><textarea id="dtd-body" placeholder="Plain text only…"></textarea><div class="dtd-compose-actions"><button class="btn dtd-compose-cancel">Cancel</button><button class="btn dtd-send">Send</button></div><div class="signon-error dtd-error"></div></div>';
         var toEl=main.querySelector('#dtd-to'),subEl=main.querySelector('#dtd-subject'),bodyEl=main.querySelector('#dtd-body');
@@ -10338,7 +10448,10 @@ try {
         '<div class="arinet-content">' +
           '<div class="arinet-home" id="an-home-view">' +
             '<img class="arinet-home-banner" src="assets/embedded/arinet-home-banner.jpg" alt="AriNet">' +
-            '<div class="arinet-home-inner"><div class="arinet-home-grid">' + tilesHtml + '</div></div>' +
+            '<div class="arinet-home-inner">' +
+              '<div class="arinet-favorites" id="an-favorites-section"><div class="arinet-favorites-title">★ My Favorites</div><div class="arinet-home-grid" id="an-favorites-grid"></div><div class="arinet-favorites-empty" id="an-favorites-empty">Save a favorite to see it here.</div></div>' +
+              '<div class="arinet-home-grid">' + tilesHtml + '</div>' +
+            '</div>' +
           '</div>' +
           '<iframe class="arinet-frame" id="an-frame" title="AriNet browser"></iframe>' +
         '</div>' +
@@ -10346,7 +10459,8 @@ try {
           '<button class="arinet-bookmark" id="an-dock-home">🏠 Home</button>' +
           '<button class="arinet-bookmark" id="an-dock-arinet">🌐 AriNet</button>' +
           '<button class="arinet-bookmark" id="an-dock-mail">✉ Mail</button>' +
-          '<button class="arinet-bookmark" id="an-dock-news">📰 News</button>' +
+          '<span class="arinet-favorite-strip" id="an-favorite-strip"></span>' +
+          '<button class="arinet-bookmark arinet-add-favorite" id="an-add-favorite">★ Add Favorite</button>' +
         '</div>' +
         '<div class="arinet-status" id="an-status">Ready</div>' +
       '</div>';
@@ -10358,6 +10472,9 @@ try {
       var status = el.querySelector('#an-status');
       var backBtn = el.querySelector('#an-back');
       var fwdBtn = el.querySelector('#an-fwd');
+      var favoritesGrid = el.querySelector('#an-favorites-grid');
+      var favoritesEmpty = el.querySelector('#an-favorites-empty');
+      var favoriteStrip = el.querySelector('#an-favorite-strip');
 
       // simple linear history: {label, url|null} — null url means the home view
       var history = [{ label: 'Home', url: null }];
@@ -10367,7 +10484,52 @@ try {
         raw = (raw || '').trim();
         if(!raw) return null;
         if(!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
-        return raw;
+        return /^https?:\/\/[^\s]+$/i.test(raw) ? raw : null;
+      }
+
+      function renderFavorites(){
+        var favorites = Array.isArray(state.arinetFavorites) ? state.arinetFavorites : [];
+        var tiles = favorites.map(function(favorite){
+          return '<div class="arinet-tile" data-favorite-id="' + escapeHtml(favorite.id) + '"><div class="arinet-tile-icon">★</div><div class="arinet-tile-name">' + escapeHtml(favorite.name) + '</div></div>';
+        }).join('');
+        favoritesGrid.innerHTML = tiles;
+        favoritesEmpty.style.display = favorites.length ? 'none' : 'block';
+        favoriteStrip.innerHTML = favorites.map(function(favorite){
+          return '<span class="arinet-bookmark arinet-favorite"><button type="button" class="arinet-favorite-open" data-favorite-id="' + escapeHtml(favorite.id) + '">★ ' + escapeHtml(favorite.name) + '</button><button type="button" class="arinet-favorite-remove" title="Remove ' + escapeHtml(favorite.name) + '" aria-label="Remove ' + escapeHtml(favorite.name) + '" data-remove-favorite-id="' + escapeHtml(favorite.id) + '">×</button></span>';
+        }).join('');
+        el.querySelectorAll('[data-favorite-id]').forEach(function(control){
+          control.addEventListener('click', function(){
+            var favorite = favorites.find(function(item){ return item.id === control.getAttribute('data-favorite-id'); });
+            if(favorite) navigateTo(favorite.url, favorite.name);
+          });
+        });
+        el.querySelectorAll('[data-remove-favorite-id]').forEach(function(control){
+          control.addEventListener('click', function(event){
+            event.stopPropagation();
+            state.arinetFavorites = favorites.filter(function(item){ return item.id !== control.getAttribute('data-remove-favorite-id'); });
+            saveState();
+            renderFavorites();
+          });
+        });
+      }
+
+      function addFavorite(){
+        var current = history[historyIndex];
+        appTextPrompt('Name this favorite:', current.url ? current.label : '', function(name){
+          if(name === null) return;
+          appTextPrompt('Web address:', current.url || 'https://', function(rawUrl){
+            if(rawUrl === null) return;
+            var url = normalizeUrl(rawUrl);
+            if(!url){ openInfoWindow('Please enter a web address that begins with http:// or https://.'); return; }
+            name = name.trim().slice(0,60) || url;
+            var existing = state.arinetFavorites.find(function(favorite){ return favorite.url === url; });
+            if(existing) existing.name = name;
+            else state.arinetFavorites.push({ id: uid(), name: name, url: url });
+            saveState();
+            renderFavorites();
+            status.textContent = 'Favorite saved: ' + name;
+          });
+        });
       }
 
       function updateNavButtons(){
@@ -10435,12 +10597,8 @@ try {
         if(s) navigateTo(s.url, s.name);
         else if(typeof openDtdPostWindow === 'function') openDtdPostWindow();
       });
+      el.querySelector('#an-add-favorite').addEventListener('click', addFavorite);
 
-      el.querySelector('#an-dock-news').addEventListener('click', function(){
-        var s = ARINET_SITES.find(function(x){ return /news/i.test(x.name); });
-        if(s) navigateTo(s.url, s.name);
-        else navigateTo('https://ari-harakiri.github.io', 'News');
-      });
       backBtn.addEventListener('click', function(){
         if(historyIndex > 0){ historyIndex--; renderCurrent(); }
       });
@@ -10457,6 +10615,7 @@ try {
         t.addEventListener('click', function(){ openBookmark(parseInt(t.getAttribute('data-idx'), 10)); });
       });
 
+      renderFavorites();
       renderCurrent();
     }});
   }
@@ -10497,6 +10656,67 @@ try {
     });
   }
 
+  function dtdAnonymousTipToken(){
+    var key='dtd-anonymous-tip-client-v1',token='';
+    try{token=localStorage.getItem(key)||'';}catch(e){}
+    if(/^[A-Za-z0-9_-]{24,100}$/.test(token))return token;
+    if(window.crypto&&typeof window.crypto.randomUUID==='function')token=window.crypto.randomUUID();
+    else{
+      var alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+      for(var i=0;i<40;i++)token+=alphabet.charAt(Math.floor(Math.random()*alphabet.length));
+    }
+    try{localStorage.setItem(key,token);}catch(e){}
+    return token;
+  }
+
+
+  function openSuggestionBoxWindow(){
+    var existing=openWindows.find(function(w){return w.type==='suggestion-box';});
+    if(existing){focusWindow(existing.id);return;}
+    var body=
+      '<div class="win-body suggestion-win">' +
+        '<div class="suggestion-intro">Send an anonymous idea, bug note, or request to DesktopDiary. Your email, screen name, account ID, and diary contents are not included.</div>' +
+        '<div class="suggestion-field"><label for="suggestion-topic">Topic (optional)</label><input id="suggestion-topic" maxlength="40" placeholder="e.g. UI polish, bug, feature idea"></div>' +
+        '<div class="suggestion-field"><label for="suggestion-text">Your anonymous tip</label><textarea id="suggestion-text" maxlength="1500" placeholder="Type your tip here…"></textarea></div>' +
+        '<div class="suggestion-honeypot" aria-hidden="true"><label for="suggestion-website">Website</label><input id="suggestion-website" type="text" tabindex="-1" autocomplete="off"></div>' +
+        '<div class="suggestion-actions"><div class="suggestion-status" aria-live="polite"></div><div class="suggestion-buttons">' +
+          '<button class="btn suggestion-submit" type="button">Send Tip</button><button class="btn suggestion-close" type="button">Close</button>' +
+        '</div></div>' +
+      '</div>';
+    createWindow({title:'Suggestion Box',extraClass:'suggest-win',bodyHtml:body,type:'suggestion-box',onMount:function(el,id){
+      var topicInput=el.querySelector('#suggestion-topic');
+      var textInput=el.querySelector('#suggestion-text');
+      var websiteInput=el.querySelector('#suggestion-website');
+      var submitBtn=el.querySelector('.suggestion-submit');
+      var status=el.querySelector('.suggestion-status');
+      function setStatus(message,color){status.style.color=color||'#555';status.textContent=message;}
+      submitBtn.onclick=function(){
+        var topic=(topicInput.value||'').trim().slice(0,40)||'General';
+        var text=(textInput.value||'').trim().slice(0,1500);
+        if(!text){setStatus('Please add a message before sending.','#b03');return;}
+        submitBtn.disabled=true;
+        setStatus('Sending…','#666');
+        supabasePublicRpc('submit_dtd_anonymous_tip',{
+          requested_topic:topic,
+          requested_message:text,
+          requested_device_class:dtdUsageDeviceClass(),
+          requested_client_token:dtdAnonymousTipToken(),
+          requested_website:websiteInput.value||''
+        }).then(function(){
+          topicInput.value='';
+          textInput.value='';
+          setStatus('Thanks — your anonymous tip was sent.','green');
+          submitBtn.disabled=false;
+        }).catch(function(){
+          submitBtn.disabled=false;
+          setStatus('Unable to send right now. Please try again later.','#b03');
+        });
+      };
+      el.querySelector('.suggestion-close').onclick=function(){closeWindow(id);};
+    }});
+  }
+
+
   function openAdminWindow(){
     var existing=openWindows.find(function(w){return w.type==='admin';});
     if(existing){focusWindow(existing.id);return;}
@@ -10505,7 +10725,7 @@ try {
       return loadDtdSiteContent().then(function(){
         var body='<div class="win-body admin-panel">'+
           '<div class="admin-intro"><b>DesktopDiary Administration</b><br>Manage public Help &amp; Install wording and review privacy-limited feature feedback. Administrator access is checked by Supabase.</div>'+
-          '<div class="admin-tabs" role="tablist"><button class="admin-tab active" type="button" role="tab" aria-selected="true" data-admin-tab="content">Help &amp; Install</button><button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="privacy">Privacy Notice</button><button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="usage">Usage Statistics</button></div>'+
+          '<div class="admin-tabs" role="tablist"><button class="admin-tab active" type="button" role="tab" aria-selected="true" data-admin-tab="content">Help &amp; Install</button><button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="privacy">Privacy Notice</button><button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="suggestions">Suggestions</button><button class="admin-tab" type="button" role="tab" aria-selected="false" data-admin-tab="usage">Usage Statistics</button></div>'+
           '<section class="admin-tab-panel active" data-admin-panel="content">'+
             '<div class="admin-field"><label for="admin-install-copy">Install Instructions</label><textarea id="admin-install-copy" maxlength="30000"></textarea></div>'+
             '<div class="admin-field"><label for="admin-help-copy">Help / How It Works</label><textarea id="admin-help-copy" maxlength="30000"></textarea></div>'+
@@ -10516,6 +10736,7 @@ try {
             '<div class="admin-field"><label for="admin-privacy-copy">Privacy Notice</label><textarea id="admin-privacy-copy" maxlength="30000" style="min-height:320px;"></textarea></div>'+
             '<div class="admin-actions"><div class="admin-privacy-status" aria-live="polite"></div><button class="btn admin-privacy-save" type="button">Save Privacy Notice</button></div>'+
           '</section>'+
+          '<section class="admin-tab-panel" data-admin-panel="suggestions"><div class="admin-suggestion-toolbar"><div class="admin-suggestion-status" aria-live="polite"></div><button class="btn admin-suggestion-refresh" type="button">Refresh</button></div><div class="admin-suggestion-list"></div></section>'+
           '<section class="admin-tab-panel" data-admin-panel="usage">'+
             '<div class="usage-toolbar"><label for="usage-period"><b>Date range</b></label><select id="usage-period"><option value="7d">Last 7 days</option><option value="30d" selected>Last 30 days</option><option value="90d">Last 90 days</option><option value="all">All available data</option></select><button class="btn usage-refresh" type="button">Refresh</button><button class="btn usage-cleanup" type="button">Clean up expired events</button><span class="usage-updated"></span></div>'+
             '<div class="admin-intro">Only approved feature names, server timestamps, broad device classes, and opted-in member IDs are available here. No diary, letter, profile, search, drawing, or other private content is collected. Identifiable records are retained for at most 90 days.</div>'+
@@ -10550,6 +10771,26 @@ try {
               privacyStatus.style.color='#237b31';privacyStatus.textContent='Saved. The Privacy Notice is now updated for everyone.';
             }).catch(function(err){privacyStatus.style.color='#c0392b';privacyStatus.textContent=err.message;}).then(function(){privacySave.disabled=false;});
           };
+
+          var suggestionsLoaded=false,suggestionsLoading=false,suggestionStatus=el.querySelector('.admin-suggestion-status'),suggestionList=el.querySelector('.admin-suggestion-list'),suggestionRefresh=el.querySelector('.admin-suggestion-refresh');
+          function suggestionDate(value){var date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleString():'Unknown date';}
+          function renderSuggestions(rows){
+            rows=Array.isArray(rows)?rows:[];
+            suggestionList.innerHTML=rows.length?rows.map(function(tip){
+              return '<article class="admin-suggestion-card"><div class="admin-suggestion-head"><b>'+escapeHtml(tip.topic||'General')+'</b><span class="admin-suggestion-meta">'+escapeHtml(suggestionDate(tip.created_at))+' · '+escapeHtml(tip.device_class||'desktop')+'</span></div><div class="admin-suggestion-message">'+escapeHtml(tip.message||'')+'</div></article>';
+            }).join(''):'<div class="usage-empty">No suggestions yet.</div>';
+          }
+          function loadSuggestions(){
+            if(suggestionsLoading)return;
+            suggestionsLoading=true;suggestionRefresh.disabled=true;suggestionStatus.style.color='#555';suggestionStatus.textContent='Loading suggestions…';
+            supabaseRpc('get_dtd_anonymous_tips',{requested_limit:100}).then(function(rows){
+              suggestionsLoaded=true;suggestionStatus.textContent='';renderSuggestions(rows);
+            }).catch(function(err){
+              suggestionStatus.style.color='#c0392b';suggestionStatus.textContent=err.message||'Suggestions are unavailable. Run the anonymous tips SQL setup first.';suggestionList.innerHTML='';
+            }).then(function(){suggestionsLoading=false;suggestionRefresh.disabled=false;});
+          }
+          suggestionRefresh.addEventListener('click',loadSuggestions);
+
 
           var usageLoaded=false,usageLoading=false,usageStatus=el.querySelector('.usage-status'),usageResults=el.querySelector('.usage-results'),periodSelect=el.querySelector('#usage-period'),refreshButton=el.querySelector('.usage-refresh'),cleanupButton=el.querySelector('.usage-cleanup'),updated=el.querySelector('.usage-updated');
           var usageLabels={diary_opened:'Diary opened',diary_entry_created:'Diary entry created',post_mail_opened:'Post Mail opened',letter_sent:'Letter sent',sudoku_started:'Sudoku started',sudoku_completed:'Sudoku completed',profile_editor_opened:'Profile editor opened',paint_opened:'Paint opened',arinet_opened:'AriNet opened',help_opened:'Help opened',koba_interacted:'Koba interaction'};
@@ -10590,7 +10831,7 @@ try {
             if(usageLoading)return;usageLoading=true;usageStatus.className='usage-status';usageStatus.textContent='Loading privacy-limited statistics…';refreshButton.disabled=true;cleanupButton.disabled=true;
             supabaseRpc('get_dtd_usage_dashboard',{period_key:periodSelect.value}).then(function(data){usageLoaded=true;usageStatus.textContent='';renderUsage(data);}).catch(function(err){usageStatus.className='usage-status usage-error';usageStatus.textContent=err.message||'Usage Statistics are unavailable. Run the analytics SQL setup first.';usageResults.innerHTML='';updated.textContent='';}).then(function(){usageLoading=false;refreshButton.disabled=false;cleanupButton.disabled=false;});
           }
-          el.querySelectorAll('[data-admin-tab]').forEach(function(tab){tab.addEventListener('click',function(){var name=tab.dataset.adminTab;el.querySelectorAll('[data-admin-tab]').forEach(function(button){var active=button===tab;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});el.querySelectorAll('[data-admin-panel]').forEach(function(panel){panel.classList.toggle('active',panel.dataset.adminPanel===name);});if(name==='usage'&&!usageLoaded)loadUsage();});});
+          el.querySelectorAll('[data-admin-tab]').forEach(function(tab){tab.addEventListener('click',function(){var name=tab.dataset.adminTab;el.querySelectorAll('[data-admin-tab]').forEach(function(button){var active=button===tab;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});el.querySelectorAll('[data-admin-panel]').forEach(function(panel){panel.classList.toggle('active',panel.dataset.adminPanel===name);});if(name==='suggestions'&&!suggestionsLoaded)loadSuggestions();if(name==='usage'&&!usageLoaded)loadUsage();});});
           periodSelect.addEventListener('change',loadUsage);refreshButton.addEventListener('click',loadUsage);
           cleanupButton.addEventListener('click',function(){
             appConfirm('Delete usage events older than 90 days now?',function(ok){if(!ok)return;cleanupButton.disabled=true;usageStatus.className='usage-status';usageStatus.textContent='Cleaning up expired events…';supabaseRpc('cleanup_dtd_usage_events',{}).then(function(count){usageStatus.style.color='#237b31';usageStatus.textContent='Cleanup complete. '+usageNumber(count)+' expired event'+(Number(count)===1?'':'s')+' removed.';usageLoaded=false;loadUsage();}).catch(function(err){usageStatus.className='usage-status usage-error';usageStatus.textContent=err.message;cleanupButton.disabled=false;});});
@@ -10602,6 +10843,7 @@ try {
 
   // ================= CLOUD SYNC WINDOW =================
   function openCloudSyncWindow(){
+    if(!requireOnlineAccount('Cloud Sync')) return;
     // Show loading state while waiting for Firebase auth to resolve
     createWindow({
       title: 'Sync',
@@ -11168,7 +11410,7 @@ try {
           '<div class="notebook-page-surface" style="--notebook-page-photo:url(\'' + pagePhotoSafe + '\')">' +
             '<a class="notebook-save-btn" id="nb-save-btn" href="https://ari-harakiri.github.io/desktop-diary/MyNotepad.html" target="_blank" rel="noopener" aria-label="Open the full version of My Notepad in a new tab"></a>' +
             '<div class="notebook-page-edit-area">' +
-              '<input class="notebook-page-title" id="nb-page-title" type="text" placeholder="Title" maxlength="120">' +
+              '<input class="notebook-page-title" id="nb-page-title" type="text" maxlength="120">' +
             '<textarea class="notebook-page-input" id="nb-page-input" placeholder=""></textarea>' +
             '</div>' +
             '<div class="notebook-page-footer">' +
