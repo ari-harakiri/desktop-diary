@@ -868,6 +868,7 @@ var runtime={
   }
   .desktop-icon:active span { background:rgba(49,106,197,.6); }
   body:not(.signed-in) #dtd-mailbox-icon { display:none; }
+  body:not(.signed-in) #windows-layer { display:none; }
   /* The mailbox follows the same stacking rules as every other desktop icon. */
   #dtd-mailbox-icon { top:400px; left:100px; }
   #dtd-mailbox-icon.mail-window-open { z-index:auto !important; }
@@ -4997,24 +4998,40 @@ try {
     if(store){
       try{
         return store.get(STORAGE_KEY, false).then(function(res){
+          activeStorageKey=STORAGE_KEY;
           if(res && res.value){
             try { state = JSON.parse(res.value); normalizeState(); } catch(e){}
           }
-          // Online diaries are stored per account. The generic state may not
-          // contain that account, so use the authenticated session (or the
-          // last known account after Sign Out) to find the correct diary.
-          var rememberedEmail=getRememberedAccountEmail()||((state.account&&state.account.email)||'');
-          if(rememberedEmail){
-            rememberedEmail=String(rememberedEmail).trim().toLowerCase();
-            activeStorageKey=accountStorageKey(rememberedEmail);
+          // Never reveal an email account's diary merely because this browser
+          // remembers its address. Only a live Supabase session may select an
+          // account-scoped diary. The remembered email remains available to
+          // prefill Sign On without loading private diary content.
+          var authenticatedSession=getSupabaseSession();
+          if(!authenticatedSession||!authenticatedSession.access_token){
+            // Older builds sometimes left an email diary in the generic slot.
+            // Preserve a scoped copy before hiding it from the signed-out UI.
+            if(state.account&&state.account.email&&res&&res.value){
+              var legacyEmail=String(state.account.email).trim().toLowerCase();
+              var legacyKey=accountStorageKey(legacyEmail);
+              state=makeFreshState();normalizeState();
+              return store.get(legacyKey,false).then(function(existing){
+                if(!existing||!existing.value)return store.set(legacyKey,res.value,false);
+              });
+            }
+            return;
+          }
+          var authenticatedEmail=(authenticatedSession.user&&authenticatedSession.user.email)||getRememberedAccountEmail();
+          if(authenticatedEmail){
+            authenticatedEmail=String(authenticatedEmail).trim().toLowerCase();
+            activeStorageKey=accountStorageKey(authenticatedEmail);
             return store.get(activeStorageKey,false).then(function(scoped){
               if(scoped&&scoped.value){
                 try{state=JSON.parse(scoped.value);normalizeState();}catch(e){}
-              }else if(state.account&&String(state.account.email||'').trim().toLowerCase()===rememberedEmail){
+              }else if(state.account&&String(state.account.email||'').trim().toLowerCase()===authenticatedEmail){
                 return store.set(activeStorageKey,JSON.stringify(state),false);
               }else{
                 state=makeFreshState();
-                state.account={email:rememberedEmail,screenName:rememberedEmail.split('@')[0]};
+                state.account={email:authenticatedEmail,screenName:authenticatedEmail.split('@')[0]};
                 normalizeState();
               }
             });
@@ -5064,14 +5081,51 @@ try {
     rememberAccountEmail(normalizedEmail);
     if(window.resetKobaNotificationsForAccountSwitch)window.resetKobaNotificationsForAccountSwitch();
     dtdMailProfilePreviewCache={};
-    // DtD Post Mail is a singleton window — if one from the outgoing account
-    // is still open, reopening mail after switching accounts would just
-    // re-focus that same stale window (and its closed-over inbox/session)
-    // instead of rebuilding it for the new account. Always close it here so
-    // it's rebuilt fresh and scoped to whichever account is signing in now.
-    openWindows.slice().forEach(function(w){ if(w.type==='dtdmail') closeWindow(w.id); });
-    function finish(next){state=next||makeFreshState();normalizeState();state.account=state.account||{};state.account.email=normalizedEmail;state.account.password=password;state.account.screenName=state.account.screenName||((auth.user&&auth.user.user_metadata&&auth.user.user_metadata.screen_name)||normalizedEmail.split('@')[0]);activeStorageKey=newKey;applyBackground();applyTheme();return saveState();}
-    return saveState().then(function(){if(forceFresh||!store)return finish(makeFreshState());return store.get(newKey,false).then(function(saved){if(saved&&saved.value){try{return finish(JSON.parse(saved.value));}catch(e){}}if(state.account&&state.account.email===normalizedEmail)return finish(state);return finish(makeFreshState());});});
+    // Close diary/content windows from the outgoing Guest or account before
+    // the authenticated desktop becomes visible. Keep the fixed Buddy List
+    // shell and any account-creation dialog that is completing this switch.
+    openWindows.slice().forEach(function(w){
+      if(w.type==='buddylist'||w.type==='createaccount'||w.type==='onlinepasswordreset')return;
+      closeWindow(w.id);
+    });
+    function finish(next){
+      state=next||makeFreshState();normalizeState();state.account=state.account||{};
+      var authenticatedName=String(auth.user&&auth.user.user_metadata&&auth.user.user_metadata.screen_name||'').trim();
+      if(!authenticatedName||authenticatedName.toLowerCase()==='guest')authenticatedName=normalizedEmail.split('@')[0];
+      if(!state.account.screenName||String(state.account.screenName).trim().toLowerCase()==='guest')state.account.screenName=authenticatedName;
+      state.account.email=normalizedEmail;state.account.password=password;activeStorageKey=newKey;applyBackground();applyTheme();return saveState();
+    }
+    function finishFromGenericOrFresh(){
+      return store.get(STORAGE_KEY,false).then(function(generic){
+        if(generic&&generic.value){
+          try{
+            var candidate=JSON.parse(generic.value),candidateEmail=String(candidate&&candidate.account&&candidate.account.email||'').trim().toLowerCase();
+            if(candidateEmail===normalizedEmail)return finish(candidate);
+          }catch(e){}
+        }
+        return finish(makeFreshState());
+      });
+    }
+    return saveState().then(function(){
+      if(forceFresh||!store)return finish(makeFreshState());
+      return store.get(newKey,false).then(function(saved){
+        if(saved&&saved.value){
+          try{
+            var candidate=JSON.parse(saved.value),candidateAccount=candidate&&candidate.account||{};
+            var candidateEmail=String(candidateAccount.email||'').trim().toLowerCase();
+            var guestOverwrite=!candidateEmail&&String(candidateAccount.screenName||'').trim().toLowerCase()==='guest';
+            var wrongAccount=!!candidateEmail&&candidateEmail!==normalizedEmail;
+            if(!guestOverwrite&&!wrongAccount)return finish(candidate);
+            var recoveryKey=newKey+'-pre-account-isolation-recovery';
+            return store.get(recoveryKey,false).then(function(recovery){
+              if(!recovery||!recovery.value)return store.set(recoveryKey,saved.value,false);
+            }).then(finishFromGenericOrFresh);
+          }catch(e){}
+        }
+        if(state.account&&String(state.account.email||'').trim().toLowerCase()===normalizedEmail)return finish(state);
+        return finishFromGenericOrFresh();
+      });
+    });
   }
 
   // ---------------- cloud sync (Firebase: Google sign-in + Firestore) ----------------
@@ -5865,6 +5919,7 @@ try {
     document.getElementById('signon-wrap').style.display = 'none';
     document.getElementById('signon-icon').style.display = 'flex';
     setSupabaseSession(null);
+    activeStorageKey = STORAGE_KEY;
     // Keep an existing guest diary when this device returns to guest mode.
     // Starting a guest session from an email account still begins separately.
     if(!state || !state.account || state.account.email) state = makeFreshState();
@@ -8069,6 +8124,41 @@ try {
       if(wasRoaming)scheduleKobaRoam();
     }
     window.stopKobaRoaming=stopKobaRoaming;
+    function kobaRestPointClearOfIcons(point){
+      var desktop=document.getElementById('desktop'),taskbar=document.getElementById('taskbar');
+      if(!desktop||!desktopCompanion)return point;
+      var width=desktopCompanion.offsetWidth||92,height=desktopCompanion.offsetHeight||92;
+      var maxX=Math.max(0,desktop.clientWidth-width);
+      var maxY=Math.max(0,desktop.clientHeight-(taskbar?taskbar.offsetHeight:TASKBAR_H)-height);
+      var desktopRect=desktop.getBoundingClientRect();
+      var base={
+        x:Math.max(0,Math.min(Number(point.x)||0,maxX)),
+        y:Math.max(0,Math.min(Number(point.y)||0,maxY)),
+        overBuddyList:!!point.overBuddyList,
+        userPlaced:point.userPlaced===true
+      };
+      if(!kobaDestinationTouchesIcon(base.x,base.y,desktopRect))return base;
+      var stepX=width+24,stepY=height+24;
+      for(var ring=1;ring<=6;ring++){
+        var candidates=[
+          {x:base.x-stepX*ring,y:base.y},
+          {x:base.x+stepX*ring,y:base.y},
+          {x:base.x,y:base.y-stepY*ring},
+          {x:base.x-stepX*ring,y:base.y-stepY*ring},
+          {x:base.x+stepX*ring,y:base.y-stepY*ring}
+        ];
+        for(var index=0;index<candidates.length;index++){
+          var candidate=candidates[index];
+          if(candidate.x<0||candidate.x>maxX||candidate.y<0||candidate.y>maxY)continue;
+          if(!kobaDestinationTouchesIcon(candidate.x,candidate.y,desktopRect)){
+            candidate.overBuddyList=false;
+            candidate.userPlaced=base.userPlaced;
+            return candidate;
+          }
+        }
+      }
+      return base;
+    }
     function defaultKobaKennelPoint(){
       var desktop=document.getElementById('desktop'),taskbar=document.getElementById('taskbar');
       var width=desktopCompanion.offsetWidth||92,height=desktopCompanion.offsetHeight||92;
@@ -8076,7 +8166,7 @@ try {
       var desktopHeight=(desktop&&desktop.clientHeight)||window.innerHeight;
       var taskbarHeight=(taskbar&&taskbar.offsetHeight)||TASKBAR_H;
       // Leave a clear grab area around the taskbar ball below Koba.
-      return{x:Math.max(0,desktopWidth-width-8),y:Math.max(0,desktopHeight-taskbarHeight-height-36),overBuddyList:false,userPlaced:false};
+      return kobaRestPointClearOfIcons({x:Math.max(0,desktopWidth-width-8),y:Math.max(0,desktopHeight-taskbarHeight-height-36),overBuddyList:false,userPlaced:false});
     }
     function kobaKennelPoint(){
       var companionState=state.companion&&typeof state.companion==='object'?state.companion:null;
@@ -8085,7 +8175,7 @@ try {
       var desktop=document.getElementById('desktop'),taskbar=document.getElementById('taskbar');
       var maxX=Math.max(0,desktop.clientWidth-desktopCompanion.offsetWidth);
       var maxY=Math.max(0,desktop.clientHeight-(taskbar?taskbar.offsetHeight:32)-desktopCompanion.offsetHeight);
-      return{x:Math.max(0,Math.min(Number(saved.x),maxX)),y:Math.max(0,Math.min(Number(saved.y),maxY)),overBuddyList:!!saved.overBuddyList,userPlaced:saved.userPlaced===true};
+      return kobaRestPointClearOfIcons({x:Math.max(0,Math.min(Number(saved.x),maxX)),y:Math.max(0,Math.min(Number(saved.y),maxY)),overBuddyList:!!saved.overBuddyList,userPlaced:saved.userPlaced===true});
     }
     function rememberKobaKennel(point){
       if(!point)return false;
