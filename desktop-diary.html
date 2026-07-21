@@ -851,7 +851,7 @@ var runtime={
   .desktop-icon:active span { background:rgba(49,106,197,.6); }
   body:not(.signed-in) #dtd-mailbox-icon { display:none; }
   /* The mailbox follows the same stacking rules as every other desktop icon. */
-  #dtd-mailbox-icon { top:72px; left:100px; }
+  #dtd-mailbox-icon { top:400px; left:100px; }
   #dtd-mailbox-icon.mail-window-open { z-index:auto !important; }
   #dtd-mailbox-icon.mail-window-open .dtd-pigeon { z-index:100000 !important; }
   #dtd-mailbox-icon .dtd-mailbox-art { display:block; width:62px; height:62px; object-fit:contain; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
@@ -942,7 +942,7 @@ var runtime={
   @media (prefers-reduced-motion:reduce){#desktop-companion .companion-dog-sprite,#desktop-companion.happy .companion-dog-sprite,#desktop-companion.barking .companion-dog-sprite,#desktop-companion.waking .companion-dog-sprite,#desktop-companion.digging .companion-dog-sprite,#desktop-companion.burying .companion-dog-sprite,#desktop-companion.sleeping .companion-dog-sprite,#desktop-companion.searching.spin-burst .companion-dog-sprite,#desktop-companion.searching.confused-burst .companion-dog-sprite,#desktop-companion.roaming .companion-dog-sprite{animation:none}#desktop-companion.roaming{transition:none}}
   body:not(.signed-in) #trash-desktop-icon { display:none; }
   body:not(.signed-in) #arinet-desktop-icon { display:none; }
-  #trash-desktop-icon { top:136px; left:16px; right:auto; bottom:auto; }
+  #trash-desktop-icon { top:480px; left:16px; right:auto; bottom:auto; }
   #signon-icon { top:16px; right:16px; left:auto; bottom:auto; }
   .trash-icon-art { position:relative; width:52px; height:52px; }
   .trash-icon-art img { position:absolute; width:auto; height:52px; left:50%; top:50%; max-width:none; transform:translate(-50%,-50%); image-rendering:pixelated; filter:drop-shadow(0 0 1px #18ef28) drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
@@ -3394,7 +3394,7 @@ function forceLoaderInteractionRecovery(){
         <div class="signon-link-stack">
           <div class="forgot-row" id="forgot-row"><span class="forgot-link" id="forgot-link">Forgot Password?</span></div>
           <div class="forgot-row" id="local-entry-row"><span class="forgot-link" id="signon-local">Continue without email</span></div>
-          <div class="forgot-row" id="account-switch-row"><span class="forgot-link" id="account-switch">Already have an account? Sign On</span></div>
+          <div class="forgot-row" id="account-switch-row"><span class="forgot-link" id="account-switch">Create a new account</span></div>
         </div>
       </div>
 
@@ -4261,7 +4261,7 @@ try {
       var desktopHeight = (desktop && desktop.clientHeight) || window.innerHeight;
       return {
         x: Math.max(0, Math.min(100, Math.max(0, desktopWidth - 100))),
-        y: Math.max(0, Math.min(72, desktopHeight - 80))
+        y: Math.max(0, Math.min(400, desktopHeight - 80))
       };
     }
     function sanitizeSavedIconPoint(icon,saved){
@@ -5739,7 +5739,7 @@ try {
     if(state.account && state.account.email){
       // Returning device with a known online email: default to Sign On,
       // pre-filled but editable so a different user can sign in on this device.
-      document.getElementById('account-switch').textContent='Create a New Account';
+      document.getElementById('account-switch').textContent='Create a new account';
       emailInput.value = state.account.email;
       document.getElementById('in-savepw').checked = !!state.savePassword;
       document.getElementById('in-autologin').checked = !!state.autoLogin;
@@ -5762,7 +5762,7 @@ try {
       // attached yet. Sign On is always the default view either way; local
       // diary owners get a link to connect their existing diary instead of
       // being dropped straight into a signup-shaped form.
-      document.getElementById('account-switch').textContent = state.account ? 'Connect this local account instead' : 'Don\'t have an account? Create One';
+      document.getElementById('account-switch').textContent = 'Create a new account';
       emailInput.value = '';
       pwInput.value = ''; pwInput.type = 'password'; pwInput.classList.remove('pw-saved'); pwInput.readOnly = false;
       pwFieldIsSavedPlaceholder = false;
