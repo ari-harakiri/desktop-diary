@@ -273,7 +273,7 @@
   }
   .placed-sticker {
     position: absolute;
-    width: 15%;
+    width: 11.25%;
     touch-action: none;
     pointer-events: auto;
     cursor: grab;
@@ -294,6 +294,32 @@
     border: 1px solid #fff;
   }
   .placed-sticker.selected .sticker-remove { display: block; }
+  .placed-sticker .sticker-resize {
+    position: absolute;
+    right: -7px;
+    bottom: -7px;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    display: none;
+    border: 1px solid #fff;
+    border-radius: 50%;
+    background: #1768c5;
+    box-shadow: 0 1px 3px rgba(0,0,0,.35);
+    cursor: nwse-resize;
+    touch-action: none;
+  }
+  .placed-sticker .sticker-resize::after {
+    content: '';
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 5px;
+    height: 5px;
+    border-right: 2px solid #fff;
+    border-bottom: 2px solid #fff;
+  }
+  .placed-sticker.selected .sticker-resize { display: block; }
   #sticker-picker {
     display: none;
     position: absolute;
@@ -326,9 +352,29 @@
     overscroll-behavior-inline: contain;
     -webkit-overflow-scrolling: touch;
     gap: 7px;
-    padding: 3px 1px;
+    padding: 3px 32px;
+    scroll-behavior: smooth;
   }
   #sticker-grid::-webkit-scrollbar { display: none; }
+  .sticker-scroll-btn {
+    position: absolute;
+    top: 43px;
+    z-index: 2;
+    width: 25px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.8);
+    border-radius: 6px;
+    background: rgba(15,25,45,.9);
+    color: #fff;
+    font: bold 24px/30px Arial, sans-serif;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  }
+  .sticker-scroll-btn:hover:not(:disabled) { background: #1768c5; }
+  .sticker-scroll-btn:disabled { opacity: .25; cursor: default; }
+  #sticker-prev-btn { left: 8px; }
+  #sticker-next-btn { right: 8px; }
   .sticker-grid-item {
     background: rgba(255,255,255,.9);
     border-radius: 7px;
@@ -346,7 +392,7 @@
   }
   .loose-sticker {
     position: fixed;
-    width: 64px;
+    width: 48px;
     touch-action: none;
     pointer-events: auto;
     cursor: grab;
@@ -597,6 +643,8 @@
     </div>
     <div id="sticker-picker" aria-label="Sticker picker">
       <button id="close-stickers-btn" type="button" title="Close stickers">✕</button>
+      <button id="sticker-prev-btn" class="sticker-scroll-btn" type="button" title="Previous stickers" aria-label="Previous stickers">‹</button>
+      <button id="sticker-next-btn" class="sticker-scroll-btn" type="button" title="Next stickers" aria-label="Next stickers">›</button>
       <div id="sticker-grid"></div>
     </div>
   </div>
@@ -623,7 +671,10 @@
     return [{ id: 'page-1', title: '', text: '', createdAt: Date.now(), stickers: [] }];
   }
 
-  var STICKER_COUNT = 83;
+  var STICKER_COUNT = 142;
+  var DEFAULT_STICKER_SIZE = 11.25;
+  var DEFAULT_LOOSE_STICKER_WIDTH = 48;
+  var LATEST_SHEET_STICKER_WIDTH = 56;
   var STICKER_FILES = [];
   var HIDDEN_STICKER_FILES = {
     's01.png': true, // Plant
@@ -687,6 +738,8 @@
   var signinBtn = document.getElementById('signin-btn');
   var openStickersBtn = document.getElementById('open-stickers-btn');
   var closeStickersBtn = document.getElementById('close-stickers-btn');
+  var stickerPrevBtn = document.getElementById('sticker-prev-btn');
+  var stickerNextBtn = document.getElementById('sticker-next-btn');
   var stickerPicker = document.getElementById('sticker-picker');
   var stickerGrid = document.getElementById('sticker-grid');
   var stickerLayer = document.getElementById('sticker-layer');
@@ -785,7 +838,7 @@
       // Keep older saved stickers within the same usable size and position range
       // as newly placed stickers.
       var savedSize = Number(st.size);
-      st.size = Number.isFinite(savedSize) ? Math.max(6, Math.min(35, savedSize)) : 15;
+      st.size = Number.isFinite(savedSize) ? Math.max(6, Math.min(35, savedSize)) : DEFAULT_STICKER_SIZE;
       var savedX = Number(st.x);
       var savedY = Number(st.y);
       st.x = Number.isFinite(savedX) ? Math.max(0, Math.min(90, savedX)) : 43;
@@ -827,33 +880,78 @@
       });
       wrap.appendChild(removeBtn);
 
+      var resizeBtn = document.createElement('button');
+      resizeBtn.className = 'sticker-resize';
+      resizeBtn.type = 'button';
+      resizeBtn.setAttribute('aria-label', 'Resize sticker');
+      resizeBtn.title = 'Drag to resize sticker';
+      wrap.appendChild(resizeBtn);
+
       wireStickerDrag(wrap, st);
+      wireStickerResize(wrap, resizeBtn, st);
       stickerLayer.appendChild(wrap);
     });
   }
 
-  function wireStickerDrag(wrap, st){
-    var dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+  function wireStickerResize(wrap, handle, st){
+    var resizing = false, activePointerId = null, startX = 0, startSize = 0, resizeSaveTimer = null;
 
-    wrap.addEventListener('pointerdown', function(e){
+    function queueResizeSave(){
+      if(resizeSaveTimer) clearTimeout(resizeSaveTimer);
+      resizeSaveTimer = setTimeout(function(){
+        resizeSaveTimer = null;
+        persistLocal();
+        pushToCloudIfSignedIn();
+      }, 180);
+    }
+
+    function moveResize(e){
+      if(!resizing || e.pointerId !== activePointerId) return;
       e.preventDefault();
+      e.stopPropagation();
+      var rect = notebookEl.getBoundingClientRect();
+      var deltaSize = ((e.clientX - startX) / rect.width) * 100;
+      st.size = Math.max(6, Math.min(35, startSize + deltaSize));
+      wrap.style.width = st.size + '%';
+      queueResizeSave();
+    }
+
+    function finishResize(e){
+      if(!resizing || (e && e.pointerId !== activePointerId)) return;
+      resizing = false;
+      activePointerId = null;
+      window.removeEventListener('pointermove', moveResize);
+      window.removeEventListener('pointerup', finishResize);
+      window.removeEventListener('pointercancel', finishResize);
+      if(e) e.stopPropagation();
+      if(resizeSaveTimer){
+        clearTimeout(resizeSaveTimer);
+        resizeSaveTimer = null;
+      }
+      persistLocal();
+      pushToCloudIfSignedIn();
+    }
+
+    handle.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      e.stopPropagation();
       st.zIndex = getNextStickerLayer(getCurrentPage());
       wrap.style.zIndex = st.zIndex;
-      Array.prototype.forEach.call(stickerLayer.querySelectorAll('.placed-sticker'), function(el){
-        el.classList.remove('selected');
-      });
-      wrap.classList.add('selected');
-      dragging = true;
-      wrap.classList.add('dragging');
+      resizing = true;
+      activePointerId = e.pointerId;
       startX = e.clientX;
-      startY = e.clientY;
-      startLeft = st.x;
-      startTop = st.y;
-      wrap.setPointerCapture(e.pointerId);
+      startSize = st.size;
+      window.addEventListener('pointermove', moveResize);
+      window.addEventListener('pointerup', finishResize);
+      window.addEventListener('pointercancel', finishResize);
     });
+  }
 
-    wrap.addEventListener('pointermove', function(e){
-      if(!dragging) return;
+  function wireStickerDrag(wrap, st){
+    var dragging = false, activePointerId = null, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+    function moveSticker(e){
+      if(!dragging || e.pointerId !== activePointerId) return;
       var rect = notebookEl.getBoundingClientRect();
       var dxPct = ((e.clientX - startX) / rect.width) * 100;
       var dyPct = ((e.clientY - startY) / rect.height) * 100;
@@ -862,11 +960,15 @@
       wrap.style.left = st.x + '%';
       wrap.style.top = st.y + '%';
       updateTrashDropTarget(e.clientX, e.clientY);
-    });
+    }
 
     function endDrag(e){
-      if(!dragging) return;
+      if(!dragging || (e && e.pointerId !== activePointerId)) return;
       dragging = false;
+      activePointerId = null;
+      window.removeEventListener('pointermove', moveSticker);
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
       wrap.classList.remove('dragging');
       trashBtn.classList.remove('sticker-drop-target');
       if(e && isOverTrash(e.clientX, e.clientY)){
@@ -878,10 +980,12 @@
         return;
       }
       if(e && !isOverNotebook(e.clientX, e.clientY)){
+        var stickerWidth = wrap.offsetWidth;
+        var stickerHeight = wrap.offsetHeight;
         var currentPage = getCurrentPage();
         currentPage.stickers = currentPage.stickers.filter(function(s){ return s.id !== st.id; });
         renderStickers();
-        addLooseSticker(st.src, e.clientX - (wrap.offsetWidth / 2), e.clientY - (wrap.offsetHeight / 2), wrap.offsetWidth, st.flipX);
+        addLooseSticker(st.src, e.clientX - (stickerWidth / 2), e.clientY - (stickerHeight / 2), stickerWidth, st.flipX);
         persistLocal();
         pushToCloudIfSignedIn();
         return;
@@ -889,8 +993,26 @@
       persistLocal();
       pushToCloudIfSignedIn();
     }
-    wrap.addEventListener('pointerup', endDrag);
-    wrap.addEventListener('pointercancel', endDrag);
+
+    wrap.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      st.zIndex = getNextStickerLayer(getCurrentPage());
+      wrap.style.zIndex = st.zIndex;
+      Array.prototype.forEach.call(stickerLayer.querySelectorAll('.placed-sticker'), function(el){
+        el.classList.remove('selected');
+      });
+      wrap.classList.add('selected');
+      dragging = true;
+      activePointerId = e.pointerId;
+      wrap.classList.add('dragging');
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = st.x;
+      startTop = st.y;
+      window.addEventListener('pointermove', moveSticker);
+      window.addEventListener('pointerup', endDrag);
+      window.addEventListener('pointercancel', endDrag);
+    });
   }
 
   // A sticker's delete control is only shown while that sticker is selected.
@@ -926,10 +1048,16 @@
   }
 
   function addLooseSticker(src, left, top, width, flipX){
+    var stickerFileMatch = String(src || '').split('?')[0].match(/\/s(\d+)\.png$/i);
+    var stickerNumber = stickerFileMatch ? Number(stickerFileMatch[1]) : 0;
+    var startingWidth = stickerNumber >= 108 && stickerNumber <= 142
+      ? LATEST_SHEET_STICKER_WIDTH
+      : DEFAULT_LOOSE_STICKER_WIDTH;
     var wrap = document.createElement('div');
     wrap.className = 'loose-sticker';
-    wrap.style.left = (Number.isFinite(left) ? left : ((window.innerWidth - 64) / 2)) + 'px';
-    wrap.style.top = (Number.isFinite(top) ? top : ((window.innerHeight - 64) / 2)) + 'px';
+    wrap.style.left = (Number.isFinite(left) ? left : ((window.innerWidth - startingWidth) / 2)) + 'px';
+    wrap.style.top = (Number.isFinite(top) ? top : ((window.innerHeight - startingWidth) / 2)) + 'px';
+    wrap.style.width = startingWidth + 'px';
     if(width) wrap.style.width = width + 'px';
 
     var img = document.createElement('img');
@@ -941,7 +1069,7 @@
     wrap.appendChild(img);
     desktopStickerLayer.appendChild(wrap);
 
-    var dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    var dragging = false, activePointerId = null, startX = 0, startY = 0, startLeft = 0, startTop = 0;
     var isFlipped = !!flipX;
     wrap.addEventListener('dblclick', function(e){
       e.preventDefault();
@@ -949,26 +1077,20 @@
       isFlipped = !isFlipped;
       img.style.transform = isFlipped ? 'scaleX(-1)' : '';
     });
-    wrap.addEventListener('pointerdown', function(e){
-      e.preventDefault();
-      desktopStickerLayer.appendChild(wrap);
-      dragging = true;
-      wrap.classList.add('dragging');
-      startX = e.clientX;
-      startY = e.clientY;
-      startLeft = parseFloat(wrap.style.left) || 0;
-      startTop = parseFloat(wrap.style.top) || 0;
-      wrap.setPointerCapture(e.pointerId);
-    });
-    wrap.addEventListener('pointermove', function(e){
-      if(!dragging) return;
+    function moveLooseSticker(e){
+      if(!dragging || e.pointerId !== activePointerId) return;
       wrap.style.left = (startLeft + e.clientX - startX) + 'px';
       wrap.style.top = (startTop + e.clientY - startY) + 'px';
       updateTrashDropTarget(e.clientX, e.clientY);
-    });
+    }
+
     function finishLooseDrag(e){
-      if(!dragging) return;
+      if(!dragging || (e && e.pointerId !== activePointerId)) return;
       dragging = false;
+      activePointerId = null;
+      window.removeEventListener('pointermove', moveLooseSticker);
+      window.removeEventListener('pointerup', finishLooseDrag);
+      window.removeEventListener('pointercancel', finishLooseDrag);
       wrap.classList.remove('dragging');
       trashBtn.classList.remove('sticker-drop-target');
       if(e && isOverTrash(e.clientX, e.clientY)){
@@ -994,8 +1116,21 @@
         pushToCloudIfSignedIn();
       }
     }
-    wrap.addEventListener('pointerup', finishLooseDrag);
-    wrap.addEventListener('pointercancel', finishLooseDrag);
+
+    wrap.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      desktopStickerLayer.appendChild(wrap);
+      dragging = true;
+      activePointerId = e.pointerId;
+      wrap.classList.add('dragging');
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = parseFloat(wrap.style.left) || 0;
+      startTop = parseFloat(wrap.style.top) || 0;
+      window.addEventListener('pointermove', moveLooseSticker);
+      window.addEventListener('pointerup', finishLooseDrag);
+      window.addEventListener('pointercancel', finishLooseDrag);
+    });
   }
 
   function addStickerToPage(src){
@@ -1268,11 +1403,25 @@
   openStickersBtn.addEventListener('click', function(){
     stickerPicker.classList.toggle('open');
     openStickersBtn.classList.toggle('active', stickerPicker.classList.contains('open'));
+    if(stickerPicker.classList.contains('open')) requestAnimationFrame(updateStickerScrollButtons);
   });
   closeStickersBtn.addEventListener('click', function(){
     stickerPicker.classList.remove('open');
     openStickersBtn.classList.remove('active');
   });
+  function updateStickerScrollButtons(){
+    var maxScroll = Math.max(0, stickerGrid.scrollWidth - stickerGrid.clientWidth);
+    stickerPrevBtn.disabled = stickerGrid.scrollLeft <= 2;
+    stickerNextBtn.disabled = stickerGrid.scrollLeft >= maxScroll - 2;
+  }
+  function scrollStickerGrid(direction){
+    var distance = Math.max(236, Math.round(stickerGrid.clientWidth * 0.72));
+    stickerGrid.scrollBy({ left: direction * distance, behavior: 'smooth' });
+  }
+  stickerPrevBtn.addEventListener('click', function(){ scrollStickerGrid(-1); });
+  stickerNextBtn.addEventListener('click', function(){ scrollStickerGrid(1); });
+  stickerGrid.addEventListener('scroll', updateStickerScrollButtons, { passive: true });
+  window.addEventListener('resize', updateStickerScrollButtons);
 
   colorPicker.addEventListener('input', function(){
     restoreTextSelection();
@@ -1558,7 +1707,7 @@
       Promise.all(stickerLoads).then(function(loaded){
         loaded.forEach(function(entry){
           if(!entry) return;
-          var sw = (entry.st.size || 15) / 100 * canvas.width;
+          var sw = (entry.st.size || DEFAULT_STICKER_SIZE) / 100 * canvas.width;
           var sh = sw * (entry.img.naturalHeight / entry.img.naturalWidth);
           var sx = (entry.st.x / 100) * canvas.width;
           var sy = (entry.st.y / 100) * canvas.height;
