@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="preload" href="log%20on.wav" as="audio">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>DesktopDiary</title>
@@ -2650,16 +2651,15 @@ var runtime={
 </head>
 <body>
 
-<div id="dd-loader" style="
+<div id="dd-loader" role="button" tabindex="0" aria-label="Click to continue" style="
   position:fixed;inset:0;z-index:999999;
   background:#000;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-family:'Courier New',monospace;
-  transition:opacity 0.72s ease;
+  transition:opacity 1.1s ease;
 ">
   <div style="text-align:center;display:flex;flex-direction:column;align-items:center;width:100%;">
-    <!-- header-only loading mode for stable positioning while we finalize Koba sizing -->
-    <div id="dd-loader-puppy" style="display:none;height:0;width:0;background-image:none;"></div>
+    <div id="dd-loader-puppy" style="display:block;width:88px;height:200px;margin:0 auto 8px;background-image:var(--companion-puppy-loading);background-repeat:no-repeat;image-rendering:pixelated;animation:none;filter:drop-shadow(0 0 16px hotpink) drop-shadow(0 4px 10px rgba(0,0,0,.5));"></div>
     <div style="
       font-family:'DiaryMinecraft',monospace;font-size:36px;font-weight:normal;letter-spacing:4px;color:#39ff14;
       text-shadow:3px 3px 0 #0d4d0d,0 0 14px #39ff14,0 0 30px #39ff14,0 0 50px rgba(57,255,20,.6);margin-bottom:36px;
@@ -2704,10 +2704,11 @@ var runtime={
   window.__ddStartupLoaderDismissed = false;
   var startupRecoveryPasses = 0;
   var loaderStartupRecoveryMaxPasses = 10;
-  var loaderBlackFadeHoldMs = 920;
+  var loaderFadeDurationMs = 1100;
+  var loaderBlackFadeHoldMs = 3050;
   var loaderDismissDelayMs = loaderBlackFadeHoldMs;
   var loaderDismissForcedByClick = false;
-  var bootSoundDisabled = true;
+  var bootSoundDisabled = false;
   var ddBootLockClass = 'dd-booting';
   var startupLockReleased = false;
 
@@ -2864,8 +2865,8 @@ var runtime={
     var currentTransition = loaderWrap.style.transition || '';
     if(currentTransition.indexOf('opacity') === -1){
       loaderWrap.style.transition = currentTransition
-        ? currentTransition + ', opacity 0.72s ease'
-        : 'opacity 0.72s ease';
+        ? currentTransition + ', opacity ' + (loaderFadeDurationMs / 1000) + 's ease'
+        : 'opacity ' + (loaderFadeDurationMs / 1000) + 's ease';
     }
   }
 
@@ -2980,7 +2981,7 @@ var runtime={
           scheduleLoaderVisualFallback();
           runStartupRecoveryPass();
         }
-      }, fadeDelayMs + 760);
+      }, fadeDelayMs + loaderFadeDurationMs);
     }
 
     loaderDismissDelayMs = loaderBlackFadeHoldMs;
@@ -3035,7 +3036,7 @@ var runtime={
     img.onload = function(){
       var frameWidth = img.naturalWidth / frameCount;
       var frameHeight = img.naturalHeight;
-      var maxDisplayHeight = 440;
+      var maxDisplayHeight = 220;
       var scale = frameHeight > 0 ? Math.min(1, maxDisplayHeight / frameHeight) : 1;
       frameRenderWidth = Math.round(frameWidth * scale);
 
@@ -3100,8 +3101,7 @@ var runtime={
     }
 
     var candidates = [
-      'source-assets/audio/originals/log%20on.wav',
-      'source-assets/audio/originals/Windows%20XP%20login.wav'
+      'log%20on.wav'
     ];
 
     var armRetry = function(){
@@ -3136,8 +3136,8 @@ var runtime={
         return;
       }
       bootSound = new Audio(candidates[index]);
-      bootSound.muted = true;
-      bootSound.volume = 0;
+      bootSound.muted = false;
+      bootSound.volume = 0.85;
       bootSound.preload = 'auto';
       bootSound.autoplay = false;
       bootSound.playsInline = true;
@@ -3147,11 +3147,6 @@ var runtime={
         fadeLoaderToBlack();
         bootSoundPlayed = true;
         bootSoundInFlight = false;
-        setTimeout(function(){
-          if(!bootSound) return;
-          bootSound.muted = false;
-          bootSound.volume = 0.85;
-        }, 80);
       }).catch(function(){
         tryPlay(index + 1);
       });
@@ -3231,7 +3226,7 @@ function forceLoaderInteractionRecovery(){
   }
 
   function requestLoaderDismiss(){
-    loaderDismissDelayMs = 0;
+    loaderDismissDelayMs = loaderBlackFadeHoldMs;
     loaderDismissForcedByClick = true;
     loaderHideReady = true;
     bootCanHideLoader = true;
@@ -3335,16 +3330,22 @@ function forceLoaderInteractionRecovery(){
   if(loaderWrap){
     var onLoaderInteract = function(){
       window.__ddLoaderDismissed = true;
+      playBootSound();
       requestLoaderDismiss();
+    };
+    var onLoaderKeydown = function(event){
+      if(event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      onLoaderInteract();
     };
     loaderWrap.addEventListener('click', onLoaderInteract, true);
     loaderWrap.addEventListener('pointerdown', onLoaderInteract, true);
     loaderWrap.addEventListener('touchstart', onLoaderInteract, true);
+    loaderWrap.addEventListener('keydown', onLoaderKeydown, true);
   }
 
   runLoaderProgress();
   syncLoaderKobaTurn();
-  playBootSound();
 
   // Failsafe: if the app fails to call the normal hide hook, auto-release the
   // boot screen so users are not stuck indefinitely on INITIALIZING.
@@ -4332,18 +4333,23 @@ try {
     }
     function mailboxDefaultPos(){
       var desktop = document.getElementById('desktop');
+      var mailbox = document.getElementById('dtd-mailbox-icon');
       var desktopWidth = (desktop && desktop.clientWidth) || window.innerWidth;
       var desktopHeight = (desktop && desktop.clientHeight) || window.innerHeight;
+      var mailboxHeight = (mailbox && mailbox.offsetHeight) || 80;
+      var defaultY = window.matchMedia('(max-width: 700px)').matches
+        ? desktopHeight - mailboxHeight - 150
+        : 400;
       return {
         x: Math.max(0, Math.min(100, Math.max(0, desktopWidth - 100))),
-        y: Math.max(0, Math.min(400, desktopHeight - 80))
+        y: Math.max(0, Math.min(defaultY, desktopHeight - mailboxHeight))
       };
     }
     function sanitizeSavedIconPoint(icon,saved){
       if(!saved || typeof saved!=='object') return null;
       var x = Number(saved.x), y = Number(saved.y);
       if(!Number.isFinite(x) || !Number.isFinite(y)) return null;
-      if(icon.id==='dtd-mailbox-icon' && !saved.userPlaced && x === 0 && y === 0) return null;
+      if(icon.id==='dtd-mailbox-icon' && saved.userPlaced !== true) return null;
       return {
         x: x,
         y: y,
@@ -4436,7 +4442,7 @@ try {
         if(icon.id==='desktop-companion')window.__ddKobaDragSuppressTaskbarUntil=Date.now()+700;
         var perched=overlapsBuddyList(icon);
         if(icon.id==='desktop-companion')icon.classList.toggle('over-buddy-list',perched);
-        state.desktopIconPositions[icon.id]={x:icon.offsetLeft,y:icon.offsetTop,overBuddyList:perched};
+        state.desktopIconPositions[icon.id]={x:icon.offsetLeft,y:icon.offsetTop,overBuddyList:perched,userPlaced:true};
         if(icon.id==='desktop-companion'&&window.setKobaKennelFromCurrentPosition)window.setKobaKennelFromCurrentPosition();
         saveState();
       }
@@ -5348,6 +5354,39 @@ try {
     }
     return window._actx;
   }
+
+  var SITE_SOUND_PATHS = {
+    buddyOn: 'buddy%20on.mp3',
+    buddyOut: 'buddy-out.mp3',
+    imSent: 'IM%20Sent.mp3',
+    logOff: 'log%20off.wav'
+  };
+  var siteSoundTemplates = {};
+
+  function preloadSiteSounds(){
+    Object.keys(SITE_SOUND_PATHS).forEach(function(name){
+      var audio = new Audio(SITE_SOUND_PATHS[name]);
+      audio.preload = 'auto';
+      audio.playsInline = true;
+      audio.load();
+      siteSoundTemplates[name] = audio;
+    });
+  }
+
+  function playSiteSound(name, volume){
+    try{
+      var template = siteSoundTemplates[name];
+      if(!template || !SITE_SOUND_PATHS[name]) return null;
+      var audio = template.cloneNode(true);
+      audio.volume = typeof volume === 'number' ? volume : 0.85;
+      audio.currentTime = 0;
+      var playAttempt = audio.play();
+      if(playAttempt && typeof playAttempt.catch === 'function') playAttempt.catch(function(){});
+      return audio;
+    }catch(e){ return null; }
+  }
+
+  preloadSiteSounds();
   function playDing(){
     try{
       var ctx = getCtx(); var now = ctx.currentTime;
@@ -6152,14 +6191,8 @@ try {
     var connectingWindow=document.getElementById('connecting-wrap');
     connectingWindow.style.zIndex=++zCounter;
     connectingWindow.style.display='block';
-    setTimeout(function(){
-      if(!window.__ddStartupLoaderDismissed){
-        playDoorCreak();
-      }
-      if(window.__ddStartupLoaderDismissed){
-        window.__ddStartupLoaderDismissed = false;
-      }
-    }, 700);
+    playSiteSound('buddyOn', 0.9);
+    if(window.__ddStartupLoaderDismissed) window.__ddStartupLoaderDismissed = false;
     waitForStartupSequence().then(function(){
       // boot completed and the desktop is entering; no extra gating needed.
       try {
@@ -6479,17 +6512,29 @@ try {
   function logOffAndClose(){
     var isSignedInNow = document.body && document.body.classList ? document.body.classList.contains('signed-in') : false;
     if(!isSignedInNow){
-      closeWindowIfPossible();
+      playSiteSound('logOff', 0.85);
+      setTimeout(closeWindowIfPossible, 4000);
       return;
     }
     signOff({
       suppressSignon: true,
+      playLogOffSound: true,
       onComplete: closeWindowIfPossible
     });
   }
 
+  var signOffInProgress = false;
   function signOff(options){
+    if(signOffInProgress) return;
+    signOffInProgress = true;
     options = options || {};
+    var signOffStartedAt = Date.now();
+    var shouldPlayLogOffSound = options.playLogOffSound === true;
+    var signOffSoundSequenceMs = shouldPlayLogOffSound ? 4470 : 900;
+    playSiteSound('buddyOut', 0.9);
+    if(shouldPlayLogOffSound){
+      setTimeout(function(){ playSiteSound('logOff', 0.85); }, 470);
+    }
     setActiveSession(false);
     dtdUsageSessionTracked=false;
     setSupabaseSession(null);
@@ -6498,7 +6543,6 @@ try {
     stopPenPalNotificationWatch();
     if(window.resetKobaNotificationsForAccountSwitch)window.resetKobaNotificationsForAccountSwitch();
     dtdMailProfilePreviewCache={};
-    playDoorSlam();
     openWindows.slice().forEach(function(w){ if(w.id !== 'buddylist-win') closeWindow(w.id); });
     if(buddyListWinRecord){
       if(buddyListWinRecord.tbEl) buddyListWinRecord.tbEl.remove();
@@ -6526,11 +6570,15 @@ try {
         state.autoLogin    = !!prevAuto;
       }
       activeStorageKey = STORAGE_KEY; // reset to generic key; sign-in will re-scope
-      if(options.suppressSignon){
-        if(typeof options.onComplete === 'function') options.onComplete();
-        return;
-      }
-      setTimeout(function(){ showSignon(); }, 900);
+      var remainingSoundMs = Math.max(0, signOffSoundSequenceMs - (Date.now() - signOffStartedAt));
+      setTimeout(function(){
+        signOffInProgress = false;
+        if(options.suppressSignon){
+          if(typeof options.onComplete === 'function') options.onComplete();
+          return;
+        }
+        showSignon();
+      }, remainingSoundMs);
     }
     // Never let a hung or failed network call strand the user with the buddy
     // list gone and no sign-on screen — always finish within a few seconds.
@@ -7294,10 +7342,13 @@ try {
 
         el.querySelector('#send-'+buddyId).addEventListener('click', handleSendOrSave);
         input.addEventListener('keydown', function(e){
-          if(e.key === 'Enter' && !e.shiftKey && !isMobile()){
-            e.preventDefault();
-            handleSendOrSave();
+          if(e.key !== 'Enter' || e.isComposing) return;
+          e.preventDefault();
+          if(e.shiftKey){
+            document.execCommand('insertLineBreak', false, null);
+            return;
           }
+          handleSendOrSave();
         });
 
         el.querySelector('#prompt-'+buddyId).addEventListener('click', function(){
@@ -9198,7 +9249,7 @@ try {
     renderLog(buddyId);
     renderStats(buddyId);
     renderBuddyList();
-    playDing();
+    playSiteSound('imSent', 0.9);
   }
 
   function insertPromptMessage(buddyId){
@@ -9260,7 +9311,8 @@ try {
         el.querySelector('#nm-voice-btn').addEventListener('click', function(){ startVoiceRecording(composeEl, el.querySelector('#nm-voice-btn')); });
         el.querySelector('.nm-ins-ts').addEventListener('click', function(){ appendPlainText(composeEl, (isRichEmpty(composeEl)?'':' ') + fmtTime(Date.now()) + ' '); });
         el.querySelector('.nm-ins-date').addEventListener('click', function(){ appendPlainText(composeEl, (isRichEmpty(composeEl)?'':' ') + fmtDateShort(Date.now()) + ' '); });
-        el.querySelector('#nm-send').addEventListener('click', function(){
+        var sendButton = el.querySelector('#nm-send');
+        sendButton.addEventListener('click', function(){
           var buddy = null;
           if(toSelect.value === '__new__'){
             var newName = newInput.value.trim();
@@ -9275,10 +9327,19 @@ try {
           state.entries[buddy.id] = state.entries[buddy.id] || [];
           state.entries[buddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry', author: state.account.screenName });
           saveState();
-          playDing();
+          playSiteSound('imSent', 0.9);
           renderBuddyList();
           closeWindow(id);
           openIMWindow(buddy.id);
+        });
+        composeEl.addEventListener('keydown', function(e){
+          if(e.key !== 'Enter' || e.isComposing) return;
+          e.preventDefault();
+          if(e.shiftKey){
+            document.execCommand('insertLineBreak', false, null);
+            return;
+          }
+          sendButton.click();
         });
 
         el.querySelector('.draft-save-link').addEventListener('click', function(){
@@ -12258,7 +12319,7 @@ try {
   function restoreStartupInteractivity(){
     var loader = document.getElementById('dd-loader');
     if(loader){
-      loader.style.pointerEvents = 'none';
+      loader.style.pointerEvents = isLoaderCoveringScreen() ? 'auto' : 'none';
     }
     setStartupControlInteractivity();
   }
