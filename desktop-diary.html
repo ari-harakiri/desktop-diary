@@ -987,6 +987,7 @@ var runtime={
   body:not(.signed-in) #arinet-desktop-icon { display:none; }
   #trash-desktop-icon { top:480px; left:16px; right:auto; bottom:auto; }
   #signon-icon { top:16px; right:16px; left:auto; bottom:auto; }
+  body.signed-in #signon-icon { display:none !important; }
   .trash-icon-art { position:relative; width:52px; height:52px; }
   .trash-icon-art img { position:absolute; width:auto; height:52px; left:50%; top:50%; max-width:none; transform:translate(-50%,-50%); image-rendering:pixelated; filter:drop-shadow(0 0 1px #18ef28) drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
   .trash-icon-art.is-wiggling { animation:trash-desktop-wiggle 420ms ease-in-out 1; transform-origin:50% 85%; }
@@ -6145,10 +6146,8 @@ try {
       errEl.style.color = '#2a7d2a';
       errEl.textContent = 'Entering offline mode…';
     }
-    // Match the Sign On window's close button so it remains available in the
-    // desktop corner if the guest later wants to sign on.
     document.getElementById('signon-wrap').style.display = 'none';
-    document.getElementById('signon-icon').style.display = 'flex';
+    document.getElementById('signon-icon').style.display = 'none';
     setSupabaseSession(null);
     activeStorageKey = STORAGE_KEY;
     // Keep an existing guest diary when this device returns to guest mode.
@@ -6366,6 +6365,7 @@ try {
     setActiveSession(true);
     document.body.classList.remove('koba-minimized');
     document.body.classList.add('signed-in');
+    document.getElementById('signon-icon').style.display = 'none';
     if(window.anchorKobaPlayBallHome)window.anchorKobaPlayBallHome(true);
     if(window.placeKobaInKennel)window.placeKobaInKennel();
     if(typeof window.__ddStartupBlockersClear === 'function'){
