@@ -1094,7 +1094,7 @@ var runtime={
   .bl-empty { padding:12px 8px; font-size:10.5px; color:#777; text-align:center; }
 
   /* ---------- IM window ---------- */
-  .im-win { width: min(320px, 92vw); height: min(520px, 84vh); }
+  .im-win { width: min(380px, 94vw); height: min(340px, 70vh); }
   .im-stats { font-size:10px; color:#666; padding:3px 8px; background:#f5f5f0; border-bottom:1px solid #ddd; text-align:right; }
   .im-toolbar { display:flex; gap:3px; padding:4px 5px; background:#ece9d8; border-bottom:1px solid #ccc; }
   .im-toolbar button { width:24px; height:22px; font-size:11px; border:1px solid #b0aca0; border-radius:3px; background:#fff; cursor:pointer; }
@@ -1112,7 +1112,7 @@ var runtime={
   .lock-toggle input { cursor:pointer; }
   .edit-cancel { color:#0850d0; text-decoration:underline; cursor:pointer; }
   .im-compose-row { border-top:1px solid #ccc; background:#fff; padding:5px; }
-  .rich-toolbar { display:flex; gap:3px; padding:3px 4px; background:#ece9d8; border-bottom:1px solid #ccc; align-items:center; flex-wrap:nowrap; overflow:hidden; }
+  .rich-toolbar { position:relative; display:flex; gap:3px; padding:3px 4px; background:#ece9d8; border-bottom:1px solid #ccc; align-items:center; flex-wrap:nowrap; overflow:visible; }
   .rich-toolbar button[data-cmd] { width:20px; height:19px; min-width:20px; font-size:10px; border:1px solid #b0aca0; border-radius:3px; background:#fff; cursor:pointer; padding:0; flex-shrink:0; }
   .rich-toolbar button[data-cmd].active { background:#316ac5; color:#fff; border-color:#0850d0; }
   .rich-size { height:19px; font-size:9px; border:1px solid #b0aca0; border-radius:3px; background:#fff; max-width:52px; flex-shrink:1; min-width:0; }
@@ -1122,10 +1122,38 @@ var runtime={
   .rich-swatch.hl span { color:#ffd400; }
   .rich-swatch.bg span { color:#8aa; }
   .rich-swatch input[type=color] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .rich-emoji-control { position:relative; display:inline-flex; flex:0 0 auto; }
+  .rich-emoji-toggle {
+    width:20px; height:19px; min-width:20px; padding:1px;
+    border:1px solid #b0aca0; border-radius:3px; background:#fff; cursor:pointer;
+  }
+  .rich-emoji-toggle img { display:block; width:100%; height:100%; object-fit:contain; }
+  .rich-emoji-picker {
+    position:fixed; z-index:99999;
+    display:grid; grid-template-columns:repeat(4, 36px); grid-template-rows:repeat(4, 36px); gap:2px;
+    width:158px; padding:4px;
+    border:1px solid #7f9db9; border-radius:4px; background:#fff;
+    box-shadow:0 3px 10px rgba(0,0,0,.3);
+  }
+  .rich-emoji-picker[hidden] { display:none; }
+  .rich-emoji-option {
+    width:36px; height:36px; padding:1px;
+    border:1px solid transparent; border-radius:3px; background:#fff; cursor:pointer;
+  }
+  .rich-emoji-option:hover, .rich-emoji-option:focus { border-color:#316ac5; background:#e9f1ff; }
+  .rich-emoji-option img { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; }
   .mi { padding:6px 12px; color:#000; white-space:nowrap; cursor:pointer; }
   .mi:hover { background:#316ac5; color:#fff; }
   .im-log img, .status-log-row img, .slr-text img { max-width:100%; border-radius:4px; }
   .rich-compose img { cursor:pointer; }
+  .rich-compose img.inline-emoji,
+  .im-log img.inline-emoji,
+  .blog-post-body img.inline-emoji,
+  .status-log-row img.inline-emoji,
+  .slr-text img.inline-emoji {
+    width:2em; height:2em; max-width:none; margin:0 .04em;
+    border-radius:0; vertical-align:-0.55em; object-fit:contain; cursor:text;
+  }
   .img-resize-menu {
     position:fixed; z-index:99999; display:flex; gap:2px;
     background:#222; border-radius:4px; padding:2px; box-shadow:0 2px 8px rgba(0,0,0,.45);
@@ -6529,8 +6557,16 @@ try {
           if(tag === 'IMG'){
             var src = child.getAttribute('src') || '';
             var chosenWidth = child.style ? child.style.width : '';
+            var isInlineEmoji = /^stickers\/s(?:5[89]|6[0-9]|7[0-3])\.png$/.test(src);
             while(child.attributes && child.attributes.length){ child.removeAttribute(child.attributes[0].name); }
-            if(/^data:image\//.test(src)){
+            if(isInlineEmoji){
+              child.setAttribute('src', src);
+              child.setAttribute('class', 'inline-emoji');
+              child.setAttribute('alt', 'smiley');
+              child.setAttribute('draggable', 'false');
+              child.setAttribute('contenteditable', 'false');
+              child.setAttribute('style', 'width:2em;height:2em;vertical-align:-0.55em;object-fit:contain;');
+            } else if(/^data:image\//.test(src)){
               child.setAttribute('src', src);
               var imgStyle = 'max-width:100%;border-radius:4px;';
               if(/^\d+px$/.test(chosenWidth)) imgStyle += 'width:' + chosenWidth + ';';
@@ -6965,7 +7001,19 @@ try {
   ];
 
   // ---- rich-text compose box: contenteditable with formatting, size, colors, bg, photos, tags ----
-  function richComposeHtml(id, placeholder){
+  function richComposeHtml(id, placeholder, includeInlineEmojis){
+    var emojiControl = '';
+    if(includeInlineEmojis){
+      var emojiButtons = '';
+      for(var emojiNumber = 58; emojiNumber <= 73; emojiNumber++){
+        var emojiSrc = 'stickers/s' + emojiNumber + '.png';
+        emojiButtons += '<button type="button" class="rich-emoji-option" data-emoji-src="'+emojiSrc+'" title="Insert smiley '+(emojiNumber - 57)+'"><img src="'+emojiSrc+'" alt=""></button>';
+      }
+      emojiControl = '<span class="rich-emoji-control">' +
+        '<button type="button" class="rich-emoji-toggle" title="Insert smiley" aria-label="Insert smiley" aria-expanded="false"><img src="stickers/s58.png" alt=""></button>' +
+        '<span class="rich-emoji-picker" role="dialog" aria-label="Smileys" hidden>'+emojiButtons+'</span>' +
+      '</span>';
+    }
     return '<div class="rich-toolbar">' +
         '<button type="button" title="Bold" data-cmd="bold">B</button>' +
         '<button type="button" title="Italic" data-cmd="italic"><i>I</i></button>' +
@@ -6988,6 +7036,7 @@ try {
         '</select>' +
         '<label class="rich-swatch" title="Text color"><span>A</span><input type="color" data-cmd="foreColor" value="#000000"></label>' +
         '<label class="rich-swatch hl" title="Highlight selected text"><span>&#9608;</span><input type="color" data-cmd="hiliteColor" value="#ffff00"></label>' +
+        emojiControl +
       '</div>' +
       '<div class="rich-compose" id="'+id+'" contenteditable="true" data-placeholder="'+escapeHtml(placeholder)+'"></div>';
   }
@@ -7080,7 +7129,7 @@ try {
   }
   function attachImageResize(target){
     target.addEventListener('click', function(e){
-      if(e.target && e.target.tagName === 'IMG'){ showResizeMenu(e.target); }
+      if(e.target && e.target.tagName === 'IMG' && !e.target.classList.contains('inline-emoji')){ showResizeMenu(e.target); }
     });
   }
 
@@ -7241,6 +7290,80 @@ try {
         }
       });
     });
+    var emojiToggle = scopeEl.querySelector('.rich-emoji-toggle');
+    var emojiPicker = scopeEl.querySelector('.rich-emoji-picker');
+    var emojiPickerHome = emojiPicker ? emojiPicker.parentNode : null;
+    function closeEmojiPicker(){
+      if(!emojiPicker) return;
+      emojiPicker.hidden = true;
+      emojiPicker.style.left = '';
+      emojiPicker.style.top = '';
+      if(emojiPickerHome && emojiPicker.parentNode !== emojiPickerHome){
+        emojiPickerHome.appendChild(emojiPicker);
+      }
+      if(emojiToggle) emojiToggle.setAttribute('aria-expanded', 'false');
+    }
+    function openEmojiPicker(){
+      document.querySelectorAll('.rich-emoji-picker').forEach(function(otherPicker){
+        if(otherPicker !== emojiPicker) otherPicker.dispatchEvent(new Event('rich-emoji-close'));
+      });
+      document.body.appendChild(emojiPicker);
+      emojiPicker.hidden = false;
+      var toggleRect = emojiToggle.getBoundingClientRect();
+      var pickerRect = emojiPicker.getBoundingClientRect();
+      var left = Math.max(4, Math.min(window.innerWidth - pickerRect.width - 4, toggleRect.right - pickerRect.width));
+      var top = toggleRect.bottom + 4;
+      if(top + pickerRect.height > window.innerHeight - 4){
+        top = Math.max(4, toggleRect.top - pickerRect.height - 4);
+      }
+      emojiPicker.style.left = Math.round(left) + 'px';
+      emojiPicker.style.top = Math.round(top) + 'px';
+      emojiToggle.setAttribute('aria-expanded', 'true');
+    }
+    if(emojiToggle && emojiPicker){
+      emojiPicker.addEventListener('rich-emoji-close', closeEmojiPicker);
+      emojiToggle.addEventListener('mousedown', function(e){
+        e.preventDefault();
+        saveSelection();
+      });
+      emojiToggle.addEventListener('click', function(e){
+        e.stopPropagation();
+        var willOpen = emojiPicker.hidden;
+        if(willOpen) openEmojiPicker();
+        else closeEmojiPicker();
+      });
+      emojiPicker.addEventListener('click', function(e){ e.stopPropagation(); });
+      emojiPicker.querySelectorAll('.rich-emoji-option').forEach(function(btn){
+        btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+        btn.addEventListener('click', function(){
+          restore();
+          var src = btn.getAttribute('data-emoji-src');
+          var img = document.createElement('img');
+          img.className = 'inline-emoji';
+          img.src = src;
+          img.alt = 'smiley';
+          img.draggable = false;
+          img.contentEditable = 'false';
+          var sel = window.getSelection();
+          if(sel && sel.rangeCount){
+            var range = sel.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(img);
+            range.setStartAfter(img);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            savedRange = range.cloneRange();
+          }
+          closeEmojiPicker();
+          target.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      });
+      document.addEventListener('click', closeEmojiPicker);
+      target.addEventListener('keydown', function(e){
+        if(e.key === 'Escape') closeEmojiPicker();
+      });
+    }
     // live token expansion (fires after a token + space is typed)
     target.addEventListener('keyup', function(e){
       if(e.key === ' ' || e.code === 'Space' || e.key === 'Spacebar'){
@@ -7328,7 +7451,7 @@ try {
       '<div class="im-log" id="log-'+buddyId+'"></div>' +
       '<div class="editing-banner" id="editbanner-'+buddyId+'" style="display:none;">Editing &mdash; <span class="edit-cancel">Cancel</span> &nbsp; <label class="lock-toggle"><input type="checkbox" id="edit-lock-'+buddyId+'"> 🔒 Private</label></div>' +
       '<div class="im-compose-row">' +
-        richComposeHtml(inputId, '') +
+        richComposeHtml(inputId, '', true) +
       '</div>' +
       '<div class="im-action-row">' +
         '<button class="action-btn" title="Send a writing prompt" id="prompt-'+buddyId+'">'+iconSVG('bulb')+'<span>Prompt</span></button>' +
@@ -9374,7 +9497,7 @@ try {
           '<option value="__new__">+ New Buddy</option>' +
         '</select></div>' +
         '<div class="nm-row" id="nm-newbuddy-row" style="display:none;"><label>New:</label><input type="text" id="nm-to-new" placeholder="Name" value="'+(prefillName && !prefillMatch ? escapeHtml(prefillName) : '')+'"></div>' +
-        richComposeHtml('nm-body', '') +
+        richComposeHtml('nm-body', '', true) +
         '<div class="im-action-row" style="justify-content:flex-start;">' +
           '<button class="action-btn" title="Insert photo" id="nm-photo-btn">'+iconSVG('photo')+'<span>Photo</span></button>' +
           '<button class="action-btn" title="Record a voice note" id="nm-voice-btn">'+iconSVG('mic')+'<span>Voice</span></button>' +
@@ -12024,7 +12147,7 @@ try {
     var body =
       '<div class="win-body nm-body">' +
         '<div class="field-row"><label>Title</label><input type="text" id="bp-title" value="'+escapeHtml(existingPost && existingPost.title ? existingPost.title : '')+'"></div>' +
-        richComposeHtml(composeId, '') +
+        richComposeHtml(composeId, '', true) +
         '<div class="nm-send-row" style="margin-top:8px;">' +
           '<button class="btn" id="bp-save">'+(isEdit?'Save Changes':'Save Private Entry')+'</button>' +
         '</div>' +
