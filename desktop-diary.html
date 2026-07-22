@@ -3797,6 +3797,8 @@ try {
     statusPresets: [],                // saved reusable statuses: { id, label, html }
     moodLog: [],                      // mood tracker history: { mood, ts }
     profile: { pic: '', html: '', header: '', aboutMe: '' },  // profile picture + two HTML sections
+    profileUpdatedAt: 0,     // changes only when the profile editor is explicitly saved
+    screenNameUpdatedAt: 0,  // changes only when the member explicitly saves a screen name
     blogPosts: [],          // blog posts: { id, title, html, ts, editedAt }
     background: { color: '', image: '' },  // custom desktop background (device-local, not synced)
     paintRecentColors: [],  // recently used custom colors in Paint (device-local, not synced)
@@ -3846,6 +3848,8 @@ try {
     }
     if(state.profile.header === undefined) state.profile.header = '';
     if(state.profile.aboutMe === undefined) state.profile.aboutMe = '';
+    state.profileUpdatedAt = Number.isFinite(Number(state.profileUpdatedAt)) && Number(state.profileUpdatedAt) > 0 ? Number(state.profileUpdatedAt) : 0;
+    state.screenNameUpdatedAt = Number.isFinite(Number(state.screenNameUpdatedAt)) && Number(state.screenNameUpdatedAt) > 0 ? Number(state.screenNameUpdatedAt) : 0;
     if(!Array.isArray(state.blogPosts)) state.blogPosts = [];
     state.blogPosts.forEach(function(post){if(post.shared===undefined)post.shared=true;});
     if(!state.background) state.background = { color: '', image: '', gradient: '' };
@@ -5223,6 +5227,105 @@ try {
     return count;
   }
 
+  function cloudIdentityEmail(value){
+    return String(value||'').trim().toLowerCase();
+  }
+  function cloudProfileHasContent(profile){
+    profile=profile&&typeof profile==='object'?profile:{};
+    return !!(profile.pic||profile.html||profile.header||profile.aboutMe);
+  }
+  function cloudScreenNameHasContent(name,email,revision){
+    name=String(name||'').trim();
+    if(!name||name.toLowerCase()==='guest')return false;
+    if(Number(revision)>0)return true;
+    email=cloudIdentityEmail(email);
+    return !email||name.toLowerCase()!==email.split('@')[0];
+  }
+  function currentCloudProfileIdentity(){
+    return {
+      accountEmail:cloudIdentityEmail(state.account&&state.account.email),
+      screenName:String(state.account&&state.account.screenName||''),
+      screenNameUpdatedAt:Number(state.screenNameUpdatedAt)||0,
+      profile:state.profile&&typeof state.profile==='object'?state.profile:{pic:'',html:'',header:'',aboutMe:''},
+      profileUpdatedAt:Number(state.profileUpdatedAt)||0
+    };
+  }
+  function cloudProfileIdentityFrom(value){
+    value=value&&typeof value==='object'?value:{};
+    return {
+      accountEmail:cloudIdentityEmail(value.accountEmail),
+      screenName:String(value.screenName||''),
+      screenNameUpdatedAt:Number(value.screenNameUpdatedAt)||0,
+      profile:value.profile&&typeof value.profile==='object'?value.profile:{pic:'',html:'',header:'',aboutMe:''},
+      profileUpdatedAt:Number(value.profileUpdatedAt)||0
+    };
+  }
+  function chooseCloudIdentityValue(localValue,localRevision,localHasContent,cloudValue,cloudRevision,cloudHasContent,preferCloudOnLegacyTie){
+    if(localRevision>cloudRevision)return {value:localValue,revision:localRevision};
+    if(cloudRevision>localRevision)return {value:cloudValue,revision:cloudRevision};
+    if(localRevision>0)return {value:cloudValue,revision:cloudRevision};
+    if(preferCloudOnLegacyTie)return cloudHasContent?{value:cloudValue,revision:0}:{value:localValue,revision:0};
+    return localHasContent?{value:localValue,revision:0}:{value:cloudValue,revision:0};
+  }
+  function mergeCloudProfileIdentity(localIdentity,cloudIdentity,preferCloudOnLegacyTie){
+    var localEmail=cloudIdentityEmail(localIdentity.accountEmail),cloudEmail=cloudIdentityEmail(cloudIdentity.accountEmail);
+    if(localEmail&&cloudEmail&&localEmail!==cloudEmail){
+      var accountError=new Error('This Google cloud backup belongs to a different DesktopDiary account. Sign out of Google Cloud Sync, then sign in with the matching account.');
+      accountError.code='cloud-account-mismatch';
+      throw accountError;
+    }
+    var identityEmail=cloudEmail||localEmail;
+    var localNameRevision=Number(localIdentity.screenNameUpdatedAt)||0,cloudNameRevision=Number(cloudIdentity.screenNameUpdatedAt)||0;
+    var localProfileRevision=Number(localIdentity.profileUpdatedAt)||0,cloudProfileRevision=Number(cloudIdentity.profileUpdatedAt)||0;
+    var nameChoice=chooseCloudIdentityValue(
+      String(localIdentity.screenName||''),localNameRevision,cloudScreenNameHasContent(localIdentity.screenName,identityEmail,localNameRevision),
+      String(cloudIdentity.screenName||''),cloudNameRevision,cloudScreenNameHasContent(cloudIdentity.screenName,identityEmail,cloudNameRevision),
+      preferCloudOnLegacyTie
+    );
+    var profileChoice=chooseCloudIdentityValue(
+      localIdentity.profile&&typeof localIdentity.profile==='object'?localIdentity.profile:{pic:'',html:'',header:'',aboutMe:''},localProfileRevision,cloudProfileHasContent(localIdentity.profile),
+      cloudIdentity.profile&&typeof cloudIdentity.profile==='object'?cloudIdentity.profile:{pic:'',html:'',header:'',aboutMe:''},cloudProfileRevision,cloudProfileHasContent(cloudIdentity.profile),
+      preferCloudOnLegacyTie
+    );
+    return {
+      accountEmail:identityEmail,
+      screenName:nameChoice.value,
+      screenNameUpdatedAt:nameChoice.revision,
+      profile:profileChoice.value,
+      profileUpdatedAt:profileChoice.revision
+    };
+  }
+  function pushCloudMetaTransaction(metaRef,proposedMeta,prepareMeta){
+    var localIdentity=currentCloudProfileIdentity();
+    return db.runTransaction(function(transaction){
+      return transaction.get(metaRef).then(function(existingSnap){
+        var existingMeta=existingSnap.exists?(existingSnap.data()||{}):{};
+        var candidateMeta=Object.assign({},proposedMeta);
+        if(cloudMetaContentCount(existingMeta)>0&&cloudMetaContentCount(candidateMeta)===0){
+          var protectedError=new Error('Cloud backup protected: this device has no diary content, but the cloud backup does. Pull from Cloud before pushing.');
+          protectedError.code='cloud-empty-overwrite-blocked';
+          throw protectedError;
+        }
+        var cloudIdentity=cloudProfileIdentityFrom(existingMeta);
+        var mergedIdentity=mergeCloudProfileIdentity(localIdentity,cloudIdentity,true);
+        candidateMeta.screenName=mergedIdentity.screenName;
+        candidateMeta.screenNameUpdatedAt=mergedIdentity.screenNameUpdatedAt;
+        candidateMeta.profile=mergedIdentity.profile;
+        candidateMeta.profileUpdatedAt=mergedIdentity.profileUpdatedAt;
+        candidateMeta.accountEmail=mergedIdentity.accountEmail;
+        if(typeof prepareMeta==='function')prepareMeta(candidateMeta,existingMeta);
+        transaction.set(metaRef,candidateMeta);
+        return candidateMeta;
+      });
+    });
+  }
+  function markCloudProfileIdentityForExplicitPush(){
+    var now=Date.now();
+    state.screenNameUpdatedAt=now;
+    state.profileUpdatedAt=now;
+    return saveState();
+  }
+
   function cloudPenPalAccountKey(email){
     return encodeURIComponent(String(email||(state.account&&state.account.email)||'').trim().toLowerCase()).replace(/\./g,'%2E');
   }
@@ -5240,6 +5343,9 @@ try {
       moodLog: state.moodLog,
       drafts: state.drafts,
       profile: state.profile,
+      accountEmail: cloudIdentityEmail(state.account&&state.account.email),
+      screenNameUpdatedAt: Number(state.screenNameUpdatedAt)||0,
+      profileUpdatedAt: Number(state.profileUpdatedAt)||0,
       blogPosts: state.blogPosts,
       bgColor: (state.background && state.background.color) || '',
       hasBgImage: !!(state.background && state.background.image),
@@ -5258,17 +5364,7 @@ try {
       meta.chunkCounts[buddyId] = entryChunks[buddyId].length;
     });
     var metaRef = db.collection('users').doc(uid).collection('diary').doc('meta');
-    return metaRef.get().then(function(existingSnap){
-      var existingMeta = existingSnap.exists ? (existingSnap.data() || {}) : {};
-      var penPalAccountKey=cloudPenPalAccountKey(),mailContactsByAccount=existingMeta.mailContactsByAccount&&typeof existingMeta.mailContactsByAccount==='object'?Object.assign({},existingMeta.mailContactsByAccount):{};
-      if(penPalAccountKey)mailContactsByAccount[penPalAccountKey]=Array.isArray(state.mail&&state.mail.contacts)?state.mail.contacts:[];
-      meta.mailContactsByAccount=mailContactsByAccount;
-      if(cloudMetaContentCount(existingMeta) > 0 && cloudMetaContentCount(meta) === 0){
-        var protectedError = new Error('Cloud backup protected: this device has no diary content, but the cloud backup does. Pull from Cloud before pushing.');
-        protectedError.code = 'cloud-empty-overwrite-blocked';
-        throw protectedError;
-      }
-      var writes = [];
+    var writes = [];
       Object.keys(entryChunks).forEach(function(buddyId){
         entryChunks[buddyId].forEach(function(chunk, i){
           writes.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).set({ entries: chunk }));
@@ -5281,9 +5377,11 @@ try {
       } else {
         writes.push(db.collection('users').doc(uid).collection('diary').doc('background').delete().catch(function(){}));
       }
-      writes.push(metaRef.set(meta));
-      return Promise.all(writes);
-    });
+    return pushCloudMetaTransaction(metaRef,meta,function(candidateMeta,existingMeta){
+      var penPalAccountKey=cloudPenPalAccountKey(),mailContactsByAccount=existingMeta.mailContactsByAccount&&typeof existingMeta.mailContactsByAccount==='object'?Object.assign({},existingMeta.mailContactsByAccount):{};
+      if(penPalAccountKey)mailContactsByAccount[penPalAccountKey]=Array.isArray(state.mail&&state.mail.contacts)?state.mail.contacts:[];
+      candidateMeta.mailContactsByAccount=mailContactsByAccount;
+    }).then(function(){return Promise.all(writes);});
   }
 
   function pullFromCloud(){
@@ -5328,7 +5426,9 @@ try {
         state.statusPresets = meta.statusPresets || [];
         state.moodLog = meta.moodLog || [];
         state.drafts = meta.drafts || {};
-        state.profile = meta.profile || { pic:'', html:'' };
+        var mergedIdentity=mergeCloudProfileIdentity(currentCloudProfileIdentity(),cloudProfileIdentityFrom(meta),false);
+        state.profile = mergedIdentity.profile;
+        state.profileUpdatedAt = mergedIdentity.profileUpdatedAt;
         if(Array.isArray(meta.blogPosts)) state.blogPosts = meta.blogPosts;
         if(Array.isArray(meta.customFonts)) state.customFonts = meta.customFonts;
         if(Array.isArray(meta.customMoods)) state.customMoods = meta.customMoods;
@@ -5336,7 +5436,8 @@ try {
         if(meta.theme && typeof meta.theme === 'object') state.theme = meta.theme;
         if(Array.isArray(meta.customThemePresets)) state.customThemePresets = meta.customThemePresets;
         if(meta.notebook && typeof meta.notebook === 'object') state.notebook = meta.notebook;
-        if(state.account && meta.screenName) state.account.screenName = meta.screenName;
+        if(state.account && mergedIdentity.screenName) state.account.screenName = mergedIdentity.screenName;
+        state.screenNameUpdatedAt = mergedIdentity.screenNameUpdatedAt;
         var penPalAccountKey=cloudPenPalAccountKey(pullAccountEmail),accountMailContacts=meta.mailContactsByAccount&&meta.mailContactsByAccount[penPalAccountKey];
         if(Array.isArray(accountMailContacts)) state.mail.contacts = accountMailContacts.slice();
         state.entries = cloudEntries;
@@ -6029,6 +6130,7 @@ try {
           if(connectingExisting){state.account={screenName:name,password:pass,email:email};activeStorageKey=accountStorageKey(email);return saveState();}
           return activateAccountDiary(email,auth,pass,true);
         }).then(function(){
+          state.screenNameUpdatedAt = Date.now();
           state.savePassword = document.getElementById('in-savepw').checked;
           state.autoLogin = document.getElementById('in-autologin').checked;
           return saveState();
@@ -11047,7 +11149,7 @@ try {
             el.querySelector('#cs-push').addEventListener('click', function(){
               el.querySelector('#cs-status').textContent = 'Pushing…';
               el.querySelector('#cs-status').style.color = '#0850d0';
-              pushToCloud().then(function(){ el.querySelector('#cs-status').textContent = 'Backed up just now.'; })
+              markCloudProfileIdentityForExplicitPush().then(function(){return pushToCloud();}).then(function(){ el.querySelector('#cs-status').textContent = 'Backed up just now.'; })
                 .catch(function(e){ el.querySelector('#cs-status').style.color='#c0392b'; el.querySelector('#cs-status').textContent='Push failed: '+(e&&e.message?e.message:String(e)); });
             });
             el.querySelector('#cs-pull').addEventListener('click', function(){
@@ -11260,6 +11362,7 @@ try {
         el.querySelector('#ep-save').addEventListener('click', function(){
           var newName = el.querySelector('#ep-screenname').value.trim();
           if(newName && state.account){
+            if(newName !== state.account.screenName) state.screenNameUpdatedAt = Date.now();
             state.account.screenName = newName;
             document.getElementById('bl-title-text').textContent = newName;
             document.getElementById('bl-me-name').textContent = newName;
@@ -11270,6 +11373,7 @@ try {
             aboutMe: sanitizeProfileHTML(el.querySelector('#ep-about').value),
             html: '' // kept for backward compat but no longer used
           };
+          state.profileUpdatedAt = Date.now();
           saveState();
           syncDtdPublicProfile().catch(function(){});
           refreshProfilePic();
@@ -12043,6 +12147,7 @@ try {
           submit.disabled=true;errEl.style.color='#555';errEl.textContent='Saving account changes…';
           var request=session?ensureSupabaseSession().then(function(fresh){return supabaseUserRequest('PUT',payload,fresh.access_token);}):Promise.resolve(null);
           request.then(function(user){
+            if(newName!==state.account.screenName)state.screenNameUpdatedAt=Date.now();
             state.account.screenName=newName;
             if(newPw)state.account.password=newPw;
             if(emailChanged){
