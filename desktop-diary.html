@@ -1714,6 +1714,9 @@ var runtime={
     #signon-wrap .signon-bottom { margin-top:8px; }
     #dtd-mailbox-icon { top:auto; left:85px; right:auto; bottom:150px; }
     #trash-desktop-icon { top:auto; left:16px; right:auto; bottom:100px; }
+    #fish-tank-desktop-icon { top:auto; left:auto; right:14px; bottom:153px; }
+    #ant-farm-desktop-icon { top:auto; left:auto; right:54px; bottom:105px; }
+    #desktop-companion { top:auto; left:52%; right:auto; bottom:40px; }
     .im-win, .nm-win, .addbuddy-win, .bgedit-win, .themeedit-win, .paint-win, .arinet-win {
       box-shadow: 0 6px 24px rgba(0,0,0,.55);
     }
@@ -6414,7 +6417,9 @@ try {
     if(state.companion&&state.companion.kennelPosition) return;
     var iw = icon.offsetWidth || 110, ih = icon.offsetHeight || 120;
     var taskbarHeight = taskbar ? taskbar.offsetHeight : TASKBAR_H;
-    var left = Math.max(0, desktop.clientWidth - iw - 8);
+    var left = desktop.clientWidth<=700
+      ? Math.max(0,Math.min(desktop.clientWidth*.52,desktop.clientWidth-iw))
+      : Math.max(0,desktop.clientWidth-iw-8);
     var top = Math.max(0, desktop.clientHeight - taskbarHeight - ih - 6);
     icon.style.left = Math.round(left) + 'px';
     icon.style.top = Math.round(top) + 'px';
