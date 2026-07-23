@@ -38,6 +38,12 @@
   const EARLY_POPULATION_WINDOW_MS = 6 * 24 * 60 * 60 * 1000;
   const MATURATION_WINDOW_MS = 29 * 24 * 60 * 60 * 1000;
   const MATURE_GROWTH_SPAN = 660;
+  const STAGE_EARLIEST_AGE_MS = [0, 1, 2, 4, 6].map(days => days * 24 * 60 * 60 * 1000);
+  const STAGE_REVEAL_DELAY_MS = 12 * 1000;
+  const STAGE_PIT_COUNTS = [2, 3, 4, 5, 5];
+  const LEGACY_PIT_COUNTS = [2, 3, 5, 5, 5];
+  const LEGACY_PATH_COUNTS = [1, 3, 7, 8, 10];
+  const MAX_PATH_COUNT = 10;
 
   const defaultState = () => ({
     version: 1,
@@ -54,6 +60,10 @@
     growth: 0,
     stage: 0,
     populationFloor: 3,
+    nextStageUnlockAt: 0,
+    pitCountFloor: 2,
+    visiblePathCount: 1,
+    nextPathUnlockAt: 0,
     lampOn: false,
     day: 1,
     actionMessage: "Your tiny colony has arrived. Keep their needs balanced and they will build.",
@@ -70,6 +80,7 @@
   buildMeters();
   applyOfflineProgress();
   syncStage(true);
+  syncPaths(true);
   rebuildAnts();
   updateUI(true);
   wireControls();
@@ -93,6 +104,17 @@
         loaded.populationFloor = stages[legacyStage].workers;
       }
       loaded.populationFloor = clamp(Math.round(loaded.populationFloor), stages[0].workers, MAX_WORKERS);
+      loaded.stage = clamp(Math.round(Number(loaded.stage) || 0), 0, stages.length - 1);
+      loaded.nextStageUnlockAt = Math.max(0, Number(loaded.nextStageUnlockAt) || 0);
+      if (!Number.isFinite(saved.pitCountFloor)) {
+        loaded.pitCountFloor = LEGACY_PIT_COUNTS[loaded.stage];
+      }
+      if (!Number.isFinite(saved.visiblePathCount)) {
+        loaded.visiblePathCount = LEGACY_PATH_COUNTS[loaded.stage];
+      }
+      loaded.pitCountFloor = clamp(Math.round(loaded.pitCountFloor), STAGE_PIT_COUNTS[0], 5);
+      loaded.visiblePathCount = clamp(Math.round(loaded.visiblePathCount), 1, MAX_PATH_COUNT);
+      loaded.nextPathUnlockAt = Math.max(0, Number(loaded.nextPathUnlockAt) || 0);
       return loaded;
     } catch (_error) {
       return defaultState();
@@ -233,25 +255,63 @@
       state.growth += realSeconds * workRate * (state.health / 100);
     }
 
-    syncStage();
+    const stageChanged = syncStage();
+    syncPaths(stageChanged);
     updateAnts(realSeconds, night);
     updateParticles(realSeconds);
   }
 
   function syncStage(force = false) {
-    let next = 0;
-    stages.forEach((stage, index) => { if (state.growth >= stage.min) next = index; });
-    const workerCount = getWorkerCount(next);
-    if (!force && next > state.stage) {
-      state.stage = next;
+    let growthTarget = 0;
+    stages.forEach((stage, index) => {
+      if (state.growth >= stage.min) growthTarget = index;
+    });
+    let ageTarget = 0;
+    const colonyAge = Math.max(0, Date.now() - state.createdAt);
+    STAGE_EARLIEST_AGE_MS.forEach((minimumAge, index) => {
+      if (colonyAge >= minimumAge) ageTarget = index;
+    });
+    const target = Math.min(growthTarget, ageTarget);
+
+    if (force) {
+      if (ants.length !== getWorkerCount()) rebuildAnts();
+      return false;
+    }
+
+    if (target > state.stage && Date.now() >= state.nextStageUnlockAt) {
+      state.stage += 1;
+      state.nextStageUnlockAt = Date.now() + STAGE_REVEAL_DELAY_MS;
+      state.nextPathUnlockAt = Math.max(state.nextPathUnlockAt, Date.now() + STAGE_REVEAL_DELAY_MS);
       rebuildAnts();
-      announce(`${stages[next].name} unlocked! The workers opened a new chamber.`);
+      announce(`${stages[state.stage].name} unlocked! The workers opened one new chamber.`);
       burst("growth", 35);
       saveState(true);
-    } else {
-      state.stage = next;
-      if (force || ants.length !== workerCount) rebuildAnts();
+      return true;
     }
+    if (ants.length !== getWorkerCount()) rebuildAnts();
+    return false;
+  }
+
+  function getPathTarget() {
+    const baseTarget = Math.min(4, state.stage + 1);
+    if (state.stage < stages.length - 1) return baseTarget;
+    const matureBase = stages[stages.length - 1].workers;
+    const workerProgress = clamp((getWorkerCount() - matureBase) / (MAX_WORKERS - matureBase), 0, 1);
+    return Math.min(MAX_PATH_COUNT, baseTarget + Math.floor(workerProgress * (MAX_PATH_COUNT - baseTarget)));
+  }
+
+  function syncPaths(stageChanged = false) {
+    if (stageChanged) return false;
+    const target = getPathTarget();
+    if (state.visiblePathCount < target && Date.now() >= state.nextPathUnlockAt) {
+      state.visiblePathCount += 1;
+      state.nextPathUnlockAt = Date.now() + STAGE_REVEAL_DELAY_MS;
+      announce("The workers finished one new connecting tunnel.");
+      burst("growth", 24);
+      saveState(true);
+      return true;
+    }
+    return false;
   }
 
   function getWorkerCount(stageIndex = state.stage) {
@@ -639,8 +699,7 @@
         { x: 286, y: 317, rx: 151, ry: 56, seed: 1 },
         { x: 678, y: 334, rx: 149, ry: 57, seed: 2 },
         { x: 492, y: 463, rx: 158, ry: 49, seed: 3 },
-        { x: 126, y: 454, rx: 76, ry: 38, seed: 4 },
-        { x: 852, y: 454, rx: 76, ry: 38, seed: 5 }
+        { x: 126, y: 454, rx: 76, ry: 38, seed: 4 }
       ],
       [
         { x: 280, y: 311, rx: 161, ry: 59, seed: 1 },
@@ -657,23 +716,33 @@
         { x: 860, y: 454, rx: 82, ry: 40, seed: 5 }
       ]
     ];
-    return layouts[Math.min(layouts.length - 1, Math.max(0, stage))];
+    const safeStage = Math.min(layouts.length - 1, Math.max(0, stage));
+    const stageLayout = layouts[safeStage];
+    const pitCount = Math.max(state.pitCountFloor, STAGE_PIT_COUNTS[safeStage]);
+    if (stageLayout.length >= pitCount) return stageLayout.slice(0, pitCount);
+    return [...stageLayout, ...layouts[layouts.length - 1].slice(stageLayout.length, pitCount)];
   }
 
   function tunnelConnections(stage) {
-    const layouts = [
-      [[0, 1]],
-      [[0, 1], [0, 2], [1, 2]],
-      [[0, 1], [0, 2], [1, 2], [0, 3], [3, 2], [1, 4], [4, 2]],
-      [[0, 1], [0, 2], [1, 2], [0, 3], [3, 2], [1, 4], [4, 2], [3, 4]],
-      [[0, 1], [0, 2], [1, 2], [0, 3], [3, 2], [1, 4], [4, 2], [3, 4]]
+    const areas = tunnelAreas(stage);
+    const allConnections = [
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [1, 4],
+      [1, 2],
+      [3, 2],
+      [4, 2],
+      [3, 4]
     ];
-    return layouts[Math.min(layouts.length - 1, Math.max(0, stage))];
+    return allConnections
+      .slice(0, state.visiblePathCount)
+      .filter(([a, b]) => Boolean(areas[a] && areas[b]));
   }
 
   function tunnelExpansionRoutes(stage, areas) {
     if (stage < 4 || areas.length < 5) return [];
-    return [
+    const routes = [
       {
         startX: areas[0].x - areas[0].rx * .58,
         startY: areas[0].y + areas[0].ry * .18,
@@ -691,6 +760,7 @@
         endY: areas[4].y - areas[4].ry * .28
       }
     ];
+    return routes.slice(0, clamp(state.visiblePathCount - 8, 0, routes.length));
   }
 
   function drawTunnels() {
