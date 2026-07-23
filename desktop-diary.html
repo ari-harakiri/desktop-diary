@@ -11688,7 +11688,7 @@ try {
                   var canvas = document.createElement('canvas');
                   canvas.width = w; canvas.height = h;
                   canvas.getContext('2d').drawImage(im, 0, 0, w, h);
-                  picData = canvas.toDataURL('image/jpeg', 0.8);
+                  picData = canvas.toDataURL('image/webp', 0.9);
                   showPic();
                 };
                 im.src = e.target.result;
