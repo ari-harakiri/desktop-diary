@@ -10495,6 +10495,7 @@ try {
     if(state.mail.contacts.length!==before){saveState();return true;}return false;
   }
   function renderDtdContacts(main,onCompose){
+    var friendSyncStarted=false;
     function render(){
       var contacts=(state.mail.contacts||[]).slice().sort(function(a,b){return (a.name||a.handle).localeCompare(b.name||b.handle);});
       main.innerHTML='<div class="dtd-heading">E-Buddies <button class="btn dtd-add-contact" style="float:right">Add+</button></div><div class="dtd-contact-list">'+(contacts.length?contacts.map(function(contact){var initials=(contact.name||contact.handle||'?').slice(0,2).toUpperCase();return '<div class="dtd-contact-row" data-contact-id="'+escapeHtml(contact.id)+'"><button class="dtd-contact-avatar" title="View profile">'+escapeHtml(initials)+'</button><button class="dtd-contact-name" title="View profile">'+escapeHtml(contact.name||contact.handle)+'<span class="dtd-contact-address">'+escapeHtml(contact.handle)+'@desktopdiary.local</span></button><button class="btn dtd-contact-write">Write</button><button class="btn dtd-contact-nickname">Nickname</button><button class="btn dtd-contact-delete" title="Delete e-buddy">×</button></div>';}).join(''):'<div class="dtd-empty">No e-buddies yet.<small class="dtd-empty-note">There’s no public people search or social network. Ask a friend to send you a letter on DesktopDiary, then save them here.</small></div>')+'</div>';
@@ -10507,16 +10508,49 @@ try {
         if(getSupabaseSession())dtdMailProfilePreview(contact.handle).then(function(publicProfile){if(publicProfile&&publicProfile.profile_picture&&avatar.isConnected)avatar.innerHTML='<img src="'+escapeHtml(publicProfile.profile_picture)+'" alt="">';});
         row.querySelector('.dtd-contact-write').onclick=function(){onCompose(contact.handle);};
         row.querySelector('.dtd-contact-nickname').onclick=function(){appTextPrompt('Nickname for '+contact.handle+'@desktopdiary.local',contact.name||'',function(name){if(name===null)return;contact.name=name.trim().slice(0,50);saveState();render();});};
-        row.querySelector('.dtd-contact-delete').onclick=function(){appConfirm('Remove '+(contact.name||contact.handle)+' from E-Buddies?',function(ok){if(!ok)return;state.mail.contacts=state.mail.contacts.filter(function(item){return item.id!==contact.id;});saveState();render();});};
+        row.querySelector('.dtd-contact-delete').onclick=function(){appConfirm('Remove '+(contact.name||contact.handle)+' from E-Buddies?',function(ok){
+          if(!ok)return;
+          if(getSupabaseSession()){
+            supabaseRpc('remove_dtd_friend',{other_handle:contact.handle}).then(function(){removeDtdContact(contact.handle);render();}).catch(function(err){openInfoWindow(err.message);});
+            return;
+          }
+          removeDtdContact(contact.handle);render();
+        });};
       });
+      if(!friendSyncStarted&&getSupabaseSession()){
+        friendSyncStarted=true;
+        syncDtdFriendsFromServer().then(function(changed){if(changed&&main.isConnected)render();});
+      }
     }
     function showAdd(){
-      main.innerHTML='<div class="dtd-heading">Add E-Buddy</div><div class="dtd-compose"><label><span>Nickname</span><input class="dtd-contact-new-name" placeholder="Optional nickname"></label><label><span>DtD username</span><span class="dtd-address-input"><input class="dtd-contact-new-handle" maxlength="20" placeholder="e-buddy" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="dtd-address-suffix">@desktopdiary.local</span></span></label><div class="dtd-compose-actions"><button class="btn dtd-contact-cancel">Cancel</button><button class="btn dtd-contact-save">Save E-Buddy</button></div><div class="signon-error dtd-contact-error"></div></div>';
-      var handle=main.querySelector('.dtd-contact-new-handle');
+      var online=!!getSupabaseSession();
+      main.innerHTML='<div class="dtd-heading">Add E-Buddy</div><div class="dtd-compose">'+(online?'':'<label><span>Nickname</span><input class="dtd-contact-new-name" placeholder="Optional nickname"></label>')+'<label><span>DtD username</span><span class="dtd-address-input"><input class="dtd-contact-new-handle" maxlength="20" placeholder="e-buddy" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="dtd-address-suffix">@desktopdiary.local</span></span></label><div class="dtd-compose-actions"><button class="btn dtd-contact-cancel">Cancel</button><button class="btn dtd-contact-save">'+(online?'Send Request':'Save E-Buddy')+'</button></div><div class="signon-error dtd-contact-error"></div></div>';
+      var handle=main.querySelector('.dtd-contact-new-handle'),nickname=main.querySelector('.dtd-contact-new-name'),saveButton=main.querySelector('.dtd-contact-save'),error=main.querySelector('.dtd-contact-error');
       handle.oninput=function(){handle.value=handle.value.toLowerCase().replace(/[^a-z0-9._-]/g,'');};
       main.querySelector('.dtd-contact-cancel').onclick=render;
-      main.querySelector('.dtd-contact-save').onclick=function(){var contact=saveDtdContact(handle.value,main.querySelector('.dtd-contact-new-name').value);if(!contact){main.querySelector('.dtd-contact-error').textContent='Use a valid 3–20 character DtD username.';return;}render();};
-      handle.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();main.querySelector('.dtd-contact-save').click();}};
+      saveButton.onclick=function(){
+        var normalized=dtdContactHandle(handle.value);
+        if(!/^[a-z0-9][a-z0-9._-]{1,18}[a-z0-9]$/.test(normalized)||normalized.indexOf('..')!==-1){error.textContent='Use a valid 3–20 character DtD username.';return;}
+        if(!online){saveDtdContact(normalized,nickname?nickname.value:'');render();return;}
+        error.textContent='Checking account…';saveButton.disabled=true;
+        supabaseRpc('get_dtd_public_profile',{requested_handle:normalized}).then(function(profile){
+          if(!profile||!profile.handle)throw new Error('No DesktopDiary account uses that username.');
+          var friendStatus=profile.friend_status||'none';
+          if(friendStatus==='self')throw new Error('That is your own DesktopDiary account.');
+          if(friendStatus==='friends'){
+            upsertDtdContact(profile.handle,profile.display_name||'');
+            return syncDtdFriendsFromServer().then(function(){render();});
+          }
+          if(friendStatus==='pending_outgoing')throw new Error('An E-Buddy request has already been sent to this account.');
+          if(friendStatus==='pending_incoming')throw new Error('This person already sent you a request. Open E-Buddy Requests to accept it.');
+          return supabaseRpc('send_dtd_friend_request',{recipient_handle:profile.handle}).then(function(){
+            rememberPendingPenPalRequest(profile.handle);
+            openInfoWindow('E-Buddy request sent to '+(profile.display_name||profile.handle)+'.');
+            render();
+          });
+        }).catch(function(err){error.textContent=err.message||'Unable to add this E-Buddy right now.';saveButton.disabled=false;});
+      };
+      handle.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();saveButton.click();}};
       setTimeout(function(){handle.focus();},20);
     }
     render();
@@ -11797,9 +11831,41 @@ try {
     });
   }
 
-  var dtdPenPalNotificationTimer=null,penPalNotificationCheckInFlight=false;
+  var dtdPenPalNotificationTimer=null,penPalNotificationCheckInFlight=false,dtdFriendSyncInFlight=null;
   function penPalNotificationState(){return state.companion.penPalNotifications;}
   function uniqueHandles(handles){return handles.filter(function(handle,index,list){return handle&&list.indexOf(handle)===index;});}
+  function syncDtdFriendsFromServer(){
+    if(!getSupabaseSession())return Promise.resolve(false);
+    if(dtdFriendSyncInFlight)return dtdFriendSyncInFlight;
+    var syncOwner=supabaseSessionOwner();
+    if(!syncOwner)return Promise.resolve(false);
+    dtdFriendSyncInFlight=supabaseRpc('list_dtd_friends',{}).then(function(rows){
+      if(supabaseSessionOwner()!==syncOwner)return false;
+      var existingByHandle={};
+      (state.mail.contacts||[]).forEach(function(contact){
+        var handle=dtdContactHandle(contact&&contact.handle);
+        if(handle&&!existingByHandle[handle])existingByHandle[handle]=contact;
+      });
+      var seen={},nextContacts=[];
+      (rows||[]).forEach(function(friend){
+        var handle=dtdContactHandle(friend&&friend.handle);
+        if(!handle||seen[handle])return;
+        seen[handle]=true;
+        var existing=existingByHandle[handle];
+        nextContacts.push({
+          id:existing&&existing.id?existing.id:uid(),
+          handle:handle,
+          name:existing&&existing.name?existing.name:String(friend.display_name||'').trim()
+        });
+      });
+      nextContacts.sort(function(a,b){return a.handle.localeCompare(b.handle);});
+      var current=(state.mail.contacts||[]).map(function(contact){return{id:contact.id,handle:dtdContactHandle(contact.handle),name:String(contact.name||'').trim()};}).sort(function(a,b){return a.handle.localeCompare(b.handle);});
+      if(JSON.stringify(current)===JSON.stringify(nextContacts))return false;
+      state.mail.contacts=nextContacts;
+      return saveState().then(function(){return true;});
+    }).catch(function(){return false;}).then(function(changed){dtdFriendSyncInFlight=null;return changed;});
+    return dtdFriendSyncInFlight;
+  }
   function refreshKobaPendingAlerts(){
     var alerts=penPalNotificationState().unreadAlerts,companion=document.getElementById('desktop-companion');
     if(companion)companion.classList.toggle('has-pending-notification',alerts.length>0);
@@ -11829,6 +11895,7 @@ try {
     if(!document.body.classList.contains('signed-in')||!getSupabaseSession()||penPalNotificationCheckInFlight)return Promise.resolve();
     var notificationOwner=supabaseSessionOwner();
     penPalNotificationCheckInFlight=true;
+    syncDtdFriendsFromServer();
     return supabaseRpc('list_dtd_friend_requests',{}).then(function(rows){
       if(!notificationOwner||supabaseSessionOwner()!==notificationOwner)return false;
       rows=rows||[];
@@ -11899,6 +11966,7 @@ try {
               supabaseRpc('respond_dtd_friend_request',{requester_handle:b.dataset.handle,accept:true}).then(function(){
                 upsertDtdContact(b.dataset.handle,b.dataset.name||b.dataset.handle);
                 acknowledgePenPalAlert('incoming:'+b.dataset.handle);
+                syncDtdFriendsFromServer();
                 return load();
               }).catch(function(err){openInfoWindow(err.message);});
             };
@@ -11940,7 +12008,7 @@ try {
         function onErr(err){if(errEl)errEl.textContent=err.message;}
         var addBtn=el.querySelector('#dtd-friend-add');if(addBtn)addBtn.onclick=function(){addBtn.disabled=true;supabaseRpc('send_dtd_friend_request',{recipient_handle:handle}).then(function(){rememberPendingPenPalRequest(handle);return load();}).catch(function(err){onErr(err);addBtn.disabled=false;});};
         var cancelBtn=el.querySelector('#dtd-friend-cancel');if(cancelBtn)cancelBtn.onclick=function(){supabaseRpc('remove_dtd_friend',{other_handle:handle}).then(load).catch(onErr);};
-        var acceptBtn=el.querySelector('#dtd-friend-accept');if(acceptBtn)acceptBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:true}).then(function(){upsertDtdContact(handle,profileData&&profileData.display_name);acknowledgePenPalAlert('incoming:'+handle);return load();}).catch(onErr);};
+        var acceptBtn=el.querySelector('#dtd-friend-accept');if(acceptBtn)acceptBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:true}).then(function(){upsertDtdContact(handle,profileData&&profileData.display_name);acknowledgePenPalAlert('incoming:'+handle);syncDtdFriendsFromServer();return load();}).catch(onErr);};
         var declineBtn=el.querySelector('#dtd-friend-decline');if(declineBtn)declineBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:false}).then(function(){acknowledgePenPalAlert('incoming:'+handle);return load();}).catch(onErr);};
         var removeBtn=el.querySelector('#dtd-friend-remove');if(removeBtn)removeBtn.onclick=function(){appConfirm('Remove '+handle+' as an E-Buddy?',function(ok){if(!ok)return;supabaseRpc('remove_dtd_friend',{other_handle:handle}).then(function(){removeDtdContact(handle);return load();}).catch(onErr);});};
       }
