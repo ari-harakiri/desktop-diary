@@ -34,6 +34,10 @@
     { name: "Busy colony", min: 380, workers: 12, eggs: 5, larvae: 4 },
     { name: "Thriving kingdom", min: 660, workers: 17, eggs: 6, larvae: 5, winged: 2 }
   ];
+  const MAX_WORKERS = 50;
+  const EARLY_POPULATION_WINDOW_MS = 6 * 24 * 60 * 60 * 1000;
+  const MATURATION_WINDOW_MS = 29 * 24 * 60 * 60 * 1000;
+  const MATURE_GROWTH_SPAN = 660;
 
   const defaultState = () => ({
     version: 1,
@@ -49,6 +53,7 @@
     energy: 82,
     growth: 0,
     stage: 0,
+    populationFloor: 3,
     lampOn: false,
     day: 1,
     actionMessage: "Your tiny colony has arrived. Keep their needs balanced and they will build.",
@@ -74,12 +79,21 @@
     try {
       const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
       if (!saved || saved.version !== 1) return defaultState();
-      return {
+      const loaded = {
         ...defaultState(),
         ...saved,
         createdAt: Number(saved.createdAt) || Date.now(),
         lastUpdate: Number(saved.lastUpdate) || Date.now()
       };
+      if (!Number.isFinite(saved.populationFloor)) {
+        let legacyStage = 0;
+        stages.forEach((stage, index) => {
+          if (loaded.growth >= stage.min) legacyStage = index;
+        });
+        loaded.populationFloor = stages[legacyStage].workers;
+      }
+      loaded.populationFloor = clamp(Math.round(loaded.populationFloor), stages[0].workers, MAX_WORKERS);
+      return loaded;
     } catch (_error) {
       return defaultState();
     }
@@ -227,6 +241,7 @@
   function syncStage(force = false) {
     let next = 0;
     stages.forEach((stage, index) => { if (state.growth >= stage.min) next = index; });
+    const workerCount = getWorkerCount(next);
     if (!force && next > state.stage) {
       state.stage = next;
       rebuildAnts();
@@ -235,12 +250,32 @@
       saveState(true);
     } else {
       state.stage = next;
-      if (force || ants.length !== stages[next].workers) rebuildAnts();
+      if (force || ants.length !== workerCount) rebuildAnts();
     }
   }
 
+  function getWorkerCount(stageIndex = state.stage) {
+    const stage = stages[stageIndex];
+    const matureStageIndex = stages.length - 1;
+    const starterWorkers = stages[0].workers;
+    const matureBase = stages[matureStageIndex].workers;
+    const colonyAge = clamp(Date.now() - state.createdAt, 0, MATURATION_WINDOW_MS);
+    const ageCapacity = colonyAge < EARLY_POPULATION_WINDOW_MS
+      ? starterWorkers + Math.floor((colonyAge / EARLY_POPULATION_WINDOW_MS) * (matureBase - starterWorkers))
+      : matureBase + Math.floor(
+        ((colonyAge - EARLY_POPULATION_WINDOW_MS) / (MATURATION_WINDOW_MS - EARLY_POPULATION_WINDOW_MS))
+        * (MAX_WORKERS - matureBase)
+      );
+    const careCapacity = stageIndex < matureStageIndex
+      ? stage.workers
+      : matureBase + Math.floor(
+        clamp((state.growth - stage.min) / MATURE_GROWTH_SPAN, 0, 1) * (MAX_WORKERS - matureBase)
+      );
+    return Math.max(state.populationFloor, Math.min(ageCapacity, careCapacity, MAX_WORKERS));
+  }
+
   function rebuildAnts() {
-    const count = stages[state.stage].workers;
+    const count = getWorkerCount();
     ants = Array.from({ length: count }, (_, index) => makeAnt(index));
   }
 
@@ -941,7 +976,7 @@
     const stage = stages[state.stage];
     ui.day.textContent = `Day ${state.day}`;
     ui.stage.textContent = stage.name;
-    const parts = [`${stage.workers} workers`, `${stage.eggs} eggs`];
+    const parts = [`${getWorkerCount()} workers`, `${stage.eggs} eggs`];
     if (stage.larvae) parts.push(`${stage.larvae} larvae`);
     if (stage.winged) parts.push(`${stage.winged} winged`);
     ui.population.textContent = parts.join(" · ");
