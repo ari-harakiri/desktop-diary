@@ -4404,6 +4404,59 @@ try {
     });
   }
 
+  function petIconOverlapsBuddyList(icon){
+    if(!icon || (icon.id!=='fish-tank-desktop-icon' && icon.id!=='ant-farm-desktop-icon')) return false;
+    var buddy=document.getElementById('buddylist-win');
+    if(!buddy || buddy.style.display==='none') return false;
+    var a=icon.getBoundingClientRect(),b=buddy.getBoundingClientRect();
+    return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+  }
+  function restorePetIconDefault(icon,preserveSavedPosition){
+    var previousTop=icon.getBoundingClientRect().top;
+    delete icon.dataset.petSafetyShifted;
+    icon.style.left='';
+    icon.style.top='';
+    icon.style.right='';
+    icon.style.bottom='';
+    if(!preserveSavedPosition && state.desktopIconPositions) delete state.desktopIconPositions[icon.id];
+    // On short or landscape screens the responsive default can still share
+    // vertical space with the Buddy List. Use the open area to its left.
+    if(petIconOverlapsBuddyList(icon)){
+      var buddy=document.getElementById('buddylist-win');
+      var b=buddy.getBoundingClientRect(),r=icon.getBoundingClientRect();
+      var slot=icon.id==='fish-tank-desktop-icon'?0:1;
+      var safeX=b.left-r.width-12-slot*(r.width+8);
+      if(safeX<4) safeX=4+slot*(r.width+8);
+      var safeY=Math.max(4,Math.min(previousTop,window.innerHeight-TASKBAR_H-r.height-4));
+      icon.style.left=Math.round(safeX)+'px';
+      icon.style.top=Math.round(safeY)+'px';
+      icon.style.right='auto';
+      icon.style.bottom='auto';
+      icon.dataset.petSafetyShifted='true';
+    }
+  }
+  function keepPetIconsClearOfBuddyList(){
+    var changed=false;
+    ['fish-tank-desktop-icon','ant-farm-desktop-icon'].forEach(function(id){
+      var icon=document.getElementById(id);
+      if(icon && icon.dataset.petSafetyShifted==='true'){
+        var saved=state.desktopIconPositions&&state.desktopIconPositions[id];
+        if(!saved || saved.userPlaced!==true){
+          icon.style.left='';
+          icon.style.top='';
+          icon.style.right='';
+          icon.style.bottom='';
+        }
+        delete icon.dataset.petSafetyShifted;
+      }
+      if(petIconOverlapsBuddyList(icon)){
+        restorePetIconDefault(icon,true);
+        changed=true;
+      }
+    });
+    if(changed) saveState();
+  }
+
   // Desktop icons can be rearranged with mouse, pen, or touch. A short tap still
   // opens the icon; only a real drag suppresses its click action.
   function initializeDesktopIconDragging(){
@@ -4525,6 +4578,11 @@ try {
         icon.classList.remove('dragging');
         if(!moved)return;
         suppressClickUntil=Date.now()+450;
+        if(petIconOverlapsBuddyList(icon)){
+          restorePetIconDefault(icon,false);
+          saveState();
+          return;
+        }
         if(icon.id==='desktop-companion')window.__ddKobaDragSuppressTaskbarUntil=Date.now()+700;
         var perched=overlapsBuddyList(icon);
         if(icon.id==='desktop-companion')icon.classList.toggle('over-buddy-list',perched);
@@ -4574,8 +4632,9 @@ try {
         }
         if(!normalized) return;
         var p=place(icon,normalized.x,normalized.y);
-        saved.x=p.x;saved.y=p.y;
+        if(saved.userPlaced!==true){saved.x=p.x;saved.y=p.y;}
       });
+      keepPetIconsClearOfBuddyList();
     });
   }
 
@@ -6459,6 +6518,7 @@ try {
       savedPosition.y = startingPosition.y;
       savedPosition.right = Math.max(0,window.innerWidth-startingPosition.x-w);
     }
+    keepPetIconsClearOfBuddyList();
     positionCompanionOverBuddyList();
     document.getElementById('bl-title-text').textContent = (state.account && state.account.screenName) || 'Guest';
     document.getElementById('bl-me-name').textContent = (state.account && state.account.screenName) || 'Guest';
@@ -6493,6 +6553,7 @@ try {
       right:Math.max(0,window.innerWidth-position.x-bl.offsetWidth),
       userPlaced:wasUserPlaced
     };
+    keepPetIconsClearOfBuddyList();
   }
   window.addEventListener('resize', function(){ fitSearchBarWidth(); keepBuddyListOnScreen(); });
   window.addEventListener('orientationchange', function(){ setTimeout(fitSearchBarWidth, 150); });
