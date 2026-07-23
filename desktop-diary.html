@@ -5256,6 +5256,7 @@ try {
       var authenticatedName=String(auth.user&&auth.user.user_metadata&&auth.user.user_metadata.screen_name||'').trim();
       if(!authenticatedName||authenticatedName.toLowerCase()==='guest')authenticatedName=normalizedEmail.split('@')[0];
       if(!state.account.screenName||String(state.account.screenName).trim().toLowerCase()==='guest')state.account.screenName=authenticatedName;
+      delete state.account.mode;
       state.account.email=normalizedEmail;state.account.password=password;activeStorageKey=newKey;applyBackground();applyTheme();return saveState();
     }
     function finishFromGenericOrFresh(){
@@ -5304,6 +5305,50 @@ try {
   var cloudPushTimer = null;
   var fbApp = null, auth = null, db = null;
   var cloudAuthReady = Promise.resolve(); // resolves once auth state is known
+  var cloudAutoPullIdentity = '';
+  var cloudAutoPullInFlight = null;
+
+  function cloudUserEmail(user){
+    return String(user&&user.email||'').trim().toLowerCase();
+  }
+  function canUseCloudForActiveAccount(user){
+    var session=getSupabaseSession();
+    var accountEmail=String(state&&state.account&&state.account.email||'').trim().toLowerCase();
+    var sessionEmail=String(session&&session.user&&session.user.email||'').trim().toLowerCase();
+    var googleEmail=cloudUserEmail(user);
+    return !!(
+      user&&session&&session.access_token&&accountEmail&&googleEmail&&
+      accountEmail===googleEmail&&
+      (!sessionEmail||sessionEmail===accountEmail)&&
+      activeStorageKey===accountStorageKey(accountEmail)&&
+      document.body.classList.contains('signed-in')
+    );
+  }
+  function refreshUiAfterAutomaticCloudPull(found){
+    if(!found)return found;
+    normalizeState();
+    applyTheme();
+    applyBackground();
+    renderAllStickyNotes();
+    if(document.getElementById('buddylist-win') &&
+       document.getElementById('buddylist-win').style.display !== 'none'){
+      renderBuddyList();
+      refreshMyStatus();
+      refreshProfilePic();
+    }
+    return found;
+  }
+  function autoPullCloudForActiveAccount(){
+    if(!canUseCloudForActiveAccount(cloudUser))return Promise.resolve(false);
+    var identity=String(cloudUser.uid||'')+'|'+cloudUserEmail(cloudUser);
+    if(cloudAutoPullIdentity===identity)return cloudAutoPullInFlight||Promise.resolve(false);
+    cloudAutoPullIdentity=identity;
+    cloudAutoPullInFlight=pullFromCloud()
+      .then(refreshUiAfterAutomaticCloudPull)
+      .catch(function(){return false;})
+      .then(function(found){cloudAutoPullInFlight=null;return found;});
+    return cloudAutoPullInFlight;
+  }
   try{
     if(typeof firebase !== 'undefined'){
       fbApp = firebase.initializeApp(firebaseConfig);
@@ -5311,25 +5356,17 @@ try {
       db = firebase.firestore();
       cloudAuthReady = new Promise(function(resolve){
         auth.onAuthStateChanged(function(user){
-          var wasSignedIn = !!cloudUser;
+          var previousUid=String(cloudUser&&cloudUser.uid||'');
           cloudUser = user;
-          resolve(user);
-          // auto-pull when signing in for the first time in this session
-          if(user && !wasSignedIn){
-            pullFromCloud().then(function(found){
-              if(found){
-                normalizeState();
-                applyTheme();
-                applyBackground();
-                if(document.getElementById('buddylist-win') &&
-                   document.getElementById('buddylist-win').style.display !== 'none'){
-                  renderBuddyList();
-                  refreshMyStatus();
-                  refreshProfilePic();
-                }
-              }
-            }).catch(function(){}); // silent — don't interrupt the user
+          if(!user||previousUid!==String(user.uid||'')){
+            cloudAutoPullIdentity='';
+            cloudAutoPullInFlight=null;
           }
+          resolve(user);
+          // A remembered Google login may exist while DesktopDiary is signed
+          // out. Restore cloud data only after the matching DesktopDiary
+          // account is authenticated and its account-scoped storage is active.
+          if(user)autoPullCloudForActiveAccount();
         });
       });
     }
@@ -5341,11 +5378,16 @@ try {
     return auth.signInWithPopup(provider);
   }
   function signOutCloud(){
+    cloudAutoPullIdentity='';
+    cloudAutoPullInFlight=null;
     return auth ? auth.signOut() : Promise.resolve();
   }
   function scheduleCloudPush(){
     clearTimeout(cloudPushTimer);
-    cloudPushTimer = setTimeout(function(){ pushToCloud().catch(function(){}); }, 3000);
+    if(!canUseCloudForActiveAccount(cloudUser))return;
+    cloudPushTimer = setTimeout(function(){
+      if(canUseCloudForActiveAccount(cloudUser))pushToCloud().catch(function(){});
+    }, 3000);
   }
 
   // splits an entries array into chunks that stay comfortably under Firestore's 1MB doc limit
@@ -5486,6 +5528,7 @@ try {
 
   function pushToCloud(){
     if(!db || !cloudUser) return Promise.reject(new Error('Not signed in.'));
+    if(!canUseCloudForActiveAccount(cloudUser))return Promise.reject(new Error('Google Cloud Sync must use the same signed-in DesktopDiary account.'));
     var uid = cloudUser.uid;
     var meta = {
       screenName: state.account ? state.account.screenName : '',
@@ -5540,6 +5583,7 @@ try {
 
   function pullFromCloud(){
     if(!db || !cloudUser) return Promise.reject(new Error('Not signed in.'));
+    if(!canUseCloudForActiveAccount(cloudUser))return Promise.reject(new Error('Google Cloud Sync must use the same signed-in DesktopDiary account.'));
     var uid = cloudUser.uid;
     var pullStartedRevision = stateRevision;
     var pullAccountEmail=String(state.account&&state.account.email||'').trim().toLowerCase();
@@ -6203,6 +6247,45 @@ try {
     }
   }
 
+  var GUEST_ISOLATION_RECOVERY_KEY=STORAGE_KEY+'-pre-guest-isolation-recovery';
+  function isExplicitGuestState(candidate){
+    var account=candidate&&candidate.account;
+    if(!account||String(account.email||'').trim())return false;
+    var name=String(account.screenName||'').trim().toLowerCase();
+    return account.mode==='guest'||!name||name==='guest';
+  }
+  function preserveSuspiciousGuestState(store,rawValue){
+    if(!store||!rawValue)return Promise.resolve();
+    return store.get(GUEST_ISOLATION_RECOVERY_KEY,false).then(function(existing){
+      if(!existing||!existing.value)return store.set(GUEST_ISOLATION_RECOVERY_KEY,rawValue,false);
+    }).catch(function(){});
+  }
+  function loadIsolatedGuestState(){
+    var store=getLocalStore();
+    if(!store)return Promise.resolve(makeFreshState());
+    return store.get(STORAGE_KEY,false).then(function(saved){
+      var candidate=null;
+      if(saved&&saved.value){
+        try{candidate=JSON.parse(saved.value);}catch(e){}
+      }
+      if(isExplicitGuestState(candidate))return candidate;
+      return preserveSuspiciousGuestState(store,saved&&saved.value).then(function(){
+        return makeFreshState();
+      });
+    }).catch(function(){return makeFreshState();});
+  }
+  function prepareGuestState(candidate){
+    state=candidate||makeFreshState();
+    normalizeState();
+    state.savePassword=false;
+    state.autoLogin=false;
+    state.account=state.account||{};
+    state.account.mode='guest';
+    state.account.screenName=String(state.account.screenName||'').trim()||'Guest';
+    state.account.email='';
+    state.account.password='';
+    delete state.account.pendingEmail;
+  }
   function continueOfflineFromSignon(){
     var errEl = document.getElementById('signon-error');
     if(errEl){
@@ -6211,24 +6294,19 @@ try {
     }
     document.getElementById('signon-wrap').style.display = 'none';
     document.getElementById('signon-icon').style.display = 'none';
+    // Invalidate a Firebase pull that may already be in flight before changing
+    // identities. Its revision check will then refuse to apply account data.
+    stateRevision++;
     setSupabaseSession(null);
     activeStorageKey = STORAGE_KEY;
-    // Keep an existing guest diary when this device returns to guest mode.
-    // Starting a guest session from an email account still begins separately.
-    if(!state || !state.account || state.account.email) state = makeFreshState();
-    state.savePassword = false;
-    state.autoLogin = false;
-    if(!state.account) state.account = { screenName: 'Guest', email: '', password: '' };
-    if(state.account){
-      if(state.account.password) state.account.password = '';
-      if(!state.account.screenName && state.account.email){
-        state.account.screenName = state.account.email.split('@')[0];
-      }
-      if(!state.account.screenName) state.account.screenName = 'Guest';
-      delete state.account.pendingEmail;
-    }
-    normalizeState();
-    return saveState().then(function(){ return enterDesktop(); }).catch(function(){ return enterDesktop(); });
+    var cloudSignOut=signOutCloud().catch(function(){});
+    return Promise.all([loadIsolatedGuestState(),cloudSignOut]).then(function(results){
+      prepareGuestState(results[0]);
+      return saveState();
+    }).then(function(){return enterDesktop();}).catch(function(){
+      prepareGuestState(makeFreshState());
+      return saveState().catch(function(){}).then(function(){return enterDesktop();});
+    });
   }
 
   document.getElementById('account-switch').addEventListener('click',function(){
@@ -6435,6 +6513,7 @@ try {
       window.__ddStartupBlockersClear();
     }
     if(!dtdUsageSessionTracked){dtdUsageSessionTracked=true;trackDtdUsage('session_started');}
+    cloudAuthReady.then(function(){return autoPullCloudForActiveAccount();}).catch(function(){});
     syncAuthenticatedEmailFromServer().catch(function(){});
     refreshAdminAccess();
     var scrapbookMenu = document.getElementById('menu-scrapbook');
@@ -11659,7 +11738,7 @@ try {
       }).join('') : '<div class="vp-empty">No diary entries have been shared to your profile yet.</div>';
 
       return '<div class="win-body vp-body" id="blog-view-body">' +
-        '<div class="vp-header">' + picHtml + '<div class="vp-name">' + name +(profileMood?' <span class="vp-mood">is <span style="color:'+profileMoodColor+'">'+escapeHtml(profileMood)+'</span></span>':'')+'</div>' +(profileStatus ? '<div class="vp-status"><b>Status:</b> '+escapeHtml(profileStatus)+(state.status&&state.status.ts?' <span style="color:#888">· '+escapeHtml(relTime(state.status.ts))+'</span>':'')+'</div>' : '')+'</div>' +
+        '<div class="vp-header" style="position:relative">' + picHtml + '<span class="forgot-link" id="vp-edit-profile-btn" style="position:absolute;top:8px;right:10px">Edit Profile</span><div class="vp-name">' + name +(profileMood?' <span class="vp-mood">is <span style="color:'+profileMoodColor+'">'+escapeHtml(profileMood)+'</span></span>':'')+'</div>' +(profileStatus ? '<div class="vp-status"><b>Status:</b> '+escapeHtml(profileStatus)+(state.status&&state.status.ts?' <span style="color:#888">· '+escapeHtml(relTime(state.status.ts))+'</span>':'')+'</div>' : '')+'</div>' +
         (header ? '<div class="vp-section">' + header + '</div>' : '') +
         (aboutMe ? '<div class="vp-section">' + aboutMe + '</div>' : '') +
         '<div class="vp-newpost-row" style="padding:16px 4px 4px;text-align:center;"><button class="btn" id="vp-newpost-btn">+ New Entry</button></div>' +
@@ -11677,6 +11756,14 @@ try {
             el._refreshProfile();
             openInfoWindow('Entry saved privately. Use View Entries when you want to read it or share it to your profile.');
           });
+        };
+      }
+      var editProfileBtn = el.querySelector('#vp-edit-profile-btn');
+      if(editProfileBtn){
+        editProfileBtn.onclick = function(){
+          var existingEditor = openWindows.find(function(w){return w.type === 'editprofile';});
+          if(existingEditor) focusWindow(existingEditor.id);
+          else openEditProfileWindow();
         };
       }
       var viewEntries=el.querySelector('#vp-view-entries');if(viewEntries)viewEntries.onclick=openDiaryEntriesWindow;
