@@ -323,7 +323,8 @@
   #sticker-picker {
     display: none;
     position: absolute;
-    inset: 0;
+    inset: auto 0 0;
+    height: 157px;
     z-index: 5;
     padding: 32px 8px 8px;
     background: rgba(20,30,50,.92);
@@ -345,7 +346,7 @@
   #sticker-grid {
     display: grid;
     grid-auto-flow: column;
-    grid-template-rows: 52px;
+    grid-template-rows: repeat(2, 52px);
     grid-auto-columns: 52px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -358,7 +359,7 @@
   #sticker-grid::-webkit-scrollbar { display: none; }
   .sticker-scroll-btn {
     position: absolute;
-    top: 43px;
+    top: 74px;
     z-index: 2;
     width: 25px;
     height: 34px;
@@ -671,18 +672,22 @@
     return [{ id: 'page-1', title: '', text: '', createdAt: Date.now(), stickers: [] }];
   }
 
-  var STICKER_COUNT = 142;
+  var STICKER_COUNT = 495;
   var DEFAULT_STICKER_SIZE = 11.25;
   var DEFAULT_LOOSE_STICKER_WIDTH = 48;
   var LATEST_SHEET_STICKER_WIDTH = 56;
   var STICKER_FILES = [];
   var HIDDEN_STICKER_FILES = {
     's01.png': true, // Plant
+    's02.png': true, // Removed legacy sticker
+    's03.png': true, // Removed legacy sticker
     's04.png': true, // Paw print
     's05.png': true, // Nest
     's06.png': true, // Nest with egg
     's07.png': true, // Paw print
     's08.png': true, // Tree
+    's09.png': true, // Removed legacy sticker
+    's10.png': true, // Removed legacy sticker
     's21.png': true, // Paint splatter
     's23.png': true, // Extra bubble removed by request
     's25.png': true, // Speech/words
@@ -705,13 +710,67 @@
   for (var fi = 58; fi <= 73; fi++) {
     FIRST_STICKER_FILES.push('s' + fi + '.png');
   }
+  for (var kirbyIndex = 464; kirbyIndex <= 479; kirbyIndex++) {
+    FIRST_STICKER_FILES.push('s' + kirbyIndex + '.png');
+  }
+  for (var kirbyCrewIndex = 480; kirbyCrewIndex <= 495; kirbyCrewIndex++) {
+    FIRST_STICKER_FILES.push('s' + kirbyCrewIndex + '.png');
+  }
+  for (var lisaFrankIndex = 238; lisaFrankIndex <= 253; lisaFrankIndex++) {
+    FIRST_STICKER_FILES.push('s' + lisaFrankIndex + '.png');
+  }
+  for (var rainbowY2kIndex = 342; rainbowY2kIndex <= 359; rainbowY2kIndex++) {
+    FIRST_STICKER_FILES.push('s' + rainbowY2kIndex + '.png');
+  }
+  for (var spitfireIndex = 143; spitfireIndex <= 158; spitfireIndex++) {
+    FIRST_STICKER_FILES.push('s' + spitfireIndex + '.png');
+  }
+  for (var characterPackIndex = 159; characterPackIndex <= 174; characterPackIndex++) {
+    FIRST_STICKER_FILES.push('s' + characterPackIndex + '.png');
+  }
+  for (var japaneseFlashIndex = 175; japaneseFlashIndex <= 190; japaneseFlashIndex++) {
+    FIRST_STICKER_FILES.push('s' + japaneseFlashIndex + '.png');
+  }
+  for (var toyMachineIndex = 191; toyMachineIndex <= 206; toyMachineIndex++) {
+    FIRST_STICKER_FILES.push('s' + toyMachineIndex + '.png');
+  }
+  for (var pinkY2kIndex = 207; pinkY2kIndex <= 226; pinkY2kIndex++) {
+    FIRST_STICKER_FILES.push('s' + pinkY2kIndex + '.png');
+  }
+  for (var tattooFlashIndex = 286; tattooFlashIndex <= 301; tattooFlashIndex++) {
+    FIRST_STICKER_FILES.push('s' + tattooFlashIndex + '.png');
+  }
+  for (var americanTraditionalIndex = 302; americanTraditionalIndex <= 317; americanTraditionalIndex++) {
+    FIRST_STICKER_FILES.push('s' + americanTraditionalIndex + '.png');
+  }
+  for (var bratzIndex = 227; bratzIndex <= 237; bratzIndex++) {
+    FIRST_STICKER_FILES.push('s' + bratzIndex + '.png');
+  }
+  for (var girlTechIndex = 254; girlTechIndex <= 269; girlTechIndex++) {
+    FIRST_STICKER_FILES.push('s' + girlTechIndex + '.png');
+  }
+  FIRST_STICKER_FILES.push('s463.png');
+  for (var boyY2kIndex = 270; boyY2kIndex <= 285; boyY2kIndex++) {
+    FIRST_STICKER_FILES.push('s' + boyY2kIndex + '.png');
+  }
+  var AFTER_RADICAL_STICKER_FILES = [];
+  for (var radicalFollowupIndex = 318; radicalFollowupIndex <= 341; radicalFollowupIndex++) {
+    AFTER_RADICAL_STICKER_FILES.push('s' + radicalFollowupIndex + '.png');
+  }
   FIRST_STICKER_FILES.forEach(function(stickerFile){
     if(!HIDDEN_STICKER_FILES[stickerFile]) STICKER_FILES.push('stickers/' + stickerFile);
   });
   for (var si = 1; si <= STICKER_COUNT; si++) {
     var stickerFile = 's' + (si < 10 ? '0' + si : si) + '.png';
-    if(!HIDDEN_STICKER_FILES[stickerFile] && FIRST_STICKER_FILES.indexOf(stickerFile) === -1) {
+    if(!HIDDEN_STICKER_FILES[stickerFile] &&
+       FIRST_STICKER_FILES.indexOf(stickerFile) === -1 &&
+       AFTER_RADICAL_STICKER_FILES.indexOf(stickerFile) === -1) {
       STICKER_FILES.push('stickers/' + stickerFile);
+      if(stickerFile === 's107.png') {
+        AFTER_RADICAL_STICKER_FILES.forEach(function(radicalStickerFile){
+          STICKER_FILES.push('stickers/' + radicalStickerFile);
+        });
+      }
     }
   }
 
@@ -1050,7 +1109,7 @@
   function addLooseSticker(src, left, top, width, flipX){
     var stickerFileMatch = String(src || '').split('?')[0].match(/\/s(\d+)\.png$/i);
     var stickerNumber = stickerFileMatch ? Number(stickerFileMatch[1]) : 0;
-    var startingWidth = stickerNumber >= 108 && stickerNumber <= 142
+    var startingWidth = stickerNumber >= 108 && stickerNumber <= 463
       ? LATEST_SHEET_STICKER_WIDTH
       : DEFAULT_LOOSE_STICKER_WIDTH;
     var wrap = document.createElement('div');
