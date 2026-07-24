@@ -826,6 +826,19 @@ var runtime={
   /* Koba always stays above ordinary windows, the taskbar, and search. */
   #desktop-companion { z-index:120600; }
   #desktop-companion.dragging { z-index:999999; }
+  #desktop-companion.dragging .companion-dog-sprite {
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    width:92px !important;
+    height:92px !important;
+    background-image:var(--companion-puppy-bury) !important;
+    background-size:600% 100% !important;
+    background-position:100% 0 !important;
+    background-repeat:no-repeat !important;
+    animation:none !important;
+    transform:none !important;
+  }
   #desktop-companion.over-buddy-list { z-index:999998; }
   #desktop-companion.searching, #desktop-companion.waking, #desktop-companion.digging, #desktop-companion.burying, #desktop-companion.actions-open, #desktop-companion.interacting { z-index:120600; }
   .desktop-icon img { display:block; filter:drop-shadow(1px 1px 2px rgba(0,0,0,.6)); pointer-events:none; -webkit-user-drag:none; user-drag:none; }
@@ -1676,9 +1689,6 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .gb-sticker.gb-size-large { width:27%; }
   .gb-sticker img { display:block; width:100%; aspect-ratio:1; object-fit:contain; pointer-events:none; }
   .gb-sticker:hover,.gb-sticker:focus-visible { z-index:6; filter:drop-shadow(2px 3px 2px rgba(55,38,22,.38)) brightness(1.04); outline:none; }
-  .gb-sticker.is-own::after {
-    content:""; position:absolute; inset:-4px; border:1px dashed rgba(75,112,167,.42); border-radius:6px; pointer-events:none;
-  }
   .gb-page-nav {
     display:flex; align-items:center; justify-content:center; gap:10px; max-width:570px; margin:10px auto 0;
     color:#333; font-size:10px;
@@ -5190,6 +5200,7 @@ try {
         drag=null;
         stopTracking();
         icon.classList.remove('dragging');
+        if(icon.id==='desktop-companion'&&window.setKobaSleepingIfIdle)window.setKobaSleepingIfIdle();
         if(!moved)return;
         suppressClickUntil=Date.now()+450;
         if(petIconOverlapsBuddyList(icon)){
@@ -5217,6 +5228,7 @@ try {
           icon.classList.remove('sleeping','waking','digging','burying','interacting','actions-open','happy','treat','bone','feed','roaming-go-sleep');
         }
         stopTracking();
+        if(icon.id==='desktop-companion')icon.classList.add('dragging');
         var rect=icon.getBoundingClientRect();
         drag={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,left:rect.left,top:rect.top,moved:false};
         if(icon.setPointerCapture)try{icon.setPointerCapture(e.pointerId);}catch(_){ }
@@ -11124,7 +11136,9 @@ try {
   var DTD_IMAGINARY_MARKER='⁣dtd-imaginary:';
   var DTD_DELIVERY_OPTIONS=[
     {id:'1d',label:'1 day',days:1},{id:'3d',label:'3 days',days:3},
-    {id:'1w',label:'7 days',days:7},
+    {id:'1w',label:'1 week',days:7},{id:'2w',label:'2 weeks',days:14},
+    {id:'1m',label:'1 month',months:1},{id:'3m',label:'3 months',months:3},
+    {id:'6m',label:'6 months',months:6},{id:'9m',label:'9 months',months:9},
     {id:'1y',label:'1 year',years:1},{id:'custom',label:'Custom date…'}
   ];
   function dtdLocalDateString(d){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
@@ -12176,12 +12190,12 @@ try {
     trackDtdUsage('profile_editor_opened');
     var body =
       '<div class="win-body nm-body">' +
+        '<div style="text-align:right;margin-bottom:7px;"><span class="forgot-link" id="ep-preview-top">Preview Profile</span></div>' +
         '<div class="field-row"><label>Screen Name</label><input type="text" id="ep-screenname" value="'+escapeHtml((state.account&&state.account.screenName)||'')+'"></div>' +
         '<div class="profile-pic-edit">' +
           '<img id="ep-pic" class="ep-pic" style="display:none;">' +
           '<div class="ep-pic-ph" id="ep-pic-ph">No picture</div>' +
           '<div class="profile-pic-actions"><button class="btn" id="ep-pic-btn">Choose Picture</button>' +
-          '<button class="btn" id="ep-pic-adjust" style="display:none;">Adjust Crop</button>' +
           '<button class="btn" id="ep-pic-clear">Remove</button></div>' +
         '</div>' +
         '<div class="field-row" style="display:flex; align-items:center; justify-content:space-between;">' +
@@ -12208,10 +12222,9 @@ try {
         var picSourceData = picData;
         var img = el.querySelector('#ep-pic');
         var ph = el.querySelector('#ep-pic-ph');
-        var adjust = el.querySelector('#ep-pic-adjust');
         function showPic(){
-          if(picData){ img.src = picData; img.style.display = 'block'; ph.style.display = 'none'; adjust.style.display = 'block'; }
-          else { img.style.display = 'none'; ph.style.display = 'flex'; adjust.style.display = 'none'; }
+          if(picData){ img.src = picData; img.style.display = 'block'; ph.style.display = 'none'; }
+          else { img.style.display = 'none'; ph.style.display = 'flex'; }
         }
         function openCrop(source,onCrop){
           var image=new Image();
@@ -12240,7 +12253,6 @@ try {
           });
           input.click();
         });
-        adjust.addEventListener('click',function(){if(picSourceData)openCrop(picSourceData,function(data){picData=data;showPic();});});
         el.querySelector('#ep-pic-clear').addEventListener('click', function(){ picData = ''; picSourceData=''; showPic(); });
 
         el.querySelector('#ep-help-btn').addEventListener('click', function(){
@@ -12261,11 +12273,13 @@ try {
           }
         });
 
-        el.querySelector('#ep-preview').addEventListener('click', function(){
+        function previewProfile(){
           var h = sanitizeProfileHTML(el.querySelector('#ep-header').value);
           var a = sanitizeProfileHTML(el.querySelector('#ep-about').value);
           openViewProfileWindow(h, a, picData);
-        });
+        }
+        el.querySelector('#ep-preview-top').addEventListener('click', previewProfile);
+        el.querySelector('#ep-preview').addEventListener('click', previewProfile);
         el.querySelector('#ep-save').addEventListener('click', function(){
           var newName = el.querySelector('#ep-screenname').value.trim();
           if(newName && state.account){
@@ -12644,7 +12658,6 @@ try {
       '<div class="gb-picker"><div class="gb-picker-grid"></div><div class="gb-picker-nav"><button class="btn gb-picker-prev">&larr;</button><span class="gb-picker-page"></span><button class="btn gb-picker-next">&rarr;</button></div></div>'+
       '<div class="gb-upload-summary"><img alt="Uploaded sticker preview"><div><b>Your uploaded sticker</b><div style="margin-top:5px"><button class="btn gb-change-upload">Adjust or replace…</button></div></div></div>'+
       '<div class="gb-sign-row"><span class="gb-sign-label">Sticker size</span><div class="gb-choice-row gb-size-row"><button class="gb-choice" data-size="small">Small</button><button class="gb-choice is-selected" data-size="medium">Medium</button><button class="gb-choice" data-size="large">Large</button></div></div>'+
-      '<div class="gb-sign-row"><span class="gb-sign-label">Optional gift</span><div class="gb-choice-row gb-gift-row"><button class="gb-choice is-selected" data-gift="">No gift</button><button class="gb-choice" data-gift="flower">&#127804; Flower</button><button class="gb-choice" data-gift="treat">&#127856; Treat</button><button class="gb-choice" data-gift="mystery">&#127873; Mystery Present</button></div></div>'+
       '<div class="gb-sign-error"></div><div class="gb-sign-actions"><button class="btn gb-sign-cancel">Cancel</button><button class="btn gb-place-button">Place Sticker</button></div>'+
       '</div>';
     createWindow({title:'Sign My Guest Book!',extraClass:'guest-book-sign-win',bodyHtml:body,type:'guestbooksign',onMount:function(el,id){
@@ -12677,7 +12690,6 @@ try {
       el.querySelector('.gb-upload-button').onclick=chooseUpload;
       el.querySelector('.gb-change-upload').onclick=chooseUpload;
       el.querySelectorAll('[data-size]').forEach(function(button){button.onclick=function(){size=button.dataset.size;el.querySelectorAll('[data-size]').forEach(function(b){b.classList.toggle('is-selected',b===button);});};});
-      el.querySelectorAll('[data-gift]').forEach(function(button){button.onclick=function(){gift=button.dataset.gift;el.querySelectorAll('[data-gift]').forEach(function(b){b.classList.toggle('is-selected',b===button);});};});
       el.querySelector('.gb-sign-cancel').onclick=function(){closeWindow(id);};
       el.querySelector('.gb-place-button').onclick=function(){
         if(!selected&&!uploaded){error.textContent='Choose a sticker first.';return;}
