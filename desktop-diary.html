@@ -1527,6 +1527,17 @@ var runtime={
   .profile-pic-edit { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
   .ep-pic { width:70px; height:70px; border-radius:6px; object-fit:cover; border:1px solid #b0aca0; }
   .ep-pic-ph { width:70px; height:70px; border-radius:6px; border:1px dashed #b0aca0; background:#f0f0ea; color:#999; display:flex; align-items:center; justify-content:center; font-size:10px; text-align:center; }
+  .profile-pic-actions { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+  .profile-crop-win { width:min(420px,96vw); height:min(560px,90vh); z-index:120700 !important; }
+  .profile-crop-body { padding:10px; overflow:auto; }
+  .profile-crop-stage { width:min(360px,calc(100vw - 64px)); aspect-ratio:1; margin:0 auto 9px; border:1px solid #718096; background:#c8d3df; box-shadow:inset 0 0 0 1px #fff; }
+  .profile-crop-canvas { display:block; width:100%; height:100%; cursor:grab; touch-action:none; }
+  .profile-crop-canvas:active { cursor:grabbing; }
+  .profile-crop-controls { max-width:360px; margin:0 auto; }
+  .profile-crop-controls label { display:block; margin-bottom:2px; font-size:11px; font-weight:bold; }
+  .profile-crop-controls input[type="range"] { width:100%; }
+  .profile-crop-help { margin-top:5px; color:#555; font-size:10px; text-align:center; }
+  .profile-crop-actions { display:grid; grid-template-columns:auto 1fr auto auto; gap:6px; align-items:center; margin-top:8px; }
   .vp-body { padding:0; }
   .vp-header { display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px; background:linear-gradient(180deg,#dce8f7,#f5f5f0); border-bottom:1px solid #ccc; }
   .vp-pic { width:90px; height:90px; border-radius:6px; object-fit:cover; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.3); }
@@ -6850,9 +6861,10 @@ try {
     } catch (e) {}
     setTimeout(function(){
       if(!window.closed){
-        if(typeof showSignon === 'function') showSignon();
+        try{ window.location.replace('about:blank'); }
+        catch(e){ document.documentElement.innerHTML = ''; }
       }
-    }, 300);
+    }, 150);
   }
 
   function logOffAndClose(){
@@ -6876,7 +6888,7 @@ try {
     options = options || {};
     var signOffStartedAt = Date.now();
     var shouldPlayLogOffSound = options.playLogOffSound === true;
-    var signOffSoundSequenceMs = shouldPlayLogOffSound ? 4470 : 900;
+    var signOffSoundSequenceMs = shouldPlayLogOffSound ? 4470 : 470;
     playSiteSound('buddyOut', 0.9);
     if(shouldPlayLogOffSound){
       setTimeout(function(){ playSiteSound('logOff', 0.85); }, 470);
@@ -11626,6 +11638,62 @@ try {
     createWindow({ title: 'HTML Help', extraClass: 'help-win', bodyHtml: body, type: 'profilehelp' });
   }
 
+  function openProfilePictureCropEditor(image,onDone){
+    var canvasSize=360,cropSize=320,zoom=1,offsetX=0,offsetY=0;
+    var body='<div class="win-body profile-crop-body">'+
+      '<div class="profile-crop-stage"><canvas class="profile-crop-canvas" width="'+canvasSize+'" height="'+canvasSize+'"></canvas></div>'+
+      '<div class="profile-crop-controls"><label for="profile-crop-zoom">Zoom</label><input id="profile-crop-zoom" type="range" min="100" max="250" value="100">'+
+        '<div class="profile-crop-help">Drag the picture to reposition it inside the square.</div>'+
+        '<div class="profile-crop-actions"><button class="btn profile-crop-reset">Reset</button><span></span><button class="btn profile-crop-cancel">Cancel</button><button class="btn profile-crop-use">Use This Crop</button></div>'+
+      '</div></div>';
+    createWindow({title:'Adjust Profile Photo',extraClass:'profile-crop-win',bodyHtml:body,type:'profilecrop',onMount:function(el,id){
+      var canvas=el.querySelector('canvas'),ctx=canvas.getContext('2d'),zoomEl=el.querySelector('#profile-crop-zoom');
+      function baseScale(){return Math.max(cropSize/image.naturalWidth,cropSize/image.naturalHeight);}
+      function clampOffsets(){
+        var scale=baseScale()*zoom;
+        var maxX=Math.max(0,(image.naturalWidth*scale-cropSize)/2);
+        var maxY=Math.max(0,(image.naturalHeight*scale-cropSize)/2);
+        offsetX=Math.max(-maxX,Math.min(maxX,offsetX));
+        offsetY=Math.max(-maxY,Math.min(maxY,offsetY));
+      }
+      function render(){
+        clampOffsets();
+        ctx.clearRect(0,0,canvasSize,canvasSize);
+        ctx.fillStyle='#c8d3df';ctx.fillRect(0,0,canvasSize,canvasSize);
+        ctx.save();ctx.beginPath();ctx.rect(20,20,cropSize,cropSize);ctx.clip();
+        ctx.fillStyle='#fff';ctx.fillRect(20,20,cropSize,cropSize);
+        var scale=baseScale()*zoom;
+        ctx.translate(canvasSize/2+offsetX,canvasSize/2+offsetY);
+        ctx.drawImage(image,-image.naturalWidth*scale/2,-image.naturalHeight*scale/2,image.naturalWidth*scale,image.naturalHeight*scale);
+        ctx.restore();
+        ctx.strokeStyle='#fff';ctx.lineWidth=8;ctx.strokeRect(16,16,cropSize+8,cropSize+8);
+        ctx.strokeStyle='#6f7e90';ctx.lineWidth=1;ctx.strokeRect(20.5,20.5,cropSize-1,cropSize-1);
+      }
+      function reset(){zoom=1;offsetX=0;offsetY=0;zoomEl.value='100';render();}
+      zoomEl.oninput=function(){zoom=Number(zoomEl.value)/100;render();};
+      canvas.addEventListener('pointerdown',function(ev){
+        ev.preventDefault();canvas.setPointerCapture(ev.pointerId);
+        var startX=ev.clientX,startY=ev.clientY,baseX=offsetX,baseY=offsetY,rect=canvas.getBoundingClientRect(),ratio=canvasSize/rect.width;
+        function move(moveEv){offsetX=baseX+(moveEv.clientX-startX)*ratio;offsetY=baseY+(moveEv.clientY-startY)*ratio;render();}
+        function up(){canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);}
+        canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+      });
+      el.querySelector('.profile-crop-reset').onclick=reset;
+      el.querySelector('.profile-crop-cancel').onclick=function(){closeWindow(id);};
+      el.querySelector('.profile-crop-use').onclick=function(){
+        clampOffsets();
+        var output=document.createElement('canvas'),outputSize=300,ratio=outputSize/cropSize,scale=baseScale()*zoom*ratio;
+        output.width=outputSize;output.height=outputSize;
+        var out=output.getContext('2d');
+        out.translate(outputSize/2+offsetX*ratio,outputSize/2+offsetY*ratio);
+        out.drawImage(image,-image.naturalWidth*scale/2,-image.naturalHeight*scale/2,image.naturalWidth*scale,image.naturalHeight*scale);
+        var data=output.toDataURL('image/webp',0.9);
+        closeWindow(id);onDone(data);
+      };
+      render();
+    }});
+  }
+
   function openEditProfileWindow(){
     trackDtdUsage('profile_editor_opened');
     var body =
@@ -11634,8 +11702,9 @@ try {
         '<div class="profile-pic-edit">' +
           '<img id="ep-pic" class="ep-pic" style="display:none;">' +
           '<div class="ep-pic-ph" id="ep-pic-ph">No picture</div>' +
-          '<div><button class="btn" id="ep-pic-btn">Choose Picture</button>' +
-          '<button class="btn" id="ep-pic-clear" style="margin-top:4px;">Remove</button></div>' +
+          '<div class="profile-pic-actions"><button class="btn" id="ep-pic-btn">Choose Picture</button>' +
+          '<button class="btn" id="ep-pic-adjust" style="display:none;">Adjust Crop</button>' +
+          '<button class="btn" id="ep-pic-clear">Remove</button></div>' +
         '</div>' +
         '<div class="field-row" style="display:flex; align-items:center; justify-content:space-between;">' +
           '<label style="margin:0;">Customize with HTML</label>' +
@@ -11658,11 +11727,19 @@ try {
       type: 'editprofile',
       onMount: function(el, id){
         var picData = (state.profile && state.profile.pic) || '';
+        var picSourceData = picData;
         var img = el.querySelector('#ep-pic');
         var ph = el.querySelector('#ep-pic-ph');
+        var adjust = el.querySelector('#ep-pic-adjust');
         function showPic(){
-          if(picData){ img.src = picData; img.style.display = 'block'; ph.style.display = 'none'; }
-          else { img.style.display = 'none'; ph.style.display = 'flex'; }
+          if(picData){ img.src = picData; img.style.display = 'block'; ph.style.display = 'none'; adjust.style.display = 'block'; }
+          else { img.style.display = 'none'; ph.style.display = 'flex'; adjust.style.display = 'none'; }
+        }
+        function openCrop(source,onCrop){
+          var image=new Image();
+          image.onload=function(){openProfilePictureCropEditor(image,onCrop);};
+          image.onerror=function(){openInfoWindow('That picture could not be opened.');};
+          image.src=source;
         }
         showPic();
         el.querySelector('#ep-header').value = (state.profile && state.profile.header) || '';
@@ -11677,21 +11754,7 @@ try {
             if(file){
               var reader = new FileReader();
               reader.onload = function(e){
-                var im = new Image();
-                im.onload = function(){
-                  var maxDim = 300;
-                  var w = im.width, h = im.height;
-                  if(w > maxDim || h > maxDim){
-                    if(w >= h){ h = Math.round(h*maxDim/w); w = maxDim; }
-                    else { w = Math.round(w*maxDim/h); h = maxDim; }
-                  }
-                  var canvas = document.createElement('canvas');
-                  canvas.width = w; canvas.height = h;
-                  canvas.getContext('2d').drawImage(im, 0, 0, w, h);
-                  picData = canvas.toDataURL('image/webp', 0.9);
-                  showPic();
-                };
-                im.src = e.target.result;
+                openCrop(e.target.result,function(data){picSourceData=e.target.result;picData=data;showPic();});
               };
               reader.readAsDataURL(file);
             }
@@ -11699,7 +11762,8 @@ try {
           });
           input.click();
         });
-        el.querySelector('#ep-pic-clear').addEventListener('click', function(){ picData = ''; showPic(); });
+        adjust.addEventListener('click',function(){if(picSourceData)openCrop(picSourceData,function(data){picData=data;showPic();});});
+        el.querySelector('#ep-pic-clear').addEventListener('click', function(){ picData = ''; picSourceData=''; showPic(); });
 
         el.querySelector('#ep-help-btn').addEventListener('click', function(){
           openProfileHelpWindow();
