@@ -55,7 +55,7 @@ h1 { margin-bottom: 0; font-family: Georgia, serif; font-size: clamp(30px, 5vw, 
 
 .bowl-stage { position: relative; min-height: min(68vw, 730px); display: grid; place-items: center; border-radius: 14px; overflow: hidden; background: radial-gradient(ellipse at 50% 52%, rgba(28,159,197,.15), transparent 48%), linear-gradient(#071a35, #051124); }
 .bowl { position: relative; width: min(720px, 88vw); aspect-ratio: 1; background: url("assets/fishbowl.png") center / contain no-repeat; filter: drop-shadow(0 22px 18px rgba(0,0,0,.4)); }
-.bowl::after { content: ""; position: absolute; z-index: 3; inset: 12% 8% 14%; border-radius: 48% 48% 44% 44%; pointer-events: none; transition: background .8s ease; }
+.bowl::after { content: ""; position: absolute; z-index: 3; inset: 13% 11% 15%; border-radius: 50%; clip-path: ellipse(49% 49% at 50% 50%); pointer-events: none; transition: background .8s ease; }
 .bowl.dawn::after { background: linear-gradient(rgba(255, 178, 142, .2), rgba(117, 165, 211, .08) 55%, transparent); box-shadow: inset 0 20px 55px rgba(255, 196, 134, .12); }
 .bowl.sunset::after { background: linear-gradient(rgba(247, 126, 92, .24), rgba(109, 66, 151, .2) 58%, rgba(21, 35, 92, .16)); box-shadow: inset 0 18px 65px rgba(255, 157, 93, .14); }
 .bowl.night::after { background: rgba(4, 18, 70, .4); box-shadow: inset 0 0 70px rgba(2,8,44,.5); }
@@ -117,6 +117,60 @@ dialog::backdrop { background: rgba(1,8,24,.8); backdrop-filter: blur(3px); }
 .dialog-card li + li { margin-top: 7px; }
 .dialog-close { position: absolute; right: 12px; top: 9px; border: 0; color: #1c3b8c; background: none; font-size: 24px; cursor: pointer; }
 .primary-button { width: 100%; border: 2px solid #162c78; border-radius: 5px; padding: 11px; color: #fff; background: #3157b7; font-weight: 700; cursor: pointer; }
+
+@media (min-width: 781px) and (max-height: 950px) {
+  .game {
+    --laptop-bowl-size: min(480px, calc(100vh - 280px));
+    width: min(1000px, calc(100% - 24px));
+    padding: 8px 0;
+  }
+
+  .pet-tabs {
+    margin-bottom: 6px;
+    padding: 3px;
+  }
+
+  .pet-tab { padding: 5px 10px; }
+  .game-header { margin-bottom: 6px; }
+  .eyebrow { display: none; }
+  h1 { font-size: 34px; }
+  .text-button { padding: 6px 9px; font-size: 10px; }
+
+  .status-strip {
+    min-height: 54px;
+    margin-bottom: 6px;
+    padding: 8px 10px;
+  }
+
+  .day-badge { padding-block: 6px; }
+
+  .bowl-stage {
+    min-height: var(--laptop-bowl-size);
+    height: var(--laptop-bowl-size);
+  }
+
+  .bowl { width: var(--laptop-bowl-size); }
+
+  .care-dock {
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .care-card {
+    min-height: 48px;
+    padding: 6px 8px;
+  }
+
+  .care-icon { width: 28px; font-size: 21px; }
+
+  .fish-message {
+    min-height: 44px;
+    margin-top: 6px;
+    padding: 6px 10px;
+  }
+
+  .portrait { width: 38px; height: 32px; }
+}
 
 @media (max-width: 780px) {
   .game { width: min(100% - 12px, 720px); padding-top: 15px; }
