@@ -5282,6 +5282,7 @@ try {
   mailboxIcon.addEventListener('dblclick',function(e){e.preventDefault();e.stopPropagation();clearTimeout(mailboxClickTimer);mailboxClickTimer=null;mailboxIcon.classList.remove('pigeon-click-perched');openDtdPostWindow();});
   mailboxIcon.addEventListener('keydown',function(e){if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();e.stopPropagation();clearTimeout(mailboxClickTimer);mailboxClickTimer=null;mailboxIcon.classList.remove('pigeon-click-perched');openDtdPostWindow();});
   (function(){
+    var tbNotepad=document.getElementById('tb-notebook-taskbar');
     var suggestionIcon=document.getElementById('suggestion-desktop-icon');
     if(suggestionIcon){
       suggestionIcon.addEventListener('click', function(e){e.stopPropagation();openSuggestionBoxWindow();});
@@ -5304,6 +5305,12 @@ try {
     function toggleNotebookWindow(){
       if(!document.body.classList.contains('signed-in')){
         if(typeof showSignon === 'function') showSignon();
+        return;
+      }
+      // Keep the taskbar control usable if a modular build omits the compact
+      // embedded notebook implementation.
+      if(typeof openNotebookWindow !== 'function'){
+        window.open('MyNotepad.html','_blank','noopener');
         return;
       }
       function updateNotebookTaskbarIcon(){
@@ -5330,28 +5337,15 @@ try {
       tbNotepad.addEventListener('click', function(e){
         e.preventDefault();
         e.stopPropagation();
-        openSuggestionBoxWindow();
+        toggleNotebookWindow();
       });
-      suggestionIcon.addEventListener('keydown',function(e){
+      tbNotepad.addEventListener('keydown',function(e){
         if(e.key!=='Enter'&&e.key!==' ')return;
         e.preventDefault();
         e.stopPropagation();
-        openSuggestionBoxWindow();
+        toggleNotebookWindow();
       });
     }
-
-    function wirePetDesktopIcon(id,path){
-      var icon=document.getElementById(id);
-      if(!icon)return;
-      function openPet(){window.open(path,'_blank','noopener');}
-      icon.addEventListener('dblclick',function(e){e.preventDefault();e.stopPropagation();openPet();});
-      icon.addEventListener('keydown',function(e){
-        if(e.key!=='Enter'&&e.key!==' ')return;
-        e.preventDefault();e.stopPropagation();openPet();
-      });
-    }
-    wirePetDesktopIcon('ant-farm-desktop-icon','ant-farm/index.html');
-    wirePetDesktopIcon('fish-tank-desktop-icon','fish-tank/index.html');
 
     var trashIcon=document.getElementById('trash-desktop-icon');
     var trashArt=trashIcon&&trashIcon.querySelector('.trash-icon-art');
@@ -7116,6 +7110,11 @@ try {
   });
 
   function enterDesktop(){
+    window.__ddStartupRoute = 'signed-in';
+    if(document.body.classList.contains('signed-in')){
+      document.getElementById('signon-wrap').style.display = 'none';
+      return;
+    }
     setActiveSession(true);
     document.body.classList.remove('koba-minimized');
     document.body.classList.add('signed-in');
