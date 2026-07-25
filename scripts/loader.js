@@ -29,12 +29,17 @@
   window.__ddStartupLoaderDismissed = false;
   var startupRecoveryPasses = 0;
   var loaderStartupRecoveryMaxPasses = 10;
-  var loaderBlackFadeHoldMs = 920;
+  var loaderFadeDurationMs = 1100;
+  var loaderBlackFadeHoldMs = 3050;
   var loaderDismissDelayMs = loaderBlackFadeHoldMs;
   var loaderDismissForcedByClick = false;
-  var bootSoundDisabled = true;
+  var bootSoundDisabled = false;
   var ddBootLockClass = 'dd-booting';
   var startupLockReleased = false;
+
+  if(!window.__ddStartupRoute){
+    window.__ddStartupRoute = 'pending';
+  }
 
   if(typeof window.__ddStartupBlockersClear !== 'function'){
     window.__ddStartupBlockersClear = function(){};
@@ -62,7 +67,11 @@
       var signon = document.getElementById('signon-wrap');
       var taskbar = document.getElementById('taskbar');
       var desktop = document.getElementById('desktop');
-      if(signon){
+      var signedIn = window.__ddStartupRoute === 'signed-in' ||
+        (document.body && document.body.classList && document.body.classList.contains('signed-in'));
+      if(signon && signedIn){
+        signon.style.display = 'none';
+      } else if(signon && window.__ddStartupRoute === 'signed-out'){
         signon.style.display = 'block';
         signon.style.visibility = 'visible';
         signon.style.opacity = '1';
@@ -99,6 +108,38 @@
   }
 
   function forceSignonRevealNow(){
+    var signon = document.getElementById('signon-wrap');
+    var taskbar = document.getElementById('taskbar');
+    var desktop = document.getElementById('desktop');
+    var connecting = document.getElementById('connecting-wrap');
+    var alreadySignedIn = window.__ddStartupRoute === 'signed-in' ||
+      (document.body && document.body.classList && document.body.classList.contains('signed-in'));
+
+    if(alreadySignedIn){
+      if(signon) signon.style.display = 'none';
+      if(taskbar){
+        taskbar.style.display = 'flex';
+        taskbar.style.visibility = 'visible';
+        taskbar.style.pointerEvents = 'auto';
+      }
+      if(desktop){
+        desktop.style.display = 'block';
+        desktop.style.visibility = 'visible';
+        desktop.style.pointerEvents = 'auto';
+      }
+      if(typeof window.__ddStartupInteractivity === 'function'){
+        try { window.__ddStartupInteractivity(); } catch (e) {}
+      }
+      if(typeof window.__ddStartupBlockersClear === 'function'){
+        try { window.__ddStartupBlockersClear(); } catch (e) {}
+      }
+      return;
+    }
+
+    // Loading the saved diary is asynchronous. Do not flash Sign On while the
+    // app is still deciding whether this is a returning signed-in session.
+    if(window.__ddStartupRoute !== 'signed-out') return;
+
     if(document.body && document.body.classList){
       document.body.classList.remove('signed-in');
       document.body.style.pointerEvents = 'auto';
@@ -106,11 +147,6 @@
         document.documentElement.style.pointerEvents = 'auto';
       }
     }
-
-    var signon = document.getElementById('signon-wrap');
-    var taskbar = document.getElementById('taskbar');
-    var desktop = document.getElementById('desktop');
-    var connecting = document.getElementById('connecting-wrap');
 
     if(signon){
       signon.style.display = 'block';
@@ -189,8 +225,8 @@
     var currentTransition = loaderWrap.style.transition || '';
     if(currentTransition.indexOf('opacity') === -1){
       loaderWrap.style.transition = currentTransition
-        ? currentTransition + ', opacity 0.72s ease'
-        : 'opacity 0.72s ease';
+        ? currentTransition + ', opacity ' + (loaderFadeDurationMs / 1000) + 's ease'
+        : 'opacity ' + (loaderFadeDurationMs / 1000) + 's ease';
     }
   }
 
@@ -305,7 +341,7 @@
           scheduleLoaderVisualFallback();
           runStartupRecoveryPass();
         }
-      }, fadeDelayMs + 760);
+      }, fadeDelayMs + loaderFadeDurationMs);
     }
 
     loaderDismissDelayMs = loaderBlackFadeHoldMs;
@@ -424,10 +460,13 @@
       bootSound = null;
     }
 
-    var candidates = [
-      'source-assets/audio/originals/log%20on.wav',
-      'source-assets/audio/originals/Windows%20XP%20login.wav'
-    ];
+    var candidates = [];
+    if(!candidates.length){
+      bootSoundPlayed = true;
+      bootSoundInFlight = false;
+      fadeLoaderToBlack();
+      return;
+    }
 
     var armRetry = function(){
       if(bootSoundRetryArmed || bootSoundPlayed) return;
@@ -461,8 +500,8 @@
         return;
       }
       bootSound = new Audio(candidates[index]);
-      bootSound.muted = true;
-      bootSound.volume = 0;
+      bootSound.muted = false;
+      bootSound.volume = 0.85;
       bootSound.preload = 'auto';
       bootSound.autoplay = false;
       bootSound.playsInline = true;
@@ -472,11 +511,6 @@
         fadeLoaderToBlack();
         bootSoundPlayed = true;
         bootSoundInFlight = false;
-        setTimeout(function(){
-          if(!bootSound) return;
-          bootSound.muted = false;
-          bootSound.volume = 0.85;
-        }, 80);
       }).catch(function(){
         tryPlay(index + 1);
       });
@@ -504,12 +538,16 @@
           window.__ddForceStartupSurface();
         } catch (e) {}
       } else {
-        document.body.classList.remove('signed-in');
         var signonFallback = document.getElementById('signon-wrap');
         var connectingFallback = document.getElementById('connecting-wrap');
         var taskbarFallback = document.getElementById('taskbar');
         var desktopFallback = document.getElementById('desktop');
-        if(signonFallback){
+        var fallbackSignedIn = window.__ddStartupRoute === 'signed-in' ||
+          (document.body && document.body.classList && document.body.classList.contains('signed-in'));
+        if(fallbackSignedIn){
+          if(signonFallback) signonFallback.style.display = 'none';
+        } else if(signonFallback){
+          document.body.classList.remove('signed-in');
           signonFallback.style.display = 'block';
           signonFallback.style.visibility = 'visible';
           signonFallback.style.opacity = '1';
@@ -556,6 +594,8 @@ function forceLoaderInteractionRecovery(){
   }
 
   function requestLoaderDismiss(){
+    // The log-on sound and the visual handoff begin together after
+    // Click to Continue.
     loaderDismissDelayMs = 0;
     loaderDismissForcedByClick = true;
     loaderHideReady = true;
@@ -660,16 +700,22 @@ function forceLoaderInteractionRecovery(){
   if(loaderWrap){
     var onLoaderInteract = function(){
       window.__ddLoaderDismissed = true;
+      playBootSound();
       requestLoaderDismiss();
+    };
+    var onLoaderKeydown = function(event){
+      if(event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      onLoaderInteract();
     };
     loaderWrap.addEventListener('click', onLoaderInteract, true);
     loaderWrap.addEventListener('pointerdown', onLoaderInteract, true);
     loaderWrap.addEventListener('touchstart', onLoaderInteract, true);
+    loaderWrap.addEventListener('keydown', onLoaderKeydown, true);
   }
 
   runLoaderProgress();
   syncLoaderKobaTurn();
-  playBootSound();
 
   // Failsafe: if the app fails to call the normal hide hook, auto-release the
   // boot screen so users are not stuck indefinitely on INITIALIZING.

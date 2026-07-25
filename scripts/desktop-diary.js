@@ -170,7 +170,8 @@ try {
   }
   function syncDtdPublicEntry(entry){
     if(!getSupabaseSession()||!entry)return Promise.resolve();
-    return entry.shared?supabaseRpc('sync_dtd_public_entry',{entry_local_id:entry.id,entry_title:entry.title||'',entry_html:entry.html||'',entry_time:new Date(entry.ts||Date.now()).toISOString()}):supabaseRpc('remove_dtd_public_entry',{entry_local_id:entry.id});
+    var publicHtml=typeof renderDiaryPostContent==='function'?renderDiaryPostContent(entry):(entry.html||'');
+    return entry.shared?supabaseRpc('sync_dtd_public_entry',{entry_local_id:entry.id,entry_title:entry.title||'',entry_html:publicHtml,entry_time:new Date(entry.ts||Date.now()).toISOString()}):supabaseRpc('remove_dtd_public_entry',{entry_local_id:entry.id});
   }
   function syncAllDtdPublicContent(){
     if(!getSupabaseSession())return Promise.resolve();
@@ -210,6 +211,8 @@ try {
     statusPresets: [],                // saved reusable statuses: { id, label, html }
     moodLog: [],                      // mood tracker history: { mood, ts }
     profile: { pic: '', html: '', header: '', aboutMe: '' },  // profile picture + two HTML sections
+    profileUpdatedAt: 0,     // changes only when the profile editor is explicitly saved
+    screenNameUpdatedAt: 0,  // changes only when the member explicitly saves a screen name
     blogPosts: [],          // blog posts: { id, title, html, ts, editedAt }
     background: { color: '', image: '' },  // custom desktop background (device-local, not synced)
     paintRecentColors: [],  // recently used custom colors in Paint (device-local, not synced)
@@ -226,8 +229,9 @@ try {
     customMoods: [],        // user-added moods: ['Grateful', 'Hopeful', ...]
     customMoodColors: {},   // mood name -> hex color override
     groups: [ { id: 'default', name: 'Buddy Lists' } ],
-    buddies: [],            // { id, name, addedAt, groupId }
+    buddies: [],            // { id, name, addedAt, updatedAt, groupId }
     entries: {},            // buddyId -> [ { id, html, ts, kind:'entry'|'prompt' } ]
+    buddyEntryTombstones: {}, // deleted entry id -> { buddyId, deletedAt }; prevents cloud resurrection
     drafts: {},             // buddyId -> [ { id, html, ts }, ... ] saved draft log
     anonymousTips: [], // anonymous suggestions sent from this device
     mail: { address: '', inbox: [], sent: [], scheduled: [], contacts: [] }, // DtD Post Mail account, messages, and address book
@@ -242,7 +246,11 @@ try {
       state.groups = [{ id: 'default', name: 'Buddy Lists' }];
     }
     if(!Array.isArray(state.buddies)) state.buddies = [];
-    state.buddies.forEach(function(b){ if(!b.groupId) b.groupId = 'default'; });
+    state.buddies.forEach(function(b){
+      if(!b.groupId) b.groupId = 'default';
+      b.addedAt = Number.isFinite(Number(b.addedAt)) ? Number(b.addedAt) : 0;
+      b.updatedAt = Number.isFinite(Number(b.updatedAt)) ? Number(b.updatedAt) : b.addedAt;
+    });
     if(!state.status) state.status = { label: '', html: '', ts: null };
     if(!Array.isArray(state.statusLog)) state.statusLog = [];
     state.statusLog.forEach(function(e){ if(!e.id) e.id = uid(); });
@@ -256,6 +264,8 @@ try {
     }
     if(state.profile.header === undefined) state.profile.header = '';
     if(state.profile.aboutMe === undefined) state.profile.aboutMe = '';
+    state.profileUpdatedAt = Number.isFinite(Number(state.profileUpdatedAt)) && Number(state.profileUpdatedAt) > 0 ? Number(state.profileUpdatedAt) : 0;
+    state.screenNameUpdatedAt = Number.isFinite(Number(state.screenNameUpdatedAt)) && Number(state.screenNameUpdatedAt) > 0 ? Number(state.screenNameUpdatedAt) : 0;
     if(!Array.isArray(state.blogPosts)) state.blogPosts = [];
     state.blogPosts.forEach(function(post){if(post.shared===undefined)post.shared=true;});
     if(!state.background) state.background = { color: '', image: '', gradient: '' };
@@ -346,9 +356,29 @@ try {
     state.trash = state.trash.filter(function(item){return item&&item.deletedAt&&Date.now()-item.deletedAt<7*24*60*60*1000;});
     if(!Array.isArray(state.customMoods)) state.customMoods = [];
     if(!state.customMoodColors || typeof state.customMoodColors !== 'object') state.customMoodColors = {};
-    state.entries = state.entries || {};
+    state.entries = state.entries && typeof state.entries === 'object' ? state.entries : {};
     Object.keys(state.entries).forEach(function(bid){
-      (state.entries[bid] || []).forEach(function(e){ if(!e.kind) e.kind = 'entry'; });
+      if(!Array.isArray(state.entries[bid])) state.entries[bid] = [];
+      state.entries[bid] = state.entries[bid].filter(function(e){ return e && typeof e === 'object'; });
+      state.entries[bid].forEach(function(e){
+        if(!e.id) e.id = uid();
+        if(!e.kind) e.kind = 'entry';
+      });
+    });
+    if(!state.buddyEntryTombstones || typeof state.buddyEntryTombstones !== 'object' || Array.isArray(state.buddyEntryTombstones)){
+      state.buddyEntryTombstones = {};
+    }
+    Object.keys(state.buddyEntryTombstones).forEach(function(entryId){
+      var marker=state.buddyEntryTombstones[entryId];
+      var deletedAt=Number(marker&&marker.deletedAt);
+      if(!entryId || !marker || typeof marker!=='object' || !Number.isFinite(deletedAt) || deletedAt<=0){
+        delete state.buddyEntryTombstones[entryId];
+        return;
+      }
+      state.buddyEntryTombstones[entryId]={
+        buddyId:String(marker.buddyId||''),
+        deletedAt:deletedAt
+      };
     });
     if(!state.drafts || typeof state.drafts !== 'object') state.drafts = {};
     Object.keys(state.drafts).forEach(function(bid){
@@ -975,6 +1005,59 @@ try {
     });
   }
 
+  function petIconOverlapsBuddyList(icon){
+    if(!icon || (icon.id!=='fish-tank-desktop-icon' && icon.id!=='ant-farm-desktop-icon')) return false;
+    var buddy=document.getElementById('buddylist-win');
+    if(!buddy || buddy.style.display==='none') return false;
+    var a=icon.getBoundingClientRect(),b=buddy.getBoundingClientRect();
+    return a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+  }
+  function restorePetIconDefault(icon,preserveSavedPosition){
+    var previousTop=icon.getBoundingClientRect().top;
+    delete icon.dataset.petSafetyShifted;
+    icon.style.left='';
+    icon.style.top='';
+    icon.style.right='';
+    icon.style.bottom='';
+    if(!preserveSavedPosition && state.desktopIconPositions) delete state.desktopIconPositions[icon.id];
+    // On short or landscape screens the responsive default can still share
+    // vertical space with the Buddy List. Use the open area to its left.
+    if(petIconOverlapsBuddyList(icon)){
+      var buddy=document.getElementById('buddylist-win');
+      var b=buddy.getBoundingClientRect(),r=icon.getBoundingClientRect();
+      var slot=icon.id==='fish-tank-desktop-icon'?0:1;
+      var safeX=b.left-r.width-12-slot*(r.width+8);
+      if(safeX<4) safeX=4+slot*(r.width+8);
+      var safeY=Math.max(4,Math.min(previousTop,window.innerHeight-TASKBAR_H-r.height-4));
+      icon.style.left=Math.round(safeX)+'px';
+      icon.style.top=Math.round(safeY)+'px';
+      icon.style.right='auto';
+      icon.style.bottom='auto';
+      icon.dataset.petSafetyShifted='true';
+    }
+  }
+  function keepPetIconsClearOfBuddyList(){
+    var changed=false;
+    ['fish-tank-desktop-icon','ant-farm-desktop-icon'].forEach(function(id){
+      var icon=document.getElementById(id);
+      if(icon && icon.dataset.petSafetyShifted==='true'){
+        var saved=state.desktopIconPositions&&state.desktopIconPositions[id];
+        if(!saved || saved.userPlaced!==true){
+          icon.style.left='';
+          icon.style.top='';
+          icon.style.right='';
+          icon.style.bottom='';
+        }
+        delete icon.dataset.petSafetyShifted;
+      }
+      if(petIconOverlapsBuddyList(icon)){
+        restorePetIconDefault(icon,true);
+        changed=true;
+      }
+    });
+    if(changed) saveState();
+  }
+
   // Desktop icons can be rearranged with mouse, pen, or touch. A short tap still
   // opens the icon; only a real drag suppresses its click action.
   function initializeDesktopIconDragging(){
@@ -1001,6 +1084,9 @@ try {
     }
     icons.forEach(function(icon){
       var saved=state.desktopIconPositions[icon.id];
+      // Retire old automatic fish-tank coordinates now that the responsive
+      // default keeps the shortcut clear of the Buddy List. User drags stay.
+      if(icon.id==='fish-tank-desktop-icon' && saved && saved.userPlaced!==true) saved=null;
       if(saved&&Number.isFinite(Number(saved.x))&&Number.isFinite(Number(saved.y))) place(icon,Number(saved.x),Number(saved.y));
       if(icon.id==='desktop-companion'&&saved&&saved.overBuddyList)icon.classList.add('over-buddy-list');
       var drag=null,suppressClickUntil=0;
@@ -1025,11 +1111,17 @@ try {
         drag=null;
         stopTracking();
         icon.classList.remove('dragging');
+        if(icon.id==='desktop-companion'&&window.setKobaSleepingIfIdle)window.setKobaSleepingIfIdle();
         if(!moved)return;
         suppressClickUntil=Date.now()+450;
+        if(petIconOverlapsBuddyList(icon)){
+          restorePetIconDefault(icon,false);
+          saveState();
+          return;
+        }
         var perched=overlapsBuddyList(icon);
         if(icon.id==='desktop-companion')icon.classList.toggle('over-buddy-list',perched);
-        state.desktopIconPositions[icon.id]={x:icon.offsetLeft,y:icon.offsetTop,overBuddyList:perched};
+        state.desktopIconPositions[icon.id]={x:icon.offsetLeft,y:icon.offsetTop,overBuddyList:perched,userPlaced:true};
         saveState();
         if(icon.id==='desktop-companion'&&window.anchorKobaPlayBallHome)window.anchorKobaPlayBallHome();
       }
@@ -1046,6 +1138,7 @@ try {
           icon.classList.remove('sleeping','waking','digging','burying','interacting','actions-open','happy','treat','bone','feed','roaming-go-sleep');
         }
         stopTracking();
+        if(icon.id==='desktop-companion')icon.classList.add('dragging');
         var rect=icon.getBoundingClientRect();
         drag={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,left:rect.left,top:rect.top,moved:false};
         if(icon.setPointerCapture)try{icon.setPointerCapture(e.pointerId);}catch(_){ }
@@ -1060,8 +1153,9 @@ try {
         var saved=state.desktopIconPositions[icon.id];
         if(!saved)return;
         var p=place(icon,Number(saved.x)||0,Number(saved.y)||0);
-        saved.x=p.x;saved.y=p.y;
+        if(saved.userPlaced!==true){saved.x=p.x;saved.y=p.y;}
       });
+      keepPetIconsClearOfBuddyList();
     });
   }
 
@@ -1076,7 +1170,8 @@ try {
     }
   });
 
-  document.getElementById('sm-stickynote').addEventListener('click', function(e){
+  var legacyStartNotebook=document.getElementById('sm-stickynote');
+  if(legacyStartNotebook)legacyStartNotebook.addEventListener('click', function(e){
     e.stopPropagation();
     document.getElementById('start-menu').classList.remove('open');
     openNotebookWindow();
@@ -1125,6 +1220,19 @@ try {
       });
     }
 
+    function wirePetDesktopIcon(id,path){
+      var icon=document.getElementById(id);
+      if(!icon)return;
+      function openPet(){window.open(path,'_blank','noopener');}
+      icon.addEventListener('dblclick',function(e){e.preventDefault();e.stopPropagation();openPet();});
+      icon.addEventListener('keydown',function(e){
+        if(e.key!=='Enter'&&e.key!==' ')return;
+        e.preventDefault();e.stopPropagation();openPet();
+      });
+    }
+    wirePetDesktopIcon('ant-farm-desktop-icon','ant-farm/index.html');
+    wirePetDesktopIcon('fish-tank-desktop-icon','fish-tank/index.html');
+
     var trashIcon=document.getElementById('trash-desktop-icon');
     var trashArt=trashIcon&&trashIcon.querySelector('.trash-icon-art');
     var trashClickTimer=0;
@@ -1140,7 +1248,10 @@ try {
       e.stopPropagation();
       clearTimeout(trashClickTimer);
       if(e.detail>1)return;
-      trashClickTimer=setTimeout(wiggleTrash,260);
+      trashClickTimer=setTimeout(function(){
+        wiggleTrash();
+        openTrashWindow();
+      },260);
     });
     trashIcon.addEventListener('dblclick',function(e){
       e.preventDefault();e.stopPropagation();
@@ -1199,7 +1310,8 @@ try {
     document.getElementById('start-menu').classList.remove('open');
     showDesktop();
   });
-  document.getElementById('sm-scrapbook').addEventListener('click', function(e){
+  var legacyStartScrapbook=document.getElementById('sm-scrapbook');
+  if(legacyStartScrapbook)legacyStartScrapbook.addEventListener('click', function(e){
     e.stopPropagation();
     document.getElementById('start-menu').classList.remove('open');
     openScrapbookWindow();
@@ -1212,7 +1324,7 @@ try {
   document.getElementById('sm-signoff').addEventListener('click', function(e){
     e.stopPropagation();
     document.getElementById('start-menu').classList.remove('open');
-    signOff();
+    signOff(true);
   });
 
   function openEditDisplayWindow(){
@@ -1317,16 +1429,17 @@ try {
       '<input class="paint-import" type="file" accept="image/*" hidden></div>'+
       '<div class="paint-main"><div class="paint-tools"><div class="paint-tools-title">DRAWING TOOLS</div><div class="paint-tool-grid">'+th+'</div><div style="font-size:9px;margin-top:9px;color:#555;font-weight:bold">CURRENT COLOR</div><div class="paint-current" style="height:30px;background:#000;border:3px inset #ddd" title="Selected drawing color"></div></div>'+
       '<div class="paint-workspace"><canvas width="640" height="420"></canvas><div class="paint-selection-box"></div><div class="paint-canvas-handle" data-edge="right" title="Drag to change canvas width"></div><div class="paint-canvas-handle" data-edge="bottom" title="Drag to change canvas height"></div><div class="paint-canvas-handle" data-edge="corner" title="Drag to change canvas size"></div></div></div>'+
-      '<div class="paint-bottom"><div class="paint-options"><div class="paint-history-buttons"><button type="button" class="paint-history-btn" data-a="undo" title="Undo (Ctrl+Z)" aria-label="Undo"><img src="assets/embedded/paint-history-undo.png" alt=""></button><button type="button" class="paint-history-btn" data-a="redo" title="Redo (Ctrl+Y)" aria-label="Redo"><img src="assets/embedded/paint-history-redo.png" alt=""></button></div><label><b>Tool size:</b> <input class="paint-size" type="range" min="1" max="40" value="3" style="width:120px;vertical-align:middle"> <span class="paint-size-value">3 px</span></label><label title="Fill rectangles and ellipses instead of drawing only their outlines"><input class="paint-filled" type="checkbox"> Fill rectangles &amp; ellipses</label><label><b>Zoom:</b> <select class="paint-zoom"><option>50</option><option selected>100</option><option>200</option><option>400</option><option>800</option></select>%</label><label><b>Custom color:</b> <input class="paint-custom" type="color" value="#000000" style="vertical-align:middle"></label></div>'+
+      '<div class="paint-bottom"><div class="paint-options"><div class="paint-history-buttons"><button type="button" class="paint-history-btn" data-a="undo" title="Undo (Ctrl+Z)" aria-label="Undo"><img src="assets/embedded/paint-history-undo.png" alt=""></button><button type="button" class="paint-history-btn" data-a="redo" title="Redo (Ctrl+Y)" aria-label="Redo"><img src="assets/embedded/paint-history-redo.png" alt=""></button></div><label><b>Tool size:</b> <input class="paint-size" type="range" min="1" max="40" value="3" style="width:120px;vertical-align:middle"> <span class="paint-size-value">3 px</span></label><label><b>Tool opacity:</b> <input class="paint-opacity" type="range" min="1" max="100" value="100" style="width:120px;vertical-align:middle"> <span class="paint-opacity-value">100%</span></label><label title="Fill rectangles and ellipses instead of drawing only their outlines"><input class="paint-filled" type="checkbox"> Fill rectangles &amp; ellipses</label><label><b>Zoom:</b> <select class="paint-zoom"><option>50</option><option selected>100</option><option>200</option><option>400</option><option>800</option></select>%</label><label><b>Custom color:</b> <input class="paint-custom" type="color" value="#000000" style="vertical-align:middle"></label></div>'+
       '<div class="paint-palette">'+ph+'</div><div class="paint-recent-label">RECENT COLORS</div><div class="paint-recent-colors"></div><div class="paint-status"><span class="paint-message">Ready</span><span class="paint-dimensions">640 × 420</span><span class="paint-coords">0, 0</span></div></div></div>';
     createWindow({title:'DesktopDiary Paint v2.3',extraClass:'paint-win',bodyHtml:body,type:'paint',onMount:function(el){
       var cv=el.querySelector('canvas'),cx=cv.getContext('2d',{willReadFrequently:true}),msg=el.querySelector('.paint-message'),dim=el.querySelector('.paint-dimensions'),co=el.querySelector('.paint-coords');
-      var box=el.querySelector('.paint-current'),sz=el.querySelector('.paint-size'),szv=el.querySelector('.paint-size-value'),fi=el.querySelector('.paint-import'),workspace=el.querySelector('.paint-workspace'),recentBox=el.querySelector('.paint-recent-colors');
+      var box=el.querySelector('.paint-current'),sz=el.querySelector('.paint-size'),szv=el.querySelector('.paint-size-value'),op=el.querySelector('.paint-opacity'),opv=el.querySelector('.paint-opacity-value'),fi=el.querySelector('.paint-import'),workspace=el.querySelector('.paint-workspace'),recentBox=el.querySelector('.paint-recent-colors');
       var filledBox=el.querySelector('.paint-filled'),zoomBox=el.querySelector('.paint-zoom'),selBox=el.querySelector('.paint-selection-box'),canvasHandles=el.querySelectorAll('.paint-canvas-handle');
-      var tool='pencil',color='#000000',size=3,drawing=false,start,lastPixelPoint=null,base,hist=[],redo=[],limit=40,selection=null,clipboard=null,moveBase=null,moveBefore=null,moving=false,moveCanvas=null,dragOffset=null,lastText=null,preserveLastText=false,textDefaults={font:'Arial',size:16,bold:false,italic:false,color:'#000000'},textTransform=null,textTransformBefore=null,textOrigin=null,textMoved=false;
+      var tool='pencil',color='#000000',size=3,opacity=100,drawing=false,start,lastPixelPoint=null,base,hist=[],redo=[],limit=40,selection=null,clipboard=null,moveBase=null,moveBefore=null,moving=false,moveCanvas=null,dragOffset=null,lastText=null,preserveLastText=false,textDefaults={font:'Arial',size:16,bold:false,italic:false,color:'#000000'},textTransform=null,textTransformBefore=null,textOrigin=null,textMoved=false;
       function updateCursor(){var c=cursorIcons[tool];cv.style.cursor=c?'url("'+c[0]+'") '+c[1]+' '+c[2]+', crosshair':'crosshair';}
+      function paintAlpha(){var v=parseInt(opacity,10);if(!v||v<1)v=1;if(v>100)v=100;return v/100;}
       function setup(){cx.lineCap='round';cx.lineJoin='round';dim.textContent=cv.width+' × '+cv.height;updateCursor();setTimeout(updateCanvasHandles,0);}
-      function stampPencilPixel(point){var pixelSize=Math.max(1,Math.round(size)),x=Math.floor(point.x/pixelSize)*pixelSize,y=Math.floor(point.y/pixelSize)*pixelSize;cx.fillStyle=color;cx.fillRect(x,y,pixelSize,pixelSize);}
+      function stampPencilPixel(point){var pixelSize=Math.max(1,Math.round(size)),x=Math.floor(point.x/pixelSize)*pixelSize,y=Math.floor(point.y/pixelSize)*pixelSize,beforeAlpha=cx.globalAlpha;cx.fillStyle=color;cx.globalAlpha=paintAlpha();cx.fillRect(x,y,pixelSize,pixelSize);cx.globalAlpha=beforeAlpha;}
       function drawPencilPixels(from,to){var distance=Math.max(Math.abs(to.x-from.x),Math.abs(to.y-from.y)),steps=Math.max(1,Math.ceil(distance/Math.max(1,size/2)));for(var i=0;i<=steps;i++)stampPencilPixel({x:from.x+(to.x-from.x)*i/steps,y:from.y+(to.y-from.y)*i/steps});}
       function blank(w,h){clearSelection();cv.width=w;cv.height=h;cx=cv.getContext('2d',{willReadFrequently:true});cx.fillStyle='#fff';cx.fillRect(0,0,w,h);setup();applyZoom();}
       function snap(){return{w:cv.width,h:cv.height,d:cx.getImageData(0,0,cv.width,cv.height)};}
@@ -1387,7 +1500,7 @@ try {
       }
       function textDialog(initial,cb){initial=initial||{};var overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999999;display:flex;align-items:center;justify-content:center;';var panel=document.createElement('div');panel.className='paint-text-dialog';panel.style.cssText='background:#ece9d8;border:2px solid #0054e3;border-radius:7px;padding:14px;width:min(430px,92vw);box-shadow:0 5px 22px rgba(0,0,0,.55);';panel.innerHTML='<div style="font-weight:bold;margin-bottom:7px">Edit text</div><div class="paint-text-dialog-controls"><label>Font <select class="td-font"><option>Arial</option><option>Verdana</option><option>Georgia</option><option>Times New Roman</option><option>Courier New</option><option>Comic Sans MS</option></select></label><label>Size <select class="td-size"><option>10</option><option>12</option><option>16</option><option>20</option><option>24</option><option>32</option><option>48</option><option>72</option></select></label><label><input class="td-bold" type="checkbox"> Bold</label><label><input class="td-italic" type="checkbox"> Italic</label><label>Color <input class="td-color" type="color"></label></div><textarea placeholder="Type one or more lines…"></textarea><div style="font-size:10px;color:#555;margin:5px 0">Change formatting before or after typing—the preview updates live.</div><div style="display:flex;justify-content:flex-end;gap:7px"><button class="btn text-cancel">Cancel</button><button class="btn text-add">Apply Text</button></div>';overlay.appendChild(panel);document.body.appendChild(overlay);var ta=panel.querySelector('textarea'),ff=panel.querySelector('.td-font'),fs=panel.querySelector('.td-size'),fb=panel.querySelector('.td-bold'),fit=panel.querySelector('.td-italic'),fc=panel.querySelector('.td-color');ta.value=initial.text||'';ff.value=initial.font||textDefaults.font;fs.value=String(initial.size||textDefaults.size);fb.checked=initial.bold!==undefined?initial.bold:textDefaults.bold;fit.checked=initial.italic!==undefined?initial.italic:textDefaults.italic;fc.value=initial.color||textDefaults.color;function preview(){ta.style.fontFamily='"'+ff.value+'", sans-serif';ta.style.fontSize=fs.value+'px';ta.style.fontWeight=fb.checked?'bold':'normal';ta.style.fontStyle=fit.checked?'italic':'normal';ta.style.color=fc.value;}[ff,fs,fb,fit,fc].forEach(function(x){x.oninput=preview;x.onchange=preview;});preview();function value(){return{text:ta.value,font:ff.value,size:parseInt(fs.value,10),bold:fb.checked,italic:fit.checked,color:fc.value};}function done(v){overlay.remove();cb(v);}panel.querySelector('.text-cancel').onclick=function(){done(null);};panel.querySelector('.text-add').onclick=function(){done(value());};ta.onkeydown=function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter')done(value());if(e.key==='Escape')done(null);};overlay.onclick=function(e){if(e.target===overlay)done(null);};setTimeout(function(){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);},20);}
       function wrappedLines(context,text,maxWidth){var out=[];text.replace(/\r/g,'').split('\n').forEach(function(paragraph){var words=paragraph.split(/\s+/),line='';if(!paragraph){out.push('');return;}words.forEach(function(word){var test=line?line+' '+word:word;if(line&&context.measureText(test).width>maxWidth){out.push(line);line=word;}else line=test;});out.push(line);});return out;}
-      function renderText(rec){var style=(rec.italic?'italic ':'')+(rec.bold?'bold ':'');cx.save();cx.beginPath();cx.rect(rec.x,rec.y,rec.w,rec.h);cx.clip();cx.fillStyle=rec.color;cx.font=style+rec.size+'px "'+rec.font+'", sans-serif';cx.textBaseline='top';var lh=Math.round(rec.size*1.25),lines=wrappedLines(cx,rec.text,Math.max(1,rec.w-4));lines.forEach(function(line,i){cx.fillText(line,rec.x+2,rec.y+2+i*lh);});cx.restore();}
+      function renderText(rec){var style=(rec.italic?'italic ':'')+(rec.bold?'bold ':'');var beforeAlpha=cx.globalAlpha;cx.save();cx.beginPath();cx.rect(rec.x,rec.y,rec.w,rec.h);cx.clip();cx.fillStyle=rec.color;cx.globalAlpha=paintAlpha();cx.font=style+rec.size+'px "'+rec.font+'", sans-serif';cx.textBaseline='top';var lh=Math.round(rec.size*1.25),lines=wrappedLines(cx,rec.text,Math.max(1,rec.w-4));lines.forEach(function(line,i){cx.fillText(line,rec.x+2,rec.y+2+i*lh);});cx.restore();cx.globalAlpha=beforeAlpha;}
       function hitText(p,rec){var pad=5;return rec&&p.x>=rec.x-pad&&p.y>=rec.y-pad&&p.x<=rec.x+rec.w+pad&&p.y<=rec.y+rec.h+pad;}
       function hitTextHandle(p,rec){var radius=10;return rec&&Math.abs(p.x-(rec.x+rec.w))<=radius&&Math.abs(p.y-(rec.y+rec.h))<=radius;}
       function addTextAt(boxRect,before,initial){textDialog(initial,function(data){if(!data||!data.text)return;var rec={text:data.text,font:data.font,size:data.size,bold:data.bold,italic:data.italic,color:data.color,x:boxRect.x,y:boxRect.y,w:boxRect.w,h:boxRect.h,before:before};renderText(rec);preserveLastText=true;lastText=rec;commit(before);textDefaults={font:rec.font,size:rec.size,bold:rec.bold,italic:rec.italic,color:rec.color};pick(rec.color);showTextBox();msg.textContent='Drag text to move it; drag the corner handle to resize';});}
@@ -1405,19 +1518,19 @@ try {
         x=Math.floor(x);y=Math.floor(y);var w=cv.width,h=cv.height,im=cx.getImageData(0,0,w,h),d=im.data,k=(y*w+x)*4,t=[d[k],d[k+1],d[k+2],d[k+3]],f=rgb(color),tol=18;
         if(Math.abs(t[0]-f[0])<=tol&&Math.abs(t[1]-f[1])<=tol&&Math.abs(t[2]-f[2])<=tol)return;
         var q=[[x,y]],seen=new Uint8Array(w*h);
-        while(q.length){var p=q.pop(),px=p[0],py=p[1];if(px<0||py<0||px>=w||py>=h)continue;var pi=py*w+px,i=pi*4;if(seen[pi]||Math.abs(d[i]-t[0])>tol||Math.abs(d[i+1]-t[1])>tol||Math.abs(d[i+2]-t[2])>tol||Math.abs(d[i+3]-t[3])>tol)continue;seen[pi]=1;d[i]=f[0];d[i+1]=f[1];d[i+2]=f[2];d[i+3]=255;q.push([px+1,py],[px-1,py],[px,py+1],[px,py-1]);}
+        while(q.length){var p=q.pop(),px=p[0],py=p[1];if(px<0||py<0||px>=w||py>=h)continue;var pi=py*w+px,i=pi*4;if(seen[pi]||Math.abs(d[i]-t[0])>tol||Math.abs(d[i+1]-t[1])>tol||Math.abs(d[i+2]-t[2])>tol||Math.abs(d[i+3]-t[3])>tol)continue;seen[pi]=1;d[i]=f[0];d[i+1]=f[1];d[i+2]=f[2];d[i+3]=Math.round(255*paintAlpha());q.push([px+1,py],[px-1,py],[px,py+1],[px,py-1]);}
         cx.putImageData(im,0,0);
       }
       function constrained(p,e){if(!e.shiftKey)return p;var dx=p.x-start.x,dy=p.y-start.y;if(tool==='line'){if(Math.abs(dx)>Math.abs(dy)*2)p.y=start.y;else if(Math.abs(dy)>Math.abs(dx)*2)p.x=start.x;else{var n=Math.max(Math.abs(dx),Math.abs(dy));p.x=start.x+(dx<0?-n:n);p.y=start.y+(dy<0?-n:n);}}else{var m=Math.max(Math.abs(dx),Math.abs(dy));p.x=start.x+(dx<0?-m:m);p.y=start.y+(dy<0?-m:m);}return p;}
-      function shape(p,e){p=constrained(p,e);cx.putImageData(base,0,0);cx.strokeStyle=color;cx.fillStyle=color;cx.lineWidth=size;cx.beginPath();if(tool==='line'){cx.moveTo(start.x,start.y);cx.lineTo(p.x,p.y);}if(tool==='rect')cx.rect(start.x,start.y,p.x-start.x,p.y-start.y);if(tool==='ellipse'){var rx=Math.abs(p.x-start.x)/2,ry=Math.abs(p.y-start.y)/2;if(rx&&ry)cx.ellipse((p.x+start.x)/2,(p.y+start.y)/2,rx,ry,0,0,Math.PI*2);}if(filledBox.checked&&tool!=='line')cx.fill();else cx.stroke();}
+      function shape(p,e){p=constrained(p,e);cx.putImageData(base,0,0);cx.strokeStyle=color;cx.fillStyle=color;cx.lineWidth=size;cx.beginPath();if(tool==='line'){cx.moveTo(start.x,start.y);cx.lineTo(p.x,p.y);}if(tool==='rect')cx.rect(start.x,start.y,p.x-start.x,p.y-start.y);if(tool==='ellipse'){var rx=Math.abs(p.x-start.x)/2,ry=Math.abs(p.y-start.y)/2;if(rx&&ry)cx.ellipse((p.x+start.x)/2,(p.y+start.y)/2,rx,ry,0,0,Math.PI*2);}var beforeAlpha=cx.globalAlpha;cx.globalAlpha=paintAlpha();if(filledBox.checked&&tool!=='line')cx.fill();else cx.stroke();cx.globalAlpha=beforeAlpha;}
       function down(e){if(e.button!==undefined&&e.button!==0)return;e.preventDefault();try{el.focus({preventScroll:true});}catch(_){el.focus();}cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);start=pos(e);var before=snap();base=before.d;
         if(tool==='select'){if(inSelection(start)){moveBefore=before;moveCanvas=document.createElement('canvas');moveCanvas.width=selection.w;moveCanvas.height=selection.h;moveCanvas.getContext('2d').drawImage(cv,selection.x,selection.y,selection.w,selection.h,0,0,selection.w,selection.h);dragOffset={x:start.x-selection.x,y:start.y-selection.y};cx.fillStyle='#fff';cx.fillRect(selection.x,selection.y,selection.w,selection.h);moveBase=cx.getImageData(0,0,cv.width,cv.height);moving=true;drawing=true;}else{clearSelection();selection={x:start.x|0,y:start.y|0,w:0,h:0};drawing=true;showSelection();}return;}
         if(tool==='fill'){fill(start.x,start.y);commit(before);msg.textContent='Filled area';return;}
         if(tool==='eyedropper'){var d=cx.getImageData(Math.min(cv.width-1,start.x|0),Math.min(cv.height-1,start.y|0),1,1).data;var picked='#'+[d[0],d[1],d[2]].map(function(v){return v.toString(16).padStart(2,'0');}).join('');pick(picked);rememberColor(picked);msg.textContent='Color picked';return;}
         if(tool==='text'){if(hitText(start,lastText)){textTransform=hitTextHandle(start,lastText)?'resize':'move';textTransformBefore=before;textOrigin={x:lastText.x,y:lastText.y,w:lastText.w,h:lastText.h};dragOffset={x:start.x-lastText.x,y:start.y-lastText.y};textMoved=false;drawing=true;return;}clearSelection();selection={x:start.x|0,y:start.y|0,w:0,h:0};drawing=true;showSelection();msg.textContent='Drag to size the text box';return;}
-        drawing=true;if(tool==='pencil'){lastPixelPoint=start;stampPencilPixel(start);}else if(tool==='brush'||tool==='eraser'){cx.beginPath();cx.moveTo(start.x,start.y);cx.lineTo(start.x+.01,start.y+.01);cx.strokeStyle=tool==='eraser'?'#fff':color;cx.lineWidth=tool==='eraser'?size*2:size;cx.stroke();}
+        drawing=true;if(tool==='pencil'){lastPixelPoint=start;stampPencilPixel(start);}else if(tool==='brush'||tool==='eraser'){var beforeAlpha=cx.globalAlpha;cx.beginPath();cx.moveTo(start.x,start.y);cx.lineTo(start.x+.01,start.y+.01);cx.strokeStyle=tool==='eraser'?'#fff':color;cx.globalAlpha=tool==='eraser'?1:paintAlpha();cx.lineWidth=tool==='eraser'?size*2:size;cx.stroke();cx.globalAlpha=beforeAlpha;}
       }
-      function move(e){var p=pos(e);co.textContent=(p.x|0)+', '+(p.y|0);if(tool==='text'&&!drawing){var over=hitText(p,lastText),handle=hitTextHandle(p,lastText);if(handle)cv.style.cursor='nwse-resize';else if(over)cv.style.cursor='move';else updateCursor();if(over)msg.textContent=handle?'Drag to resize text box':'Drag to move; click to edit';}else if(tool!=='text')updateCursor();if(!drawing)return;e.preventDefault();if(tool==='text'){if(textTransform&&lastText){if(Math.abs(p.x-start.x)>2||Math.abs(p.y-start.y)>2)textMoved=true;cx.putImageData(lastText.before.d,0,0);if(textTransform==='move'){lastText.x=Math.max(0,Math.min(cv.width-lastText.w,Math.round(p.x-dragOffset.x)));lastText.y=Math.max(0,Math.min(cv.height-lastText.h,Math.round(p.y-dragOffset.y)));}else{lastText.w=Math.max(20,Math.min(cv.width-lastText.x,Math.round(p.x-lastText.x)));lastText.h=Math.max(20,Math.min(cv.height-lastText.y,Math.round(p.y-lastText.y)));}renderText(lastText);showTextBox();return;}selection=normalized(start,p);showSelection();return;}if(tool==='select'){if(moving){var nx=Math.max(0,Math.min(cv.width-selection.w,Math.round(p.x-dragOffset.x))),ny=Math.max(0,Math.min(cv.height-selection.h,Math.round(p.y-dragOffset.y)));cx.putImageData(moveBase,0,0);cx.drawImage(moveCanvas,nx,ny);selection.x=nx;selection.y=ny;}else selection=normalized(start,p);showSelection();return;}if(tool==='pencil'){drawPencilPixels(lastPixelPoint||p,p);lastPixelPoint=p;}else if(tool==='brush'||tool==='eraser'){cx.strokeStyle=tool==='eraser'?'#fff':color;cx.lineWidth=tool==='eraser'?size*2:size;cx.lineTo(p.x,p.y);cx.stroke();}else shape(p,e);}
+      function move(e){var p=pos(e);co.textContent=(p.x|0)+', '+(p.y|0);if(tool==='text'&&!drawing){var over=hitText(p,lastText),handle=hitTextHandle(p,lastText);if(handle)cv.style.cursor='nwse-resize';else if(over)cv.style.cursor='move';else updateCursor();if(over)msg.textContent=handle?'Drag to resize text box':'Drag to move; click to edit';}else if(tool!=='text')updateCursor();if(!drawing)return;e.preventDefault();if(tool==='text'){if(textTransform&&lastText){if(Math.abs(p.x-start.x)>2||Math.abs(p.y-start.y)>2)textMoved=true;cx.putImageData(lastText.before.d,0,0);if(textTransform==='move'){lastText.x=Math.max(0,Math.min(cv.width-lastText.w,Math.round(p.x-dragOffset.x)));lastText.y=Math.max(0,Math.min(cv.height-lastText.h,Math.round(p.y-dragOffset.y)));}else{lastText.w=Math.max(20,Math.min(cv.width-lastText.x,Math.round(p.x-lastText.x)));lastText.h=Math.max(20,Math.min(cv.height-lastText.y,Math.round(p.y-lastText.y)));}renderText(lastText);showTextBox();return;}selection=normalized(start,p);showSelection();return;}if(tool==='select'){if(moving){var nx=Math.max(0,Math.min(cv.width-selection.w,Math.round(p.x-dragOffset.x))),ny=Math.max(0,Math.min(cv.height-selection.h,Math.round(p.y-dragOffset.y)));cx.putImageData(moveBase,0,0);cx.drawImage(moveCanvas,nx,ny);selection.x=nx;selection.y=ny;}else selection=normalized(start,p);showSelection();return;}if(tool==='pencil'){drawPencilPixels(lastPixelPoint||p,p);lastPixelPoint=p;}else if(tool==='brush'||tool==='eraser'){var beforeAlpha=cx.globalAlpha;cx.globalAlpha=tool==='eraser'?1:paintAlpha();cx.strokeStyle=tool==='eraser'?'#fff':color;cx.lineWidth=tool==='eraser'?size*2:size;cx.lineTo(p.x,p.y);cx.stroke();cx.globalAlpha=beforeAlpha;}else shape(p,e);}
       function up(e){if(!drawing)return;if(tool==='text'){drawing=false;if(textTransform){var changed=textMoved;textTransform=null;if(changed){preserveLastText=true;commit(textTransformBefore);showTextBox();msg.textContent='Text box updated';}else editLastText();textTransformBefore=null;return;}var rect=normalized(start,pos(e));if(rect.w<12||rect.h<12)rect={x:Math.min(cv.width-1,start.x|0),y:Math.min(cv.height-1,start.y|0),w:Math.max(1,Math.min(240,cv.width-(start.x|0))),h:Math.max(1,Math.min(100,cv.height-(start.y|0)))};clearSelection();addTextAt(rect,{w:cv.width,h:cv.height,d:base});return;}if(tool==='select'){drawing=false;if(moving){moving=false;commit(moveBefore);moveBefore=null;moveBase=null;moveCanvas=null;msg.textContent='Selection moved';}else{selection=normalized(start,pos(e));if(!selection.w||!selection.h)clearSelection();else msg.textContent=selection.w+' × '+selection.h+' selected';}showSelection();buttons();return;}if(tool==='line'||tool==='rect'||tool==='ellipse')shape(pos(e),e);drawing=false;lastPixelPoint=null;commit({w:cv.width,h:cv.height,d:base});base=null;msg.textContent=tool==='pencil'?'Pixel stroke added':'Stroke added';}
       function transformSelection(k){var before=snap(),s=document.createElement('canvas'),sc=s.getContext('2d'),w=selection.w,h=selection.h,swap=k==='l'||k==='r';s.width=w;s.height=h;sc.drawImage(cv,selection.x,selection.y,w,h,0,0,w,h);var t=document.createElement('canvas'),x=t.getContext('2d');t.width=swap?h:w;t.height=swap?w:h;x.save();if(k==='h'){x.translate(w,0);x.scale(-1,1);}if(k==='v'){x.translate(0,h);x.scale(1,-1);}if(k==='l'){x.translate(0,w);x.rotate(-Math.PI/2);}if(k==='r'){x.translate(h,0);x.rotate(Math.PI/2);}x.drawImage(s,0,0);x.restore();cx.fillStyle='#fff';cx.fillRect(selection.x,selection.y,w,h);cx.drawImage(t,selection.x,selection.y);selection.w=Math.min(t.width,cv.width-selection.x);selection.h=Math.min(t.height,cv.height-selection.y);commit(before);showSelection();buttons();msg.textContent='Selection transformed';}
       function transform(k){if(selection){transformSelection(k);return;}var before=snap();clearSelection();var t=document.createElement('canvas'),x=t.getContext('2d'),w=cv.width,h=cv.height,swap=k==='l'||k==='r';t.width=swap?h:w;t.height=swap?w:h;x.fillStyle='#fff';x.fillRect(0,0,t.width,t.height);x.save();if(k==='h'){x.translate(w,0);x.scale(-1,1);}if(k==='v'){x.translate(0,h);x.scale(1,-1);}if(k==='l'){x.translate(0,w);x.rotate(-Math.PI/2);}if(k==='r'){x.translate(h,0);x.rotate(Math.PI/2);}x.drawImage(cv,0,0);x.restore();cv.width=t.width;cv.height=t.height;cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(t,0,0);setup();applyZoom();commit(before);msg.textContent='Image transformed';}
@@ -1436,7 +1549,7 @@ try {
       canvasHandles.forEach(function(handle){handle.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();var edge=handle.dataset.edge,before=snap(),ow=cv.width,oh=cv.height,sx=cv.offsetWidth/cv.width,sy=cv.offsetHeight/cv.height,startX=e.clientX,startY=e.clientY,changed=false;function drag(ev){var w=edge==='bottom'?ow:Math.max(1,Math.min(4096,Math.round(ow+(ev.clientX-startX)/sx))),h=edge==='right'?oh:Math.max(1,Math.min(4096,Math.round(oh+(ev.clientY-startY)/sy)));if(w===cv.width&&h===cv.height)return;changed=true;blank(w,h);cx.putImageData(before.d,0,0);msg.textContent='Canvas size: '+w+' × '+h;}function finish(){document.removeEventListener('pointermove',drag);document.removeEventListener('pointerup',finish);if(changed){commit(before);msg.textContent='Canvas resized without scaling artwork';}updateCanvasHandles();}document.addEventListener('pointermove',drag);document.addEventListener('pointerup',finish);});});
       cv.addEventListener('pointerdown',down);cv.addEventListener('pointermove',move);cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
       el.querySelectorAll('.paint-tool-btn').forEach(function(b){b.onclick=function(){tool=b.dataset.tool;if(tool!=='select')clearSelection();el.querySelectorAll('.paint-tool-btn').forEach(function(q){q.classList.remove('active');});b.classList.add('active');updateCursor();if(tool==='text')showTextBox();msg.textContent=tool==='text'?'Text: drag a box; drag existing text to move or resize':b.title;};});
-      el.querySelectorAll('.paint-palette .paint-color-swatch').forEach(function(s){s.onclick=function(){pick(s.dataset.color);rememberColor(s.dataset.color);};});el.querySelector('.paint-custom').oninput=function(e){pick(e.target.value);};el.querySelector('.paint-custom').onchange=function(e){rememberColor(e.target.value);};sz.oninput=function(){size=parseInt(sz.value,10);szv.textContent=size+' px';};zoomBox.onchange=applyZoom;fi.onchange=function(){load(fi.files[0]);fi.value='';};
+      el.querySelectorAll('.paint-palette .paint-color-swatch').forEach(function(s){s.onclick=function(){pick(s.dataset.color);rememberColor(s.dataset.color);};});el.querySelector('.paint-custom').oninput=function(e){pick(e.target.value);};el.querySelector('.paint-custom').onchange=function(e){rememberColor(e.target.value);};sz.oninput=function(){size=parseInt(sz.value,10);szv.textContent=size+' px';};op.oninput=function(){opacity=parseInt(op.value,10);if(!opacity||opacity<1)opacity=1;if(opacity>100)opacity=100;opv.textContent=opacity+'%';};zoomBox.onchange=applyZoom;fi.onchange=function(){load(fi.files[0]);fi.value='';};
       el.querySelectorAll('[data-a]').forEach(function(b){b.onclick=function(){if(b.classList.contains('disabled'))return;var a=b.dataset.a;if(a==='new')newImg();if(a==='import')fi.click();if(a==='export')save();if(a==='undo')undoIt();if(a==='redo')redoIt();if(a==='editText')editLastText();if(a==='cut')cutSelection();if(a==='copy')copySelection();if(a==='paste'){if(clipboard)pasteSelection();else pasteFromSystemClipboard();}if(a==='delete')deleteSelection();if(a==='crop')cropSelection();if(a==='resizeSel')resizeSelection();if(a==='clear')clear();if(a==='fh')transform('h');if(a==='fv')transform('v');if(a==='rl')transform('l');if(a==='rr')transform('r');if(a==='resize')resize();if(a==='saveDiary')saveToDiary();if(a==='setbg'){state.background={color:'',gradient:'',image:cv.toDataURL('image/png')};applyBackground();saveState();msg.textContent='Set as desktop background';}if(a==='about')openInfoWindow('DesktopDiary Paint v2.3 — paste copied images with Command+V or Ctrl+V, then move or edit them like a selection.');};});
       el.tabIndex=0;el.addEventListener('paste',handlePaste);el.onkeydown=function(e){var k=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;if(mod&&k==='n'){e.preventDefault();newImg();}if(mod&&k==='z'){e.preventDefault();e.shiftKey?redoIt():undoIt();}if(mod&&k==='y'){e.preventDefault();redoIt();}if(mod&&k==='s'){e.preventDefault();save();}if(mod&&k==='o'){e.preventDefault();fi.click();}if(mod&&k==='c'){e.preventDefault();copySelection();}if(mod&&k==='x'){e.preventDefault();cutSelection();}if(k==='delete'||k==='backspace'){if(selection){e.preventDefault();deleteSelection();}}if(k==='escape')clearSelection();};
       blank(640,420);hist=[];redo=[];buttons();
@@ -1526,24 +1639,40 @@ try {
     if(store){
       try{
         return store.get(STORAGE_KEY, false).then(function(res){
+          activeStorageKey=STORAGE_KEY;
           if(res && res.value){
             try { state = JSON.parse(res.value); normalizeState(); } catch(e){}
           }
-          // Online diaries are stored per account. The generic state may not
-          // contain that account, so use the authenticated session (or the
-          // last known account after Sign Out) to find the correct diary.
-          var rememberedEmail=getRememberedAccountEmail()||((state.account&&state.account.email)||'');
-          if(rememberedEmail){
-            rememberedEmail=String(rememberedEmail).trim().toLowerCase();
-            activeStorageKey=accountStorageKey(rememberedEmail);
+          // Never reveal an email account's diary merely because this browser
+          // remembers its address. Only a live Supabase session may select an
+          // account-scoped diary. The remembered email remains available to
+          // prefill Sign On without loading private diary content.
+          var authenticatedSession=getSupabaseSession();
+          if(!authenticatedSession||!authenticatedSession.access_token){
+            // Older builds sometimes left an email diary in the generic slot.
+            // Preserve a scoped copy before hiding it from the signed-out UI.
+            if(state.account&&state.account.email&&res&&res.value){
+              var legacyEmail=String(state.account.email).trim().toLowerCase();
+              var legacyKey=accountStorageKey(legacyEmail);
+              state=makeFreshState();normalizeState();
+              return store.get(legacyKey,false).then(function(existing){
+                if(!existing||!existing.value)return store.set(legacyKey,res.value,false);
+              });
+            }
+            return;
+          }
+          var authenticatedEmail=(authenticatedSession.user&&authenticatedSession.user.email)||getRememberedAccountEmail();
+          if(authenticatedEmail){
+            authenticatedEmail=String(authenticatedEmail).trim().toLowerCase();
+            activeStorageKey=accountStorageKey(authenticatedEmail);
             return store.get(activeStorageKey,false).then(function(scoped){
               if(scoped&&scoped.value){
                 try{state=JSON.parse(scoped.value);normalizeState();}catch(e){}
-              }else if(state.account&&String(state.account.email||'').trim().toLowerCase()===rememberedEmail){
+              }else if(state.account&&String(state.account.email||'').trim().toLowerCase()===authenticatedEmail){
                 return store.set(activeStorageKey,JSON.stringify(state),false);
               }else{
                 state=makeFreshState();
-                state.account={email:rememberedEmail,screenName:rememberedEmail.split('@')[0]};
+                state.account={email:authenticatedEmail,screenName:authenticatedEmail.split('@')[0]};
                 normalizeState();
               }
             });
@@ -1591,16 +1720,55 @@ try {
   function activateAccountDiary(email,auth,password,forceFresh){
     var normalizedEmail=String(email||'').trim().toLowerCase(),store=getLocalStore(),newKey=accountStorageKey(normalizedEmail);
     rememberAccountEmail(normalizedEmail);
-    // DtD Post Mail is a singleton window — if one from the outgoing account
-    // is still open, reopening mail after switching accounts would just
-    // re-focus that same stale window (and its closed-over inbox/session)
-    // instead of rebuilding it for the new account. Always close it here so
-    // it's rebuilt fresh and scoped to whichever account is signing in now.
-    openWindows.slice().forEach(function(w){ if(w.type==='dtdmail') closeWindow(w.id); });
-    function finish(next){state=next||makeFreshState();normalizeState();state.account=state.account||{};state.account.email=normalizedEmail;state.account.password=password;state.account.screenName=state.account.screenName||((auth.user&&auth.user.user_metadata&&auth.user.user_metadata.screen_name)||normalizedEmail.split('@')[0]);activeStorageKey=newKey;applyBackground();applyTheme();return saveState();}
-    return saveState().then(function(){if(forceFresh||!store)return finish(makeFreshState());return store.get(newKey,false).then(function(saved){if(saved&&saved.value){try{return finish(JSON.parse(saved.value));}catch(e){}}if(state.account&&state.account.email===normalizedEmail)return finish(state);return finish(makeFreshState());});});
+    if(window.resetKobaNotificationsForAccountSwitch)window.resetKobaNotificationsForAccountSwitch();
+    dtdMailProfilePreviewCache={};
+    // Close diary/content windows from the outgoing Guest or account before
+    // the authenticated desktop becomes visible. Keep the fixed Buddy List
+    // shell and any account-creation dialog that is completing this switch.
+    openWindows.slice().forEach(function(w){
+      if(w.type==='buddylist'||w.type==='createaccount'||w.type==='onlinepasswordreset')return;
+      closeWindow(w.id);
+    });
+    function finish(next){
+      state=next||makeFreshState();normalizeState();state.account=state.account||{};
+      var authenticatedName=String(auth.user&&auth.user.user_metadata&&auth.user.user_metadata.screen_name||'').trim();
+      if(!authenticatedName||authenticatedName.toLowerCase()==='guest')authenticatedName=normalizedEmail.split('@')[0];
+      if(!state.account.screenName||String(state.account.screenName).trim().toLowerCase()==='guest')state.account.screenName=authenticatedName;
+      delete state.account.mode;
+      state.account.email=normalizedEmail;state.account.password=password;activeStorageKey=newKey;applyBackground();applyTheme();return saveState();
+    }
+    function finishFromGenericOrFresh(){
+      return store.get(STORAGE_KEY,false).then(function(generic){
+        if(generic&&generic.value){
+          try{
+            var candidate=JSON.parse(generic.value),candidateEmail=String(candidate&&candidate.account&&candidate.account.email||'').trim().toLowerCase();
+            if(candidateEmail===normalizedEmail)return finish(candidate);
+          }catch(e){}
+        }
+        return finish(makeFreshState());
+      });
+    }
+    return saveState().then(function(){
+      if(forceFresh||!store)return finish(makeFreshState());
+      return store.get(newKey,false).then(function(saved){
+        if(saved&&saved.value){
+          try{
+            var candidate=JSON.parse(saved.value),candidateAccount=candidate&&candidate.account||{};
+            var candidateEmail=String(candidateAccount.email||'').trim().toLowerCase();
+            var guestOverwrite=!candidateEmail&&String(candidateAccount.screenName||'').trim().toLowerCase()==='guest';
+            var wrongAccount=!!candidateEmail&&candidateEmail!==normalizedEmail;
+            if(!guestOverwrite&&!wrongAccount)return finish(candidate);
+            var recoveryKey=newKey+'-pre-account-isolation-recovery';
+            return store.get(recoveryKey,false).then(function(recovery){
+              if(!recovery||!recovery.value)return store.set(recoveryKey,saved.value,false);
+            }).then(finishFromGenericOrFresh);
+          }catch(e){}
+        }
+        if(state.account&&String(state.account.email||'').trim().toLowerCase()===normalizedEmail)return finish(state);
+        return finishFromGenericOrFresh();
+      });
+    });
   }
-
 
   // === END scripts/core/persistence.js ===
 
@@ -1618,6 +1786,50 @@ try {
   var cloudPushTimer = null;
   var fbApp = null, auth = null, db = null;
   var cloudAuthReady = Promise.resolve(); // resolves once auth state is known
+  var cloudAutoPullIdentity = '';
+  var cloudAutoPullInFlight = null;
+
+  function cloudUserEmail(user){
+    return String(user&&user.email||'').trim().toLowerCase();
+  }
+  function canUseCloudForActiveAccount(user){
+    var session=getSupabaseSession();
+    var accountEmail=String(state&&state.account&&state.account.email||'').trim().toLowerCase();
+    var sessionEmail=String(session&&session.user&&session.user.email||'').trim().toLowerCase();
+    var googleEmail=cloudUserEmail(user);
+    return !!(
+      user&&session&&session.access_token&&accountEmail&&googleEmail&&
+      accountEmail===googleEmail&&
+      (!sessionEmail||sessionEmail===accountEmail)&&
+      activeStorageKey===accountStorageKey(accountEmail)&&
+      document.body.classList.contains('signed-in')
+    );
+  }
+  function refreshUiAfterAutomaticCloudPull(found){
+    if(!found)return found;
+    normalizeState();
+    applyTheme();
+    applyBackground();
+    renderAllStickyNotes();
+    if(document.getElementById('buddylist-win') &&
+       document.getElementById('buddylist-win').style.display !== 'none'){
+      renderBuddyList();
+      refreshMyStatus();
+      refreshProfilePic();
+    }
+    return found;
+  }
+  function autoPullCloudForActiveAccount(){
+    if(!canUseCloudForActiveAccount(cloudUser))return Promise.resolve(false);
+    var identity=String(cloudUser.uid||'')+'|'+cloudUserEmail(cloudUser);
+    if(cloudAutoPullIdentity===identity)return cloudAutoPullInFlight||Promise.resolve(false);
+    cloudAutoPullIdentity=identity;
+    cloudAutoPullInFlight=pullFromCloud()
+      .then(refreshUiAfterAutomaticCloudPull)
+      .catch(function(){return false;})
+      .then(function(found){cloudAutoPullInFlight=null;return found;});
+    return cloudAutoPullInFlight;
+  }
   try{
     if(typeof firebase !== 'undefined'){
       fbApp = firebase.initializeApp(firebaseConfig);
@@ -1625,26 +1837,17 @@ try {
       db = firebase.firestore();
       cloudAuthReady = new Promise(function(resolve){
         auth.onAuthStateChanged(function(user){
-          var wasSignedIn = !!cloudUser;
+          var previousUid=String(cloudUser&&cloudUser.uid||'');
           cloudUser = user;
-          resolve(user);
-          // auto-pull when signing in for the first time in this session
-          if(user && !wasSignedIn){
-            pullFromCloud().then(function(found){
-              if(found){
-                normalizeState();
-                applyTheme();
-                applyBackground();
-                renderAllStickyNotes();
-                if(document.getElementById('buddylist-win') &&
-                   document.getElementById('buddylist-win').style.display !== 'none'){
-                  renderBuddyList();
-                  refreshMyStatus();
-                  refreshProfilePic();
-                }
-              }
-            }).catch(function(){}); // silent — don't interrupt the user
+          if(!user||previousUid!==String(user.uid||'')){
+            cloudAutoPullIdentity='';
+            cloudAutoPullInFlight=null;
           }
+          resolve(user);
+          // A remembered Google login may exist while DesktopDiary is signed
+          // out. Restore cloud data only after the matching DesktopDiary
+          // account is authenticated and its account-scoped storage is active.
+          if(user)autoPullCloudForActiveAccount();
         });
       });
     }
@@ -1656,11 +1859,16 @@ try {
     return auth.signInWithPopup(provider);
   }
   function signOutCloud(){
+    cloudAutoPullIdentity='';
+    cloudAutoPullInFlight=null;
     return auth ? auth.signOut() : Promise.resolve();
   }
   function scheduleCloudPush(){
     clearTimeout(cloudPushTimer);
-    cloudPushTimer = setTimeout(function(){ pushToCloud().catch(function(){}); }, 3000);
+    if(!canUseCloudForActiveAccount(cloudUser))return;
+    cloudPushTimer = setTimeout(function(){
+      if(canUseCloudForActiveAccount(cloudUser))pushToCloud().catch(function(){});
+    }, 3000);
   }
 
   // splits an entries array into chunks that stay comfortably under Firestore's 1MB doc limit
@@ -1676,6 +1884,136 @@ try {
     });
     chunks.push(current); // always at least one (possibly empty) chunk
     return chunks;
+  }
+
+  function buddyEntryRevision(entry){
+    entry=entry&&typeof entry==='object'?entry:{};
+    return Math.max(Number(entry.restoredAt)||0,Number(entry.editedAt)||0,Number(entry.ts)||0);
+  }
+  function stableLegacyBuddyEntryId(entry,buddyId){
+    var source=[
+      String(buddyId||''),
+      String(entry&&entry.ts||''),
+      String(entry&&entry.kind||''),
+      String(entry&&entry.author||''),
+      String(entry&&(entry.html!==undefined?entry.html:entry.text)||'')
+    ].join('|');
+    var hash=2166136261;
+    for(var i=0;i<source.length;i++){
+      hash^=source.charCodeAt(i);
+      hash=Math.imul(hash,16777619);
+    }
+    return 'legacy-'+(hash>>>0).toString(36);
+  }
+  function mergeBuddyEntryTombstones(localMarkers,cloudMarkers){
+    var merged={};
+    function include(markers){
+      if(!markers||typeof markers!=='object'||Array.isArray(markers))return;
+      Object.keys(markers).forEach(function(entryId){
+        var marker=markers[entryId],deletedAt=Number(marker&&marker.deletedAt)||0;
+        if(!entryId||!deletedAt)return;
+        if(!merged[entryId]||deletedAt>merged[entryId].deletedAt){
+          merged[entryId]={buddyId:String(marker.buddyId||''),deletedAt:deletedAt};
+        }
+      });
+    }
+    include(localMarkers);
+    include(cloudMarkers);
+    return merged;
+  }
+  function chooseBuddyEntryVersion(first,second){
+    var firstRevision=buddyEntryRevision(first),secondRevision=buddyEntryRevision(second);
+    if(firstRevision!==secondRevision)return firstRevision>secondRevision?first:second;
+    return JSON.stringify(first)>=JSON.stringify(second)?first:second;
+  }
+  function mergeBuddyEntryCollections(localEntries,cloudEntries,localMarkers,cloudMarkers){
+    var byId={},buddyById={},markers=mergeBuddyEntryTombstones(localMarkers,cloudMarkers);
+    function include(collection){
+      if(!collection||typeof collection!=='object')return;
+      Object.keys(collection).forEach(function(buddyId){
+        var entries=Array.isArray(collection[buddyId])?collection[buddyId]:[];
+        entries.forEach(function(rawEntry){
+          if(!rawEntry||typeof rawEntry!=='object')return;
+          var entry=Object.assign({},rawEntry);
+          entry.id=String(entry.id||stableLegacyBuddyEntryId(entry,buddyId));
+          var existing=byId[entry.id];
+          if(!existing||chooseBuddyEntryVersion(existing,entry)===entry){
+            byId[entry.id]=entry;
+            buddyById[entry.id]=String(buddyId);
+          }
+        });
+      });
+    }
+    include(localEntries);
+    include(cloudEntries);
+    var mergedEntries={};
+    Object.keys(byId).forEach(function(entryId){
+      var entry=byId[entryId],marker=markers[entryId];
+      if(marker&&marker.deletedAt>=buddyEntryRevision(entry))return;
+      if(marker)delete markers[entryId];
+      var buddyId=buddyById[entryId]||String(marker&&marker.buddyId||'');
+      if(!buddyId)return;
+      if(!mergedEntries[buddyId])mergedEntries[buddyId]=[];
+      mergedEntries[buddyId].push(entry);
+    });
+    Object.keys(mergedEntries).forEach(function(buddyId){
+      mergedEntries[buddyId].sort(function(a,b){
+        var timeDifference=(Number(a.ts)||0)-(Number(b.ts)||0);
+        return timeDifference||String(a.id).localeCompare(String(b.id));
+      });
+    });
+    return {entries:mergedEntries,tombstones:markers};
+  }
+  function recordBuddyEntryDeletion(buddyId,entry){
+    if(!entry||!entry.id)return;
+    if(!state.buddyEntryTombstones||typeof state.buddyEntryTombstones!=='object')state.buddyEntryTombstones={};
+    var deletedAt=Date.now(),existing=state.buddyEntryTombstones[entry.id];
+    if(existing&&Number(existing.deletedAt)>=deletedAt)deletedAt=Number(existing.deletedAt)+1;
+    state.buddyEntryTombstones[entry.id]={buddyId:String(buddyId||''),deletedAt:deletedAt};
+  }
+  function recordBuddyEntriesDeletion(buddyId,entries){
+    (Array.isArray(entries)?entries:[]).forEach(function(entry){recordBuddyEntryDeletion(buddyId,entry);});
+  }
+  function mergeCloudBuddyLists(localBuddies,cloudBuddies,requiredCloudBuddyIds){
+    var byId={},requiredIds=null;
+    if(Array.isArray(requiredCloudBuddyIds)){
+      requiredIds={};
+      requiredCloudBuddyIds.forEach(function(id){requiredIds[String(id)]=true;});
+    }
+    function include(list,filterCloudOnly){
+      (Array.isArray(list)?list:[]).forEach(function(rawBuddy){
+        if(!rawBuddy||!rawBuddy.id)return;
+        var buddy=Object.assign({},rawBuddy),existing=byId[buddy.id];
+        if(filterCloudOnly&&requiredIds&&!existing&&!requiredIds[String(buddy.id)])return;
+        var buddyRevision=Math.max(Number(buddy.updatedAt)||0,Number(buddy.addedAt)||0);
+        var existingRevision=Math.max(Number(existing&&existing.updatedAt)||0,Number(existing&&existing.addedAt)||0);
+        if(!existing||buddyRevision>existingRevision||
+           (buddyRevision===existingRevision&&JSON.stringify(buddy)>JSON.stringify(existing))){
+          byId[buddy.id]=buddy;
+        }
+      });
+    }
+    include(localBuddies,false);
+    include(cloudBuddies,true);
+    return Object.keys(byId).map(function(id){return byId[id];}).sort(function(a,b){
+      return (Number(a.addedAt)||0)-(Number(b.addedAt)||0)||String(a.id).localeCompare(String(b.id));
+    });
+  }
+  function fetchCloudBuddyEntries(uid,chunkCounts){
+    chunkCounts=chunkCounts&&typeof chunkCounts==='object'?chunkCounts:{};
+    var cloudEntries={};
+    var fetches=Object.keys(chunkCounts).map(function(buddyId){
+      var count=Math.max(0,Math.floor(Number(chunkCounts[buddyId])||0)),docFetches=[];
+      for(var i=0;i<count;i++){
+        docFetches.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).get());
+      }
+      return Promise.all(docFetches).then(function(snaps){
+        var all=[];
+        snaps.forEach(function(s){if(s.exists)all=all.concat((s.data()||{}).entries||[]);});
+        cloudEntries[buddyId]=all;
+      });
+    });
+    return Promise.all(fetches).then(function(){return cloudEntries;});
   }
 
   function cloudMetaContentCount(meta){
@@ -1694,96 +2032,231 @@ try {
     return count;
   }
 
+  function cloudIdentityEmail(value){
+    return String(value||'').trim().toLowerCase();
+  }
+  function cloudProfileHasContent(profile){
+    profile=profile&&typeof profile==='object'?profile:{};
+    return !!(profile.pic||profile.html||profile.header||profile.aboutMe);
+  }
+  function cloudScreenNameHasContent(name,email,revision){
+    name=String(name||'').trim();
+    if(!name||name.toLowerCase()==='guest')return false;
+    if(Number(revision)>0)return true;
+    email=cloudIdentityEmail(email);
+    return !email||name.toLowerCase()!==email.split('@')[0];
+  }
+  function currentCloudProfileIdentity(){
+    return {
+      accountEmail:cloudIdentityEmail(state.account&&state.account.email),
+      screenName:String(state.account&&state.account.screenName||''),
+      screenNameUpdatedAt:Number(state.screenNameUpdatedAt)||0,
+      profile:state.profile&&typeof state.profile==='object'?state.profile:{pic:'',html:'',header:'',aboutMe:''},
+      profileUpdatedAt:Number(state.profileUpdatedAt)||0
+    };
+  }
+  function cloudProfileIdentityFrom(value){
+    value=value&&typeof value==='object'?value:{};
+    return {
+      accountEmail:cloudIdentityEmail(value.accountEmail),
+      screenName:String(value.screenName||''),
+      screenNameUpdatedAt:Number(value.screenNameUpdatedAt)||0,
+      profile:value.profile&&typeof value.profile==='object'?value.profile:{pic:'',html:'',header:'',aboutMe:''},
+      profileUpdatedAt:Number(value.profileUpdatedAt)||0
+    };
+  }
+  function chooseCloudIdentityValue(localValue,localRevision,localHasContent,cloudValue,cloudRevision,cloudHasContent,preferCloudOnLegacyTie){
+    if(localRevision>cloudRevision)return {value:localValue,revision:localRevision};
+    if(cloudRevision>localRevision)return {value:cloudValue,revision:cloudRevision};
+    if(localRevision>0)return {value:cloudValue,revision:cloudRevision};
+    if(preferCloudOnLegacyTie)return cloudHasContent?{value:cloudValue,revision:0}:{value:localValue,revision:0};
+    return localHasContent?{value:localValue,revision:0}:{value:cloudValue,revision:0};
+  }
+  function mergeCloudProfileIdentity(localIdentity,cloudIdentity,preferCloudOnLegacyTie){
+    var localEmail=cloudIdentityEmail(localIdentity.accountEmail),cloudEmail=cloudIdentityEmail(cloudIdentity.accountEmail);
+    if(localEmail&&cloudEmail&&localEmail!==cloudEmail){
+      var accountError=new Error('This Google cloud backup belongs to a different DesktopDiary account. Sign out of Google Cloud Sync, then sign in with the matching account.');
+      accountError.code='cloud-account-mismatch';
+      throw accountError;
+    }
+    var identityEmail=cloudEmail||localEmail;
+    var localNameRevision=Number(localIdentity.screenNameUpdatedAt)||0,cloudNameRevision=Number(cloudIdentity.screenNameUpdatedAt)||0;
+    var localProfileRevision=Number(localIdentity.profileUpdatedAt)||0,cloudProfileRevision=Number(cloudIdentity.profileUpdatedAt)||0;
+    var nameChoice=chooseCloudIdentityValue(
+      String(localIdentity.screenName||''),localNameRevision,cloudScreenNameHasContent(localIdentity.screenName,identityEmail,localNameRevision),
+      String(cloudIdentity.screenName||''),cloudNameRevision,cloudScreenNameHasContent(cloudIdentity.screenName,identityEmail,cloudNameRevision),
+      preferCloudOnLegacyTie
+    );
+    var profileChoice=chooseCloudIdentityValue(
+      localIdentity.profile&&typeof localIdentity.profile==='object'?localIdentity.profile:{pic:'',html:'',header:'',aboutMe:''},localProfileRevision,cloudProfileHasContent(localIdentity.profile),
+      cloudIdentity.profile&&typeof cloudIdentity.profile==='object'?cloudIdentity.profile:{pic:'',html:'',header:'',aboutMe:''},cloudProfileRevision,cloudProfileHasContent(cloudIdentity.profile),
+      preferCloudOnLegacyTie
+    );
+    return {
+      accountEmail:identityEmail,
+      screenName:nameChoice.value,
+      screenNameUpdatedAt:nameChoice.revision,
+      profile:profileChoice.value,
+      profileUpdatedAt:profileChoice.revision
+    };
+  }
+  function pushCloudMetaTransaction(metaRef,proposedMeta,prepareMeta,writeRelatedDocuments){
+    var localIdentity=currentCloudProfileIdentity();
+    return db.runTransaction(function(transaction){
+      return transaction.get(metaRef).then(function(existingSnap){
+        var existingMeta=existingSnap.exists?(existingSnap.data()||{}):{};
+        var candidateMeta=Object.assign({},proposedMeta);
+        if(cloudMetaContentCount(existingMeta)>0&&cloudMetaContentCount(candidateMeta)===0){
+          var protectedError=new Error('Cloud backup protected: this device has no diary content, but the cloud backup does. Pull from Cloud before pushing.');
+          protectedError.code='cloud-empty-overwrite-blocked';
+          throw protectedError;
+        }
+        var cloudIdentity=cloudProfileIdentityFrom(existingMeta);
+        var mergedIdentity=mergeCloudProfileIdentity(localIdentity,cloudIdentity,true);
+        candidateMeta.screenName=mergedIdentity.screenName;
+        candidateMeta.screenNameUpdatedAt=mergedIdentity.screenNameUpdatedAt;
+        candidateMeta.profile=mergedIdentity.profile;
+        candidateMeta.profileUpdatedAt=mergedIdentity.profileUpdatedAt;
+        candidateMeta.accountEmail=mergedIdentity.accountEmail;
+        if(typeof prepareMeta==='function')prepareMeta(candidateMeta,existingMeta);
+        transaction.set(metaRef,candidateMeta);
+        if(typeof writeRelatedDocuments==='function')writeRelatedDocuments(transaction,candidateMeta);
+        return candidateMeta;
+      });
+    });
+  }
+  function markCloudProfileIdentityForExplicitPush(){
+    var now=Date.now();
+    state.screenNameUpdatedAt=now;
+    state.profileUpdatedAt=now;
+    return saveState();
+  }
+
   function pushToCloud(){
     if(!db || !cloudUser) return Promise.reject(new Error('Not signed in.'));
-    var uid = cloudUser.uid;
-    var meta = {
-      screenName: state.account ? state.account.screenName : '',
-      groups: state.groups,
-      buddies: state.buddies,
-      status: state.status,
-      statusLog: state.statusLog,
-      statusPresets: state.statusPresets,
-      moodLog: state.moodLog,
-      drafts: state.drafts,
-      profile: state.profile,
-      blogPosts: state.blogPosts,
-      bgColor: (state.background && state.background.color) || '',
-      hasBgImage: !!(state.background && state.background.image),
-      customFonts: state.customFonts,
-      customMoods: state.customMoods,
-      customMoodColors: state.customMoodColors,
-      theme: state.theme,
-      customThemePresets: state.customThemePresets,
-      notebook: {
-        pages:(state.notebook && Array.isArray(state.notebook.pages) ? state.notebook.pages : []).map(function(page){
-          return {
-            id: page.id,
-            title: page.title || '',
-            text: page.text || '',
-            createdAt: Number(page.createdAt) || 0,
-            updatedAt: Number(page.updatedAt) || 0,
-            order: Number(page.order) || 0
-          };
-        }),
-        currentPageId: state.notebook && state.notebook.currentPageId ? state.notebook.currentPageId : null
-      },
-      chunkCounts: {},
-      updatedAt: Date.now()
-    };
-    var entryChunks = {};
-    Object.keys(state.entries).forEach(function(buddyId){
-      entryChunks[buddyId] = chunkEntries(state.entries[buddyId]);
-      meta.chunkCounts[buddyId] = entryChunks[buddyId].length;
-    });
-    var metaRef = db.collection('users').doc(uid).collection('diary').doc('meta');
-    return metaRef.get().then(function(existingSnap){
-      var existingMeta = existingSnap.exists ? (existingSnap.data() || {}) : {};
-      if(cloudMetaContentCount(existingMeta) > 0 && cloudMetaContentCount(meta) === 0){
-        var protectedError = new Error('Cloud backup protected: this device has no diary content, but the cloud backup does. Pull from Cloud before pushing.');
-        protectedError.code = 'cloud-empty-overwrite-blocked';
-        throw protectedError;
-      }
-      var writes = [];
-      Object.keys(entryChunks).forEach(function(buddyId){
-        entryChunks[buddyId].forEach(function(chunk, i){
-          writes.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).set({ entries: chunk }));
+    if(!canUseCloudForActiveAccount(cloudUser))return Promise.reject(new Error('Google Cloud Sync must use the same signed-in DesktopDiary account.'));
+    return pushBuddySafeCloudSnapshot(cloudUser.uid,0);
+  }
+
+  function pushBuddySafeCloudSnapshot(uid,retryCount){
+    var metaRef=db.collection('users').doc(uid).collection('diary').doc('meta');
+    return metaRef.get().then(function(baseSnap){
+      var baseMeta=baseSnap.exists?(baseSnap.data()||{}):{};
+      var baseBuddyRevision=Number(baseMeta.buddyEntriesRevision)||0;
+      return fetchCloudBuddyEntries(uid,baseMeta.chunkCounts).then(function(cloudEntries){
+        var mergedMessages=mergeBuddyEntryCollections(
+          state.entries,
+          cloudEntries,
+          state.buddyEntryTombstones,
+          baseMeta.buddyEntryTombstones
+        );
+        state.entries=mergedMessages.entries;
+        state.buddyEntryTombstones=mergedMessages.tombstones;
+        state.buddies=mergeCloudBuddyLists(state.buddies,baseMeta.buddies,Object.keys(state.entries));
+        var entryChunks={};
+        var meta = {
+          screenName: state.account ? state.account.screenName : '',
+          groups: state.groups,
+          buddies: state.buddies,
+          status: state.status,
+          statusLog: state.statusLog,
+          statusPresets: state.statusPresets,
+          moodLog: state.moodLog,
+          drafts: state.drafts,
+          profile: state.profile,
+          accountEmail: cloudIdentityEmail(state.account&&state.account.email),
+          screenNameUpdatedAt: Number(state.screenNameUpdatedAt)||0,
+          profileUpdatedAt: Number(state.profileUpdatedAt)||0,
+          blogPosts: state.blogPosts,
+          bgColor: (state.background && state.background.color) || '',
+          hasBgImage: !!(state.background && state.background.image),
+          customFonts: state.customFonts,
+          customMoods: state.customMoods,
+          customMoodColors: state.customMoodColors,
+          theme: state.theme,
+          customThemePresets: state.customThemePresets,
+          notebook: {
+            pages:(state.notebook && Array.isArray(state.notebook.pages) ? state.notebook.pages : []).map(function(page){
+              return {
+                id: page.id,
+                title: page.title || '',
+                text: page.text || '',
+                createdAt: Number(page.createdAt) || 0,
+                updatedAt: Number(page.updatedAt) || 0,
+                order: Number(page.order) || 0
+              };
+            }),
+            currentPageId: state.notebook && state.notebook.currentPageId ? state.notebook.currentPageId : null
+          },
+          buddyEntryTombstones: state.buddyEntryTombstones,
+          buddyEntriesRevision: baseBuddyRevision+1,
+          chunkCounts: {},
+          updatedAt: Date.now()
+        };
+        function prepareBuddyChunks(candidateMeta,latestMeta){
+          var latestBuddyRevision=Number(latestMeta.buddyEntriesRevision)||0;
+          if(latestBuddyRevision!==baseBuddyRevision){
+            var retryError=new Error('Buddy messages changed in cloud while syncing. Retrying with the newer copy.');
+            retryError.code='cloud-buddy-retry';
+            throw retryError;
+          }
+          var finalMessages=mergeBuddyEntryCollections(
+            state.entries,
+            {},
+            state.buddyEntryTombstones,
+            latestMeta.buddyEntryTombstones
+          );
+          state.entries=finalMessages.entries;
+          state.buddyEntryTombstones=finalMessages.tombstones;
+          state.buddies=mergeCloudBuddyLists(state.buddies,latestMeta.buddies,Object.keys(state.entries));
+          candidateMeta.buddies=state.buddies;
+          candidateMeta.buddyEntryTombstones=state.buddyEntryTombstones;
+          candidateMeta.buddyEntriesRevision=baseBuddyRevision+1;
+          candidateMeta.chunkCounts={};
+          entryChunks={};
+          Object.keys(state.entries).forEach(function(buddyId){
+            entryChunks[buddyId]=chunkEntries(state.entries[buddyId]);
+            candidateMeta.chunkCounts[buddyId]=entryChunks[buddyId].length;
+          });
+        }
+        function writeBuddyChunks(transaction){
+          Object.keys(entryChunks).forEach(function(buddyId){
+            entryChunks[buddyId].forEach(function(chunk,i){
+              var chunkRef=db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i);
+              transaction.set(chunkRef,{entries:chunk});
+            });
+          });
+        }
+        return pushCloudMetaTransaction(metaRef,meta,prepareBuddyChunks,writeBuddyChunks).then(function(){
+          var writes=[];
+          // Background images remain separate because a data URI can approach
+          // Firestore's per-document size limit.
+          if(state.background&&state.background.image){
+            writes.push(db.collection('users').doc(uid).collection('diary').doc('background').set({image:state.background.image}));
+          }else{
+            writes.push(db.collection('users').doc(uid).collection('diary').doc('background').delete().catch(function(){}));
+          }
+          return Promise.all(writes);
         });
       });
-      // background image lives in its own doc (can be a large data URI) so it never
-      // risks pushing the meta doc over Firestore's ~1MB document size limit
-      if(state.background && state.background.image){
-        writes.push(db.collection('users').doc(uid).collection('diary').doc('background').set({ image: state.background.image }));
-      } else {
-        writes.push(db.collection('users').doc(uid).collection('diary').doc('background').delete().catch(function(){}));
+    }).catch(function(error){
+      if(error&&error.code==='cloud-buddy-retry'&&retryCount<3){
+        return pushBuddySafeCloudSnapshot(uid,retryCount+1);
       }
-      writes.push(metaRef.set(meta));
-      return Promise.all(writes);
+      throw error;
     });
   }
 
   function pullFromCloud(){
     if(!db || !cloudUser) return Promise.reject(new Error('Not signed in.'));
+    if(!canUseCloudForActiveAccount(cloudUser))return Promise.reject(new Error('Google Cloud Sync must use the same signed-in DesktopDiary account.'));
     var uid = cloudUser.uid;
     var pullStartedRevision = stateRevision;
     return db.collection('users').doc(uid).collection('diary').doc('meta').get().then(function(snap){
       if(!snap.exists) return false;
       var meta = snap.data() || {};
-      var chunkCounts = meta.chunkCounts || {};
-      var buddyIds = Object.keys(chunkCounts);
-      var cloudEntries = {};
-      var fetches = buddyIds.map(function(buddyId){
-        var n = chunkCounts[buddyId];
-        var docFetches = [];
-        for(var i=0;i<n;i++){
-          docFetches.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).get());
-        }
-        return Promise.all(docFetches).then(function(snaps){
-          var all = [];
-          snaps.forEach(function(s){ if(s.exists) all = all.concat((s.data()||{}).entries || []); });
-          cloudEntries[buddyId] = all;
-        });
-      });
+      var cloudEntries={};
+      var entriesFetch=fetchCloudBuddyEntries(uid,meta.chunkCounts).then(function(entries){cloudEntries=entries;});
       var cloudBackground = { color: meta.bgColor || '', image: '' };
       // background image lives in its own doc; only fetch it if push indicated one exists
       var bgFetch = meta.hasBgImage
@@ -1793,17 +2266,18 @@ try {
             cloudBackground.image = '';
           })
         : Promise.resolve();
-      return Promise.all(fetches.concat([bgFetch])).then(function(){
+      return Promise.all([entriesFetch,bgFetch]).then(function(){
         // Do not let an older cloud snapshot overwrite edits made while it was loading.
         if(stateRevision !== pullStartedRevision) return false;
         state.groups = meta.groups || state.groups;
-        state.buddies = meta.buddies || [];
         state.status = meta.status || { label:'', html:'', ts:null };
         state.statusLog = meta.statusLog || [];
         state.statusPresets = meta.statusPresets || [];
         state.moodLog = meta.moodLog || [];
         state.drafts = meta.drafts || {};
-        state.profile = meta.profile || { pic:'', html:'' };
+        var mergedIdentity=mergeCloudProfileIdentity(currentCloudProfileIdentity(),cloudProfileIdentityFrom(meta),false);
+        state.profile = mergedIdentity.profile;
+        state.profileUpdatedAt = mergedIdentity.profileUpdatedAt;
         if(Array.isArray(meta.blogPosts)) state.blogPosts = meta.blogPosts;
         if(Array.isArray(meta.customFonts)) state.customFonts = meta.customFonts;
         if(Array.isArray(meta.customMoods)) state.customMoods = meta.customMoods;
@@ -1815,8 +2289,19 @@ try {
           currentPageId: meta.notebook.currentPageId || null
         };
         else if(Array.isArray(meta.stickyNotes)) state.stickyNotes = meta.stickyNotes;
-        if(state.account && meta.screenName) state.account.screenName = meta.screenName;
-        state.entries = cloudEntries;
+        if(state.account && mergedIdentity.screenName) state.account.screenName = mergedIdentity.screenName;
+        state.screenNameUpdatedAt = mergedIdentity.screenNameUpdatedAt;
+        var mergedMessages=mergeBuddyEntryCollections(
+          state.entries,
+          cloudEntries,
+          state.buddyEntryTombstones,
+          meta.buddyEntryTombstones
+        );
+        state.entries = mergedMessages.entries;
+        state.buddyEntryTombstones = mergedMessages.tombstones;
+        // Cloud Buddy Lists remain authoritative, while any local list that
+        // still owns a surviving unsynced message is retained.
+        state.buddies = mergeCloudBuddyLists(meta.buddies,state.buddies,Object.keys(state.entries));
         state.background = cloudBackground;
         normalizeState();
         return saveState().then(function(){ return true; });
@@ -1834,6 +2319,38 @@ try {
     }
     return window._actx;
   }
+
+  var SITE_SOUND_PATHS = {
+    buddyOn: 'buddy%20on.mp3',
+    buddyOut: 'buddy-out.mp3',
+    imSent: 'IM%20Sent.mp3'
+  };
+  var siteSoundTemplates = {};
+
+  function preloadSiteSounds(){
+    Object.keys(SITE_SOUND_PATHS).forEach(function(name){
+      var audio = new Audio(SITE_SOUND_PATHS[name]);
+      audio.preload = 'auto';
+      audio.playsInline = true;
+      audio.load();
+      siteSoundTemplates[name] = audio;
+    });
+  }
+
+  function playSiteSound(name, volume){
+    try{
+      var template = siteSoundTemplates[name];
+      if(!template || !SITE_SOUND_PATHS[name]) return null;
+      var audio = template.cloneNode(true);
+      audio.volume = typeof volume === 'number' ? volume : 0.85;
+      audio.currentTime = 0;
+      var playAttempt = audio.play();
+      if(playAttempt && typeof playAttempt.catch === 'function') playAttempt.catch(function(){});
+      return audio;
+    }catch(e){ return null; }
+  }
+
+  preloadSiteSounds();
   function playDing(){
     try{
       var ctx = getCtx(); var now = ctx.currentTime;
@@ -2045,12 +2562,19 @@ try {
     }else if(item.type==='buddy'){
       var pack=item.data||{},restoredBuddy=pack.buddy;if(!restoredBuddy)return false;
       if(!state.groups.some(function(g){return g.id===restoredBuddy.groupId;}))restoredBuddy.groupId='default';
+      restoredBuddy.updatedAt=Date.now();
       if(!state.buddies.some(function(b){return b.id===restoredBuddy.id;}))state.buddies.push(restoredBuddy);
       state.entries[restoredBuddy.id]=Array.isArray(pack.entries)?pack.entries:[];
+      state.entries[restoredBuddy.id].forEach(function(entry){
+        entry.restoredAt=Date.now();
+        if(state.buddyEntryTombstones)delete state.buddyEntryTombstones[entry.id];
+      });
       state.drafts[restoredBuddy.id]=Array.isArray(pack.drafts)?pack.drafts:[];
     }else if(item.type==='buddyEntry'){
       var buddy=state.buddies.find(function(b){return b.id===item.meta.buddyId;});if(!buddy){openInfoWindow('That diary no longer exists, so this entry cannot be restored.');return false;}
       state.entries[item.meta.buddyId]=state.entries[item.meta.buddyId]||[];
+      item.data.restoredAt=Date.now();
+      if(state.buddyEntryTombstones)delete state.buddyEntryTombstones[item.data.id];
       if(!state.entries[item.meta.buddyId].some(function(e){return e.id===item.data.id;}))state.entries[item.meta.buddyId].push(item.data);
     }else if(item.type==='diaryPost'){
       state.blogPosts=state.blogPosts||[];
@@ -2286,7 +2810,8 @@ try {
     if(!name) return null;
     var existing = findBuddyByName(name);
     if(existing) return existing;
-    var b = { id: uid(), name: name, addedAt: Date.now(), groupId: groupId || 'default' };
+    var now=Date.now();
+    var b = { id: uid(), name: name, addedAt: now, updatedAt: now, groupId: groupId || 'default' };
     state.buddies.push(b);
     state.entries[b.id] = [];
     return b;
@@ -2311,8 +2836,11 @@ try {
   }
 
   function showSignon(){
+    window.__ddStartupRoute = 'signed-out';
     setActiveSession(false);
     document.body.classList.remove('signed-in');
+    var signonSafeWindows={help:true,privacy:true,createaccount:true,onlinepasswordreset:true,'suggestion-box':true};
+    openWindows.slice().forEach(function(w){if(!signonSafeWindows[w.type])closeWindow(w.id);});
     var stickyLayer=document.getElementById('sticky-layer');
     if(stickyLayer)stickyLayer.innerHTML='';
     document.getElementById('buddylist-win').style.display = 'none';
@@ -2415,6 +2943,7 @@ try {
           if(connectingExisting){state.account={screenName:name,password:pass,email:email};activeStorageKey=accountStorageKey(email);return saveState();}
           return activateAccountDiary(email,auth,pass,true);
         }).then(function(){
+          state.screenNameUpdatedAt = Date.now();
           state.savePassword = document.getElementById('in-savepw').checked;
           state.autoLogin = document.getElementById('in-autologin').checked;
           return saveState();
@@ -2521,33 +3050,66 @@ try {
     }else document.getElementById('signon-error').textContent='Enter your account email first.';
   });
 
+  var GUEST_ISOLATION_RECOVERY_KEY=STORAGE_KEY+'-pre-guest-isolation-recovery';
+  function isExplicitGuestState(candidate){
+    var account=candidate&&candidate.account;
+    if(!account||String(account.email||'').trim())return false;
+    var name=String(account.screenName||'').trim().toLowerCase();
+    return account.mode==='guest'||!name||name==='guest';
+  }
+  function preserveSuspiciousGuestState(store,rawValue){
+    if(!store||!rawValue)return Promise.resolve();
+    return store.get(GUEST_ISOLATION_RECOVERY_KEY,false).then(function(existing){
+      if(!existing||!existing.value)return store.set(GUEST_ISOLATION_RECOVERY_KEY,rawValue,false);
+    }).catch(function(){});
+  }
+  function loadIsolatedGuestState(){
+    var store=getLocalStore();
+    if(!store)return Promise.resolve(makeFreshState());
+    return store.get(STORAGE_KEY,false).then(function(saved){
+      var candidate=null;
+      if(saved&&saved.value){
+        try{candidate=JSON.parse(saved.value);}catch(e){}
+      }
+      if(isExplicitGuestState(candidate))return candidate;
+      return preserveSuspiciousGuestState(store,saved&&saved.value).then(function(){
+        return makeFreshState();
+      });
+    }).catch(function(){return makeFreshState();});
+  }
+  function prepareGuestState(candidate){
+    state=candidate||makeFreshState();
+    normalizeState();
+    state.savePassword=false;
+    state.autoLogin=false;
+    state.account=state.account||{};
+    state.account.mode='guest';
+    state.account.screenName=String(state.account.screenName||'').trim()||'Guest';
+    state.account.email='';
+    state.account.password='';
+    delete state.account.pendingEmail;
+  }
   function continueOfflineFromSignon(){
     var errEl = document.getElementById('signon-error');
     if(errEl){
       errEl.style.color = '#2a7d2a';
       errEl.textContent = 'Entering offline mode…';
     }
-    // Match the Sign On window's close button: guest mode leaves its icon
-    // available in the desktop corner if the person wants to sign on later.
     document.getElementById('signon-wrap').style.display = 'none';
-    document.getElementById('signon-icon').style.display = 'flex';
+    document.getElementById('signon-icon').style.display = 'none';
+    // Invalidate a Firebase pull that may already be in flight before changing
+    // identities. Its revision check will then refuse to apply account data.
+    stateRevision++;
     setSupabaseSession(null);
-    // Keep an existing guest diary when this device returns to guest mode.
-    // Starting a guest session from an email account still begins separately.
-    if(!state || !state.account || state.account.email) state = makeFreshState();
-    state.savePassword = false;
-    state.autoLogin = false;
-    if(!state.account) state.account = { screenName: 'Guest', email: '', password: '' };
-    if(state.account){
-      if(state.account.password) state.account.password = '';
-      if(!state.account.screenName && state.account.email){
-        state.account.screenName = state.account.email.split('@')[0];
-      }
-      if(!state.account.screenName) state.account.screenName = 'Guest';
-      delete state.account.pendingEmail;
-    }
-    normalizeState();
-    return saveState().then(function(){ return enterDesktop(); }).catch(function(){ return enterDesktop(); });
+    activeStorageKey = STORAGE_KEY;
+    var cloudSignOut=signOutCloud().catch(function(){});
+    return Promise.all([loadIsolatedGuestState(),cloudSignOut]).then(function(results){
+      prepareGuestState(results[0]);
+      return saveState();
+    }).then(function(){return enterDesktop();}).catch(function(){
+      prepareGuestState(makeFreshState());
+      return saveState().catch(function(){}).then(function(){return enterDesktop();});
+    });
   }
 
   var signonLocalButton = document.getElementById('signon-local');
@@ -2562,9 +3124,16 @@ try {
   });
 
   function enterDesktop(){
+    window.__ddStartupRoute = 'signed-in';
+    if(document.body.classList.contains('signed-in')){
+      document.getElementById('signon-wrap').style.display = 'none';
+      return;
+    }
     setActiveSession(true);
     document.body.classList.add('signed-in');
+    document.getElementById('signon-icon').style.display = 'none';
     if(!dtdUsageSessionTracked){dtdUsageSessionTracked=true;trackDtdUsage('session_started');}
+    cloudAuthReady.then(function(){return autoPullCloudForActiveAccount();}).catch(function(){});
     syncAuthenticatedEmailFromServer().catch(function(){});
     refreshAdminAccess();
     refreshTrashIcon();
@@ -2574,9 +3143,7 @@ try {
     var connectingWindow=document.getElementById('connecting-wrap');
     connectingWindow.style.zIndex=++zCounter;
     connectingWindow.style.display='block';
-    setTimeout(function(){
-      playDoorCreak();
-    }, 700);
+    playSiteSound('buddyOn', 0.9);
     setTimeout(function(){
       document.getElementById('connecting-wrap').style.display = 'none';
       showBuddyList();
@@ -2594,6 +3161,16 @@ try {
     var toolbar = bl && bl.querySelector('.bl-toolbar');
     if(!icon||!bl||!toolbar) return;
     if(state.desktopIconPositions && state.desktopIconPositions[icon.id]) return;
+    if(window.innerWidth<=700){
+      var mobileLeft=Math.max(0,Math.min(window.innerWidth*.52,window.innerWidth-(icon.offsetWidth||92)));
+      var mobileTop=Math.max(0,window.innerHeight-40-(icon.offsetHeight||92));
+      icon.style.left=Math.round(mobileLeft)+'px';
+      icon.style.top=Math.round(mobileTop)+'px';
+      icon.style.right='auto';
+      icon.style.bottom='auto';
+      icon.classList.remove('over-buddy-list');
+      return;
+    }
     var blRect = bl.getBoundingClientRect();
     var tbRect = toolbar.getBoundingClientRect();
     var iw = icon.offsetWidth || 110, ih = icon.offsetHeight || 120;
@@ -2634,6 +3211,7 @@ try {
       savedPosition.y = startingPosition.y;
       savedPosition.right = Math.max(0,window.innerWidth-startingPosition.x-w);
     }
+    keepPetIconsClearOfBuddyList();
     positionCompanionOverBuddyList();
     document.getElementById('bl-title-text').textContent = state.account.screenName;
     document.getElementById('bl-me-name').textContent = state.account.screenName;
@@ -2668,6 +3246,7 @@ try {
       right:Math.max(0,window.innerWidth-position.x-bl.offsetWidth),
       userPlaced:wasUserPlaced
     };
+    keepPetIconsClearOfBuddyList();
   }
   window.addEventListener('resize', function(){ fitSearchBarWidth(); keepBuddyListOnScreen(); });
   window.addEventListener('orientationchange', function(){ setTimeout(fitSearchBarWidth, 150); });
@@ -2683,6 +3262,20 @@ try {
       img.style.display = 'none';
       ph.style.display = 'flex';
     }
+  }
+
+  function editBuddyName(buddy,onRenamed){
+    if(!buddy)return;
+    appTextPrompt('Edit buddy name',buddy.name,function(nextName){
+      if(nextName===null)return;
+      nextName=nextName.trim();
+      if(!nextName||nextName===buddy.name)return;
+      buddy.name=nextName;
+      buddy.updatedAt=Date.now();
+      saveState();
+      renderBuddyList();
+      if(typeof onRenamed==='function')onRenamed(nextName);
+    });
   }
 
   var buddyListWinRecord = null;
@@ -2769,8 +3362,20 @@ try {
           '<span class="bl-name-wrap">' +
             '<span class="bl-name">' + escapeHtml(b.name) + '</span>' +
             '<span class="bl-sub">' + (ts ? relTime(ts) : 'new buddy') + '</span>' +
-          '</span>';
+          '</span>' +
+          '<span class="bl-group-rename bl-buddy-edit" role="button" tabindex="0" aria-label="Edit '+escapeHtml(b.name)+'">Edit</span>';
         row.addEventListener('click', function(){ openIMWindow(b.id); });
+        var editBuddy=row.querySelector('.bl-buddy-edit');
+        function beginBuddyEdit(e){
+          e.preventDefault();
+          e.stopPropagation();
+          editBuddyName(b);
+        }
+        editBuddy.addEventListener('click',beginBuddyEdit);
+        editBuddy.addEventListener('keydown',function(e){
+          if(e.key!=='Enter'&&e.key!==' ')return;
+          beginBuddyEdit(e);
+        });
         listEl.appendChild(row);
       });
     });
@@ -2800,8 +3405,16 @@ try {
           if(tag === 'IMG'){
             var src = child.getAttribute('src') || '';
             var chosenWidth = child.style ? child.style.width : '';
+            var isInlineEmoji = typeof isDtdStickerSrc === 'function' && isDtdStickerSrc(src);
             while(child.attributes && child.attributes.length){ child.removeAttribute(child.attributes[0].name); }
-            if(/^data:image\//.test(src)){
+            if(isInlineEmoji){
+              child.setAttribute('src', src);
+              child.setAttribute('class', 'inline-emoji');
+              child.setAttribute('alt', 'sticker');
+              child.setAttribute('draggable', 'false');
+              child.setAttribute('contenteditable', 'false');
+              child.setAttribute('style', 'width:2em;height:2em;vertical-align:-0.55em;object-fit:contain;');
+            } else if(/^data:image\//.test(src)){
               child.setAttribute('src', src);
               var imgStyle = 'max-width:100%;border-radius:4px;';
               if(/^\d+px$/.test(chosenWidth)) imgStyle += 'width:' + chosenWidth + ';';
@@ -2869,14 +3482,28 @@ try {
     var profileWindow=openWindows.find(function(w){return w.type==='viewprofile';});if(profileWindow&&profileWindow.el&&profileWindow.el._refreshProfile)profileWindow.el._refreshProfile();
   });
 
-  function signOff(){
+  var signOffInProgress = false;
+  function closeDesktopDiaryPage(){
+    try{ window.close(); }catch(e){}
+    setTimeout(function(){
+      if(window.closed) return;
+      try{ window.location.replace('about:blank'); }
+      catch(e){ document.documentElement.innerHTML = ''; }
+    }, 150);
+  }
+  function signOff(closePage){
+    if(signOffInProgress) return;
+    signOffInProgress = true;
+    var closePageAfterSound = closePage === true;
+    var signOffStartedAt = Date.now();
+    var signOffSoundSequenceMs = closePageAfterSound ? 900 : 470;
+    playSiteSound('buddyOut', 0.9);
     setActiveSession(false);
     dtdUsageSessionTracked=false;
     setSupabaseSession(null);
     setAdminMenuVisible(false);
     stopDesktopMailWatch();
     stopPenPalNotificationWatch();
-    playDoorSlam();
     openWindows.slice().forEach(function(w){ if(w.id !== 'buddylist-win') closeWindow(w.id); });
     if(buddyListWinRecord){
       if(buddyListWinRecord.tbEl) buddyListWinRecord.tbEl.remove();
@@ -2905,7 +3532,12 @@ try {
         state.autoLogin    = !!prevAuto;
       }
       activeStorageKey = STORAGE_KEY; // reset to generic key; sign-in will re-scope
-      setTimeout(function(){ showSignon(); }, 900);
+      var remainingSoundMs = Math.max(0, signOffSoundSequenceMs - (Date.now() - signOffStartedAt));
+      setTimeout(function(){
+        signOffInProgress = false;
+        if(closePageAfterSound) closeDesktopDiaryPage();
+        else showSignon();
+      }, remainingSoundMs);
     }
     // Never let a hung or failed network call strand the user with the buddy
     // list gone and no sign-on screen — always finish within a few seconds.
@@ -3177,8 +3809,82 @@ try {
     "What's one thing you'd change about today?"
   ];
 
+  // DesktopDiary uses the same ordered sticker library as My Notepad. Keep the
+  // catalog as file paths so saved messages and diary entries stay lightweight.
+  var DTD_STICKER_COUNT = 495;
+  var DTD_HIDDEN_STICKERS = {
+    's01.png':1, 's02.png':1, 's03.png':1, 's04.png':1, 's05.png':1,
+    's06.png':1, 's07.png':1, 's08.png':1, 's09.png':1, 's10.png':1,
+    's21.png':1, 's23.png':1, 's25.png':1, 's26.png':1, 's28.png':1,
+    's40.png':1, 's41.png':1, 's45.png':1, 's46.png':1, 's47.png':1,
+    's48.png':1, 's52.png':1, 's53.png':1, 's54.png':1, 's55.png':1,
+    's56.png':1, 's57.png':1
+  };
+
+  function dtdStickerFile(number){
+    return 's' + (number < 10 ? '0' + number : number) + '.png';
+  }
+
+  function buildDtdStickerFiles(){
+    var first=[], afterRadical=[], files=[];
+    function addRange(target, start, end){
+      for(var number=start; number<=end; number++) target.push(dtdStickerFile(number));
+    }
+    addRange(first,58,73);
+    addRange(first,464,479);
+    addRange(first,480,495);
+    addRange(first,238,253);
+    addRange(first,342,359);
+    addRange(first,143,158);
+    addRange(first,159,174);
+    addRange(first,175,190);
+    addRange(first,191,206);
+    addRange(first,207,226);
+    addRange(first,286,301);
+    addRange(first,302,317);
+    addRange(first,227,237);
+    addRange(first,254,269);
+    first.push('s463.png');
+    addRange(first,270,285);
+    addRange(afterRadical,318,341);
+    first.forEach(function(file){
+      if(!DTD_HIDDEN_STICKERS[file]) files.push('stickers/' + file);
+    });
+    for(var number=1; number<=DTD_STICKER_COUNT; number++){
+      var file=dtdStickerFile(number);
+      if(DTD_HIDDEN_STICKERS[file] || first.indexOf(file)>-1 || afterRadical.indexOf(file)>-1) continue;
+      files.push('stickers/' + file);
+      if(file==='s107.png'){
+        afterRadical.forEach(function(radicalFile){ files.push('stickers/' + radicalFile); });
+      }
+    }
+    return files;
+  }
+
+  var DTD_STICKER_FILES = buildDtdStickerFiles();
+  var DTD_STICKER_FILE_SET = DTD_STICKER_FILES.reduce(function(set,src){set[src]=1;return set;},{});
+  function isDtdStickerSrc(src){ return !!DTD_STICKER_FILE_SET[src]; }
+
   // ---- rich-text compose box: contenteditable with formatting, size, colors, bg, photos, tags ----
-  function richComposeHtml(id, placeholder){
+  function richComposeHtml(id, placeholder, includeInlineEmojis){
+    var emojiControl = '';
+    if(includeInlineEmojis){
+      var useFullStickerLibrary = includeInlineEmojis === 'stickers';
+      var pickerTitle = useFullStickerLibrary ? 'Insert sticker' : 'Insert smiley';
+      var pickerLabel = useFullStickerLibrary ? 'Stickers' : 'Smileys';
+      var pickerClass = useFullStickerLibrary ? 'rich-emoji-picker rich-sticker-picker-full' : 'rich-emoji-picker rich-emoji-picker-small';
+      emojiControl = '<span class="rich-emoji-control">' +
+        '<button type="button" class="rich-emoji-toggle" title="'+pickerTitle+'" aria-label="'+pickerTitle+'" aria-expanded="false"><img src="stickers/s58.png" alt=""></button>' +
+        '<span class="'+pickerClass+'" role="dialog" aria-label="'+pickerLabel+'" hidden>' +
+          '<span class="rich-sticker-grid"></span>' +
+          '<span class="rich-sticker-nav">' +
+            '<button type="button" class="rich-sticker-prev" title="Previous stickers" aria-label="Previous stickers">‹</button>' +
+            '<span class="rich-sticker-page" aria-live="polite"></span>' +
+            '<button type="button" class="rich-sticker-next" title="Next stickers" aria-label="Next stickers">›</button>' +
+          '</span>' +
+        '</span>' +
+      '</span>';
+    }
     return '<div class="rich-toolbar">' +
         '<button type="button" title="Bold" data-cmd="bold">B</button>' +
         '<button type="button" title="Italic" data-cmd="italic"><i>I</i></button>' +
@@ -3201,6 +3907,7 @@ try {
         '</select>' +
         '<label class="rich-swatch" title="Text color"><span>A</span><input type="color" data-cmd="foreColor" value="#000000"></label>' +
         '<label class="rich-swatch hl" title="Highlight selected text"><span>&#9608;</span><input type="color" data-cmd="hiliteColor" value="#ffff00"></label>' +
+        emojiControl +
       '</div>' +
       '<div class="rich-compose" id="'+id+'" contenteditable="true" data-placeholder="'+escapeHtml(placeholder)+'"></div>';
   }
@@ -3293,7 +4000,7 @@ try {
   }
   function attachImageResize(target){
     target.addEventListener('click', function(e){
-      if(e.target && e.target.tagName === 'IMG'){ showResizeMenu(e.target); }
+      if(e.target && e.target.tagName === 'IMG' && !e.target.classList.contains('inline-emoji')){ showResizeMenu(e.target); }
     });
   }
 
@@ -3454,6 +4161,117 @@ try {
         }
       });
     });
+    var emojiToggle = scopeEl.querySelector('.rich-emoji-toggle');
+    var emojiPicker = scopeEl.querySelector('.rich-emoji-picker');
+    var emojiPickerHome = emojiPicker ? emojiPicker.parentNode : null;
+    var stickerGrid = emojiPicker ? emojiPicker.querySelector('.rich-sticker-grid') : null;
+    var stickerPageLabel = emojiPicker ? emojiPicker.querySelector('.rich-sticker-page') : null;
+    var stickerFiles = emojiPicker && emojiPicker.classList.contains('rich-sticker-picker-full') ? DTD_STICKER_FILES : DTD_STICKER_FILES.slice(0,16);
+    var stickerDocked = false;
+    var stickerPage = 0;
+    var stickerPageSize = emojiPicker && emojiPicker.classList.contains('rich-sticker-picker-full') ? 24 : 30;
+    var stickerPageCount = Math.ceil(stickerFiles.length / stickerPageSize);
+    function insertSticker(src){
+      if(!isDtdStickerSrc(src)) return;
+      if(typeof target._addFreeSticker === 'function'){
+        target._addFreeSticker(src);
+        closeEmojiPicker();
+        return;
+      }
+      restore();
+      var img = document.createElement('img');
+      img.className = 'inline-emoji';
+      img.src = src;
+      img.alt = 'sticker';
+      img.draggable = false;
+      img.contentEditable = 'false';
+      var sel = window.getSelection();
+      if(sel && sel.rangeCount){
+        var range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(img);
+        range.setStartAfter(img);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        savedRange = range.cloneRange();
+      }
+      closeEmojiPicker();
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function renderStickerPage(){
+      if(!stickerGrid) return;
+      var start=stickerPage*stickerPageSize;
+      var pageFiles=stickerFiles.slice(start,start+stickerPageSize);
+      stickerGrid.innerHTML=pageFiles.map(function(src,index){
+        return '<button type="button" class="rich-emoji-option" data-sticker-src="'+src+'" title="Insert sticker '+(start+index+1)+'"><img src="'+src+'" alt="" loading="lazy"></button>';
+      }).join('');
+      if(stickerPageLabel) stickerPageLabel.textContent=(stickerPage+1)+' / '+stickerPageCount;
+      var prev=emojiPicker.querySelector('.rich-sticker-prev');
+      var next=emojiPicker.querySelector('.rich-sticker-next');
+      if(prev) prev.disabled=stickerPage===0;
+      if(next) next.disabled=stickerPage>=stickerPageCount-1;
+    }
+    function closeEmojiPicker(){
+      if(!emojiPicker) return;
+      if(stickerDocked) return;
+      emojiPicker.hidden = true;
+      emojiPicker.style.left = '';
+      emojiPicker.style.top = '';
+      if(emojiPickerHome && emojiPicker.parentNode !== emojiPickerHome){
+        emojiPickerHome.appendChild(emojiPicker);
+      }
+      if(emojiToggle) emojiToggle.setAttribute('aria-expanded', 'false');
+    }
+    function openEmojiPicker(){
+      document.querySelectorAll('.rich-emoji-picker').forEach(function(otherPicker){
+        if(otherPicker !== emojiPicker) otherPicker.dispatchEvent(new Event('rich-emoji-close'));
+      });
+      document.body.appendChild(emojiPicker);
+      if(stickerGrid && !stickerGrid.childNodes.length) renderStickerPage();
+      emojiPicker.hidden = false;
+      var toggleRect = emojiToggle.getBoundingClientRect();
+      var pickerRect = emojiPicker.getBoundingClientRect();
+      var left = Math.max(4, Math.min(window.innerWidth - pickerRect.width - 4, toggleRect.right - pickerRect.width));
+      var top = toggleRect.bottom + 4;
+      if(top + pickerRect.height > window.innerHeight - 4){
+        top = Math.max(4, toggleRect.top - pickerRect.height - 4);
+      }
+      emojiPicker.style.left = Math.round(left) + 'px';
+      emojiPicker.style.top = Math.round(top) + 'px';
+      emojiToggle.setAttribute('aria-expanded', 'true');
+    }
+    if(emojiToggle && emojiPicker){
+      emojiPicker.addEventListener('rich-emoji-close', closeEmojiPicker);
+      emojiToggle.addEventListener('mousedown', function(e){
+        e.preventDefault();
+        saveSelection();
+      });
+      emojiToggle.addEventListener('click', function(e){
+        e.stopPropagation();
+        var willOpen = emojiPicker.hidden;
+        if(willOpen) openEmojiPicker();
+        else closeEmojiPicker();
+      });
+      emojiPicker.addEventListener('click', function(e){ e.stopPropagation(); });
+      emojiPicker.addEventListener('mousedown', function(e){
+        if(e.target.closest('button')) e.preventDefault();
+      });
+      emojiPicker.addEventListener('click', function(e){
+        var option=e.target.closest('.rich-emoji-option');
+        if(option){insertSticker(option.getAttribute('data-sticker-src'));return;}
+        if(e.target.closest('.rich-sticker-prev')){
+          stickerPage=Math.max(0,stickerPage-1);renderStickerPage();return;
+        }
+        if(e.target.closest('.rich-sticker-next')){
+          stickerPage=Math.min(stickerPageCount-1,stickerPage+1);renderStickerPage();
+        }
+      });
+      document.addEventListener('click', closeEmojiPicker);
+      target.addEventListener('keydown', function(e){
+        if(e.key === 'Escape') closeEmojiPicker();
+      });
+    }
     // live token expansion (fires after a token + space is typed)
     target.addEventListener('keyup', function(e){
       if(e.key === ' ' || e.code === 'Space' || e.key === 'Spacebar'){
@@ -3489,6 +4307,17 @@ try {
     };
     target._saveSelection = saveSelection;
     target._restore = restore;
+    target._mountStickerDock = function(host){
+      if(!host || !emojiPicker || !emojiPicker.classList.contains('rich-sticker-picker-full')) return;
+      stickerDocked = true;
+      emojiPickerHome = host;
+      host.appendChild(emojiPicker);
+      renderStickerPage();
+      emojiPicker.hidden = false;
+      emojiPicker.style.left = '';
+      emojiPicker.style.top = '';
+      if(emojiToggle) emojiToggle.setAttribute('aria-expanded', 'true');
+    };
   }
 
   function isRichEmpty(el){
@@ -3506,7 +4335,6 @@ try {
     sel.addRange(range);
     document.execCommand('insertText', false, text);
   }
-
 
   // === END scripts/shared/rich-compose.js ===
 
@@ -3541,11 +4369,10 @@ try {
 
     var inputId = 'input-'+buddyId;
     var body =
-      '<div class="im-stats" id="stats-'+buddyId+'"></div>' +
       '<div class="im-log" id="log-'+buddyId+'"></div>' +
       '<div class="editing-banner" id="editbanner-'+buddyId+'" style="display:none;">Editing &mdash; <span class="edit-cancel">Cancel</span> &nbsp; <label class="lock-toggle"><input type="checkbox" id="edit-lock-'+buddyId+'"> 🔒 Private</label></div>' +
       '<div class="im-compose-row">' +
-        richComposeHtml(inputId, '') +
+        richComposeHtml(inputId, '', true) +
       '</div>' +
       '<div class="im-action-row">' +
         '<button class="action-btn" title="Send a writing prompt" id="prompt-'+buddyId+'">'+iconSVG('bulb')+'<span>Prompt</span></button>' +
@@ -3554,7 +4381,7 @@ try {
         '<button class="send-btn-gold" id="send-'+buddyId+'">'+iconSVG('send')+'<span id="send-label-'+buddyId+'">Send</span></button>' +
       '</div>' +
       '<div class="draft-links" style="text-align:right;padding-right:8px;"><span class="draft-save-link-'+buddyId+'">Save Draft</span></div>' +
-      '<div class="pct-key">%t = time &nbsp; %d = date</div>';
+      '<div class="pct-key"><span>%t = time &nbsp; %d = date</span><span class="im-stats" id="stats-'+buddyId+'"></span></div>';
 
     createWindow({
       title: buddy.name,
@@ -3563,6 +4390,7 @@ try {
       bodyHtml: body,
       type: 'im',
       buddyId: buddyId,
+      constructionBar: false,
       onMount: function(el, id){
         renderLog(buddyId);
         renderStats(buddyId);
@@ -3624,6 +4452,7 @@ try {
                 if(!confirmed) return;
                 var entryLabel=stripHtmlTags(entry.html!==undefined?entry.html:(entry.text||'')).trim().slice(0,55)||'Diary Entry';
                 moveToTrash('buddyEntry',entryLabel,entry,{buddyId:buddyId});
+                recordBuddyEntryDeletion(buddyId,entry);
                 state.entries[buddyId] = list.filter(function(x){ return x.id !== entryId; });
                 if(editingEntryId === entryId) cancelEdit();
                 saveState();
@@ -3661,10 +4490,13 @@ try {
 
         el.querySelector('#send-'+buddyId).addEventListener('click', handleSendOrSave);
         input.addEventListener('keydown', function(e){
-          if(e.key === 'Enter' && !e.shiftKey && !isMobile()){
-            e.preventDefault();
-            handleSendOrSave();
+          if(e.key !== 'Enter' || e.isComposing) return;
+          e.preventDefault();
+          if(e.shiftKey){
+            document.execCommand('insertLineBreak', false, null);
+            return;
           }
+          handleSendOrSave();
         });
 
         el.querySelector('#prompt-'+buddyId).addEventListener('click', function(){
@@ -3690,13 +4522,7 @@ try {
           exportConversation(buddyId, buddy.name);
         });
         el.querySelector('.mi-rename-list').addEventListener('click', function(){
-          appTextPrompt('Rename buddy list', buddy.name, function(nextName){
-            if(nextName === null) return;
-            nextName = nextName.trim();
-            if(!nextName || nextName === buddy.name) return;
-            buddy.name = nextName;
-            saveState();
-            renderBuddyList();
+          editBuddyName(buddy,function(nextName){
             var titleText = el.querySelector('.t-title span:last-child');
             if(titleText) titleText.textContent = nextName;
             var record = openWindows.find(function(w){ return w.id === id; });
@@ -3706,6 +4532,7 @@ try {
         el.querySelector('.mi-delete-list').addEventListener('click', function(){
           confirmDeleteBuddyList(buddy, function(){
             moveToTrash('buddy',buddy.name,{buddy:buddy,entries:(state.entries[buddyId]||[]),drafts:(state.drafts[buddyId]||[])},{});
+            recordBuddyEntriesDeletion(buddyId,state.entries[buddyId]||[]);
             state.buddies = state.buddies.filter(function(item){ return item.id !== buddyId; });
             delete state.entries[buddyId];
             delete state.drafts[buddyId];
@@ -5002,11 +5829,12 @@ try {
   // === BEGIN scripts/shared/drafts.js ===
   // Generic draft log, usable by any rich-text compose box (IM entries, new messages,
   // status edits, blog posts). `key` is a buddyId or a fixed scope like '__blog__'.
-  function saveDraftFor(key, html, recipient){
-    if(!html || !stripHtmlTags(html).trim()) return false;
+  function saveDraftFor(key, html, recipient, extra){
+    if((!html || !stripHtmlTags(html).trim()) && !(extra&&Array.isArray(extra.stickers)&&extra.stickers.length)) return false;
     state.drafts[key] = state.drafts[key] || [];
     var draft = { id: uid(), html: html, ts: Date.now() };
     if(recipient) draft.recipient = recipient;
+    if(extra&&Array.isArray(extra.stickers)) draft.stickers=normalizeDiaryStickerList(extra.stickers);
     state.drafts[key].push(draft);
     saveState();
     return true;
@@ -5017,7 +5845,7 @@ try {
       var list = (state.drafts[key] || []).slice().sort(function(a,b){ return b.ts - a.ts; });
       if(!list.length) return '<div class="bl-empty">No saved drafts yet.</div>';
       return list.map(function(d){
-        var preview = stripHtmlTags(d.html).trim();
+        var preview = stripHtmlTags(d.html).trim()||((d.stickers||[]).length?'Sticker diary draft':'');
         if(preview.length > 80) preview = preview.slice(0, 80) + '\u2026';
         var recipient = impliedRecipient || d.recipient || null;
         var recipientHtml = recipient ? '<div class="draft-recipient">To: ' + escapeHtml(recipient) + '</div>' : '';
@@ -5043,7 +5871,7 @@ try {
               var draftId = row && row.getAttribute('data-draft-id');
               var draft = (state.drafts[key] || []).find(function(d){ return d.id === draftId; });
               if(!draft) return;
-              onLoad(draft.html);
+              onLoad(draft.html,draft);
               closeWindow(dId);
             };
           });
@@ -5071,7 +5899,7 @@ try {
     function rowsFor(key, impliedRecipient){
       var list = (state.drafts[key] || []).slice().sort(function(a,b){ return b.ts - a.ts; });
       return list.map(function(d){
-        var preview = stripHtmlTags(d.html).trim();
+        var preview = stripHtmlTags(d.html).trim()||((d.stickers||[]).length?'Sticker diary draft':'');
         if(preview.length > 70) preview = preview.slice(0, 70) + '\u2026';
         var recipient = impliedRecipient || d.recipient || null;
         var recipientHtml = recipient ? '<div class="draft-recipient">To: ' + escapeHtml(recipient) + '</div>' : '';
@@ -5120,7 +5948,7 @@ try {
               if(!draft) return;
               closeWindow(id);
               if(key === '__blog__'){
-                openBlogPostEditor(null, null, draft.html);
+                openBlogPostEditor(null, null, draft.html, draft.stickers);
               } else if(key === '__newmessage__'){
                 openNewMessageWindow();
                 var composeEl = document.getElementById('nm-body');
@@ -5152,7 +5980,6 @@ try {
     });
   }
 
-
   // === END scripts/shared/drafts.js ===
 
   // === BEGIN scripts/shared/entry-filters.js ===
@@ -5182,7 +6009,7 @@ try {
   function buildScrapbookHtml(snapshot){
     var made=Date.now(), owner=(snapshot.account&&snapshot.account.screenName)||'DesktopDiary', cards=[];
     (snapshot.buddies||[]).forEach(function(b){(snapshot.entries&&snapshot.entries[b.id]||[]).forEach(function(e){cards.push({type:e.kind==='prompt'?'Prompt':'Diary entry',title:b.name,html:sanitizeHTML(e.html||e.text||''),ts:e.ts||made});});});
-    (snapshot.blogPosts||[]).forEach(function(p){cards.push({type:'Diary post',title:p.title||'Untitled post',html:sanitizeHTML(p.html||''),ts:p.ts||made});});
+    (snapshot.blogPosts||[]).forEach(function(p){cards.push({type:'Diary post',title:p.title||'Untitled post',html:renderDiaryPostContent(p),ts:p.ts||made});});
     cards.sort(function(a,b){return b.ts-a.ts;});
     var cardHtml=cards.map(function(c){var search=(c.title+' '+stripHtmlTags(c.html)).toLowerCase();return '<article class="memory" data-search="'+escapeHtml(search)+'"><div class="memory-head"><div><small>'+escapeHtml(c.type)+'</small><h2>'+escapeHtml(c.title)+'</h2></div><time>'+escapeHtml(scrapbookDate(c.ts))+'</time></div><div class="memory-body">'+c.html+'</div></article>';}).join('')||'<div class="empty">Your scrapbook is ready for its first memory.</div>';
     var moods=(snapshot.moodLog||[]).slice().sort(function(a,b){return b.ts-a.ts;}).map(function(m){return '<li><b>'+escapeHtml(m.mood||'Mood')+'</b><span>'+escapeHtml(scrapbookDate(m.ts))+'</span></li>';}).join('')||'<li>No moods yet.</li>';
@@ -5200,7 +6027,7 @@ try {
     var fonts={system:'-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif',arial:'Arial,sans-serif',georgia:'Georgia,serif',courier:'"Courier New",monospace',trebuchet:'"Trebuchet MS",Arial,sans-serif',verdana:'Verdana,Arial,sans-serif',times:'"Times New Roman",serif'},bodyFont=fonts[design.fontFamily]||fonts.system,headingFont=fonts[design.headingFont]||fonts.system,fontSize={small:'13px',medium:'15px',large:'18px'}[design.fontSize]||'15px';
     var stickers=(design.stickers||[]).map(function(sticker){return '<span>'+escapeHtml(sticker)+'</span>';}).join('');
     var notes=(design.notes||[]).map(function(note){return '<article class="scrapbook-note">'+escapeHtml(note.text||'').replace(/\n/g,'<br>')+'</article>';}).join('');
-    var css=':root{--book-bg:'+background.color+';--book-line:'+background.line+';--book-border:'+bookBorder+';--book-font:'+bodyFont+';--book-heading-font:'+headingFont+'}body{background-color:var(--book-bg);font-family:var(--book-font);font-size:'+fontSize+'}h1,h2,.memory small,.stats{font-family:var(--book-heading-font)}body.sb-dots{background-image:radial-gradient(var(--book-line) 1px,transparent 1px);background-size:18px 18px}body.sb-grid{background-image:linear-gradient(var(--book-line) 1px,transparent 1px),linear-gradient(90deg,var(--book-line) 1px,transparent 1px);background-size:24px 24px}.memory,.side section,.scrapbook-note{border:var(--book-border)}header{border-bottom:var(--book-border)}.scrapbook-stickers{display:flex;justify-content:center;gap:11px;flex-wrap:wrap;min-height:8px;margin:15px auto 0;font-size:28px}.scrapbook-notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:13px;width:min(1050px,94%);margin:22px auto 0}.scrapbook-note{padding:17px;background:#fff7a8;box-shadow:3px 4px 0 #00000012;overflow-wrap:anywhere}@media print{.scrapbook-note{break-inside:avoid}}';
+    var css=':root{--book-bg:'+background.color+';--book-line:'+background.line+';--book-border:'+bookBorder+';--book-font:'+bodyFont+';--book-heading-font:'+headingFont+'}body{background-color:var(--book-bg);font-family:var(--book-font);font-size:'+fontSize+'}h1,h2,.memory small,.stats{font-family:var(--book-heading-font)}body.sb-dots{background-image:radial-gradient(var(--book-line) 1px,transparent 1px);background-size:18px 18px}body.sb-grid{background-image:linear-gradient(var(--book-line) 1px,transparent 1px),linear-gradient(90deg,var(--book-line) 1px,transparent 1px);background-size:24px 24px}.memory,.side section,.scrapbook-note{border:var(--book-border)}header{border-bottom:var(--book-border)}.scrapbook-stickers{display:flex;justify-content:center;gap:11px;flex-wrap:wrap;min-height:8px;margin:15px auto 0;font-size:28px}.scrapbook-notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:13px;width:min(1050px,94%);margin:22px auto 0}.scrapbook-note{padding:17px;background:#fff7a8;box-shadow:3px 4px 0 #00000012;overflow-wrap:anywhere}.diary-rendered-entry{position:relative;min-height:180px;overflow:hidden}.diary-rendered-text{position:relative;z-index:1;min-height:180px}.diary-rendered-sticker-layer{position:absolute;inset:0;z-index:2;pointer-events:none}.memory-body img.diary-saved-sticker{position:absolute;max-width:none;height:auto;border-radius:0;pointer-events:none;transform-origin:center}@media print{.scrapbook-note{break-inside:avoid}}';
     var patternClass=design.backgroundPattern==='dots'?'sb-dots':design.backgroundPattern==='grid'?'sb-grid':'';
     html=html.replace('</style>',css+'</style>').replace('<body>','<body class="'+patternClass+'">');
     if(stickers)html=html.replace('</header>','<div class="scrapbook-stickers">'+stickers+'</div></header>');
@@ -5371,7 +6198,7 @@ try {
     renderLog(buddyId);
     renderStats(buddyId);
     renderBuddyList();
-    playDing();
+    playSiteSound('imSent', 0.9);
   }
 
   function insertPromptMessage(buddyId){
@@ -5382,7 +6209,6 @@ try {
     renderLog(buddyId);
     renderStats(buddyId);
   }
-
 
   // === END scripts/features/scrapbook.js ===
 
@@ -5398,7 +6224,7 @@ try {
           '<option value="__new__">+ New Buddy</option>' +
         '</select></div>' +
         '<div class="nm-row" id="nm-newbuddy-row" style="display:none;"><label>New:</label><input type="text" id="nm-to-new" placeholder="Name" value="'+(prefillName && !prefillMatch ? escapeHtml(prefillName) : '')+'"></div>' +
-        richComposeHtml('nm-body', '') +
+        richComposeHtml('nm-body', '', true) +
         '<div class="im-action-row" style="justify-content:flex-start;">' +
           '<button class="action-btn" title="Insert photo" id="nm-photo-btn">'+iconSVG('photo')+'<span>Photo</span></button>' +
           '<button class="action-btn" title="Record a voice note" id="nm-voice-btn">'+iconSVG('mic')+'<span>Voice</span></button>' +
@@ -5437,7 +6263,8 @@ try {
         el.querySelector('#nm-voice-btn').addEventListener('click', function(){ startVoiceRecording(composeEl, el.querySelector('#nm-voice-btn')); });
         el.querySelector('.nm-ins-ts').addEventListener('click', function(){ appendPlainText(composeEl, (isRichEmpty(composeEl)?'':' ') + fmtTime(Date.now()) + ' '); });
         el.querySelector('.nm-ins-date').addEventListener('click', function(){ appendPlainText(composeEl, (isRichEmpty(composeEl)?'':' ') + fmtDateShort(Date.now()) + ' '); });
-        el.querySelector('#nm-send').addEventListener('click', function(){
+        var sendButton = el.querySelector('#nm-send');
+        sendButton.addEventListener('click', function(){
           var buddy = null;
           if(toSelect.value === '__new__'){
             var newName = newInput.value.trim();
@@ -5452,10 +6279,19 @@ try {
           state.entries[buddy.id] = state.entries[buddy.id] || [];
           state.entries[buddy.id].push({ id: uid(), html: html, ts: Date.now(), kind: 'entry', author: state.account.screenName });
           saveState();
-          playDing();
+          playSiteSound('imSent', 0.9);
           renderBuddyList();
           closeWindow(id);
           openIMWindow(buddy.id);
+        });
+        composeEl.addEventListener('keydown', function(e){
+          if(e.key !== 'Enter' || e.isComposing) return;
+          e.preventDefault();
+          if(e.shiftKey){
+            document.execCommand('insertLineBreak', false, null);
+            return;
+          }
+          sendButton.click();
         });
 
         el.querySelector('.draft-save-link').addEventListener('click', function(){
@@ -5486,7 +6322,6 @@ try {
       wire();
     }});
   }
-
 
   // === END scripts/features/new-message.js ===
 
@@ -5547,7 +6382,7 @@ try {
           var groupId = groupSelect.value;
           var b = currentBuddyId && state.buddies.find(function(x){ return x.id === currentBuddyId; });
           if(!b) b = buddyNamed(name);
-          if(b){ b.name = name; b.groupId = groupId; }
+          if(b){ b.name = name; b.groupId = groupId; b.updatedAt = Date.now(); }
           else ensureBuddy(name, groupId);
           saveState();
           renderBuddyList();
@@ -5561,6 +6396,7 @@ try {
           appConfirm('Move "' + b.name + '" and their diary to Trash? You can recover them for seven days.', function(confirmed){
             if(!confirmed) return;
             moveToTrash('buddy',b.name,{buddy:b,entries:(state.entries[b.id]||[]),drafts:(state.drafts[b.id]||[])},{});
+            recordBuddyEntriesDeletion(b.id,state.entries[b.id]||[]);
             state.buddies = state.buddies.filter(function(x){ return x.id !== b.id; });
             delete state.entries[b.id];
             delete state.drafts[b.id];
@@ -6172,34 +7008,79 @@ try {
     if(existing){if(name)existing.name=name;saveState();return existing;}
     var contact={id:uid(),handle:handle,name:name};state.mail.contacts.push(contact);saveState();return contact;
   }
+  function upsertDtdContact(handle,name){
+    handle=dtdContactHandle(handle);name=String(name||'').trim();
+    var existing=(state.mail.contacts||[]).find(function(contact){return contact&&contact.handle===handle;});
+    if(existing){if(name&&!existing.name){existing.name=name;saveState();}return existing;}
+    return saveDtdContact(handle,name);
+  }
+  function removeDtdContact(handle){
+    handle=dtdContactHandle(handle);if(!handle)return false;
+    var before=(state.mail.contacts||[]).length;
+    state.mail.contacts=(state.mail.contacts||[]).filter(function(contact){return contact&&contact.handle!==handle;});
+    if(state.mail.contacts.length!==before){saveState();return true;}return false;
+  }
   function renderDtdContacts(main,onCompose){
+    var friendSyncStarted=false;
     function render(){
       var contacts=(state.mail.contacts||[]).slice().sort(function(a,b){return (a.name||a.handle).localeCompare(b.name||b.handle);});
-      main.innerHTML='<div class="dtd-heading">PenPals <button class="btn dtd-add-contact" style="float:right">Add+</button></div><div class="dtd-contact-list">'+(contacts.length?contacts.map(function(contact){var initials=(contact.name||contact.handle||'?').slice(0,2).toUpperCase();return '<div class="dtd-contact-row" data-contact-id="'+escapeHtml(contact.id)+'"><button class="dtd-contact-avatar" title="View profile">'+escapeHtml(initials)+'</button><button class="dtd-contact-name" title="View profile">'+escapeHtml(contact.name||contact.handle)+'<span class="dtd-contact-address">'+escapeHtml(contact.handle)+'@desktopdiary.local</span></button><button class="btn dtd-contact-write">Write</button><button class="btn dtd-contact-nickname">Nickname</button><button class="btn dtd-contact-delete" title="Delete pen pal">×</button></div>';}).join(''):'<div class="dtd-empty">No pen pals yet. Add a pen pal or save someone from a letter.</div>')+'</div>';
+      main.innerHTML='<div class="dtd-heading">E-Buddies <button class="btn dtd-add-contact" style="float:right">Add+</button></div><div class="dtd-contact-list">'+(contacts.length?contacts.map(function(contact){var initials=(contact.name||contact.handle||'?').slice(0,2).toUpperCase();return '<div class="dtd-contact-row" data-contact-id="'+escapeHtml(contact.id)+'"><button class="dtd-contact-avatar" title="View profile">'+escapeHtml(initials)+'</button><button class="dtd-contact-name" title="View profile">'+escapeHtml(contact.name||contact.handle)+'<span class="dtd-contact-address">'+escapeHtml(contact.handle)+'@desktopdiary.local</span></button><button class="btn dtd-contact-write">Write</button><button class="btn dtd-contact-nickname">Nickname</button><button class="btn dtd-contact-delete" title="Delete e-buddy">×</button></div>';}).join(''):'<div class="dtd-empty">No e-buddies yet.<small class="dtd-empty-note">There’s no public people search or social network. Ask a friend to send you a letter on DesktopDiary, then save them here.</small></div>')+'</div>';
       main.querySelector('.dtd-add-contact').onclick=showAdd;
       main.querySelectorAll('[data-contact-id]').forEach(function(row){
         var contact=contacts.find(function(item){return item.id===row.dataset.contactId;});if(!contact)return;
         var avatar=row.querySelector('.dtd-contact-avatar');
-        function openProfile(){if(!getSupabaseSession()){openInfoWindow('PenPal profiles are available when you are signed in online.');return;}openDtdPublicProfileWindow(contact.handle);}
+        function openProfile(){if(!getSupabaseSession()){openInfoWindow('E-Buddy profiles are available when you are signed in online.');return;}openDtdPublicProfileWindow(contact.handle);}
         avatar.onclick=openProfile;row.querySelector('.dtd-contact-name').onclick=openProfile;
         if(getSupabaseSession())dtdMailProfilePreview(contact.handle).then(function(publicProfile){if(publicProfile&&publicProfile.profile_picture&&avatar.isConnected)avatar.innerHTML='<img src="'+escapeHtml(publicProfile.profile_picture)+'" alt="">';});
         row.querySelector('.dtd-contact-write').onclick=function(){onCompose(contact.handle);};
         row.querySelector('.dtd-contact-nickname').onclick=function(){appTextPrompt('Nickname for '+contact.handle+'@desktopdiary.local',contact.name||'',function(name){if(name===null)return;contact.name=name.trim().slice(0,50);saveState();render();});};
-        row.querySelector('.dtd-contact-delete').onclick=function(){appConfirm('Remove '+(contact.name||contact.handle)+' from PenPals?',function(ok){if(!ok)return;state.mail.contacts=state.mail.contacts.filter(function(item){return item.id!==contact.id;});saveState();render();});};
+        row.querySelector('.dtd-contact-delete').onclick=function(){appConfirm('Remove '+(contact.name||contact.handle)+' from E-Buddies?',function(ok){
+          if(!ok)return;
+          if(getSupabaseSession()){
+            supabaseRpc('remove_dtd_friend',{other_handle:contact.handle}).then(function(){removeDtdContact(contact.handle);render();}).catch(function(err){openInfoWindow(err.message);});
+            return;
+          }
+          removeDtdContact(contact.handle);render();
+        });};
       });
+      if(!friendSyncStarted&&getSupabaseSession()){
+        friendSyncStarted=true;
+        syncDtdFriendsFromServer().then(function(changed){if(changed&&main.isConnected)render();});
+      }
     }
     function showAdd(){
-      main.innerHTML='<div class="dtd-heading">Add PenPal</div><div class="dtd-compose"><label><span>Nickname</span><input class="dtd-contact-new-name" placeholder="Optional nickname"></label><label><span>DtD username</span><span class="dtd-address-input"><input class="dtd-contact-new-handle" maxlength="20" placeholder="penpal" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="dtd-address-suffix">@desktopdiary.local</span></span></label><div class="dtd-compose-actions"><button class="btn dtd-contact-cancel">Cancel</button><button class="btn dtd-contact-save">Save PenPal</button></div><div class="signon-error dtd-contact-error"></div></div>';
-      var handle=main.querySelector('.dtd-contact-new-handle');
+      var online=!!getSupabaseSession();
+      main.innerHTML='<div class="dtd-heading">Add E-Buddy</div><div class="dtd-compose"><label><span>Nickname</span><input class="dtd-contact-new-name" placeholder="Optional nickname"></label><label><span>DtD username</span><span class="dtd-address-input"><input class="dtd-contact-new-handle" maxlength="20" placeholder="e-buddy" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="dtd-address-suffix">@desktopdiary.local</span></span></label><div class="dtd-compose-actions"><button class="btn dtd-contact-cancel">Cancel</button><button class="btn dtd-contact-save">'+(online?'Send Request':'Save E-Buddy')+'</button></div><div class="signon-error dtd-contact-error"></div></div>';
+      var handle=main.querySelector('.dtd-contact-new-handle'),nickname=main.querySelector('.dtd-contact-new-name'),saveButton=main.querySelector('.dtd-contact-save'),error=main.querySelector('.dtd-contact-error');
       handle.oninput=function(){handle.value=handle.value.toLowerCase().replace(/[^a-z0-9._-]/g,'');};
       main.querySelector('.dtd-contact-cancel').onclick=render;
-      main.querySelector('.dtd-contact-save').onclick=function(){var contact=saveDtdContact(handle.value,main.querySelector('.dtd-contact-new-name').value);if(!contact){main.querySelector('.dtd-contact-error').textContent='Use a valid 3–20 character DtD username.';return;}render();};
-      handle.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();main.querySelector('.dtd-contact-save').click();}};
+      saveButton.onclick=function(){
+        var normalized=dtdContactHandle(handle.value);
+        if(!/^[a-z0-9][a-z0-9._-]{1,18}[a-z0-9]$/.test(normalized)||normalized.indexOf('..')!==-1){error.textContent='Use a valid 3–20 character DtD username.';return;}
+        if(!online){saveDtdContact(normalized,nickname.value);render();return;}
+        error.textContent='Checking account…';saveButton.disabled=true;
+        supabaseRpc('get_dtd_public_profile',{requested_handle:normalized}).then(function(profile){
+          if(!profile||!profile.handle)throw new Error('No DesktopDiary account uses that username.');
+          var friendStatus=profile.friend_status||'none';
+          if(friendStatus==='self')throw new Error('That is your own DesktopDiary account.');
+          if(friendStatus==='friends'){
+            saveDtdContact(profile.handle,nickname.value||profile.display_name||'');
+            return syncDtdFriendsFromServer().then(function(){render();});
+          }
+          if(friendStatus==='pending_outgoing')throw new Error('An E-Buddy request has already been sent to this account.');
+          if(friendStatus==='pending_incoming')throw new Error('This person already sent you a request. Open E-Buddies to accept it.');
+          return supabaseRpc('send_dtd_friend_request',{recipient_handle:profile.handle}).then(function(){
+            rememberPendingPenPalRequest(profile.handle);
+            openInfoWindow('E-Buddy request sent to '+(profile.display_name||profile.handle)+'.');
+            render();
+          });
+        }).catch(function(err){error.textContent=err.message||'Unable to add this E-Buddy right now.';saveButton.disabled=false;});
+      };
+      handle.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();saveButton.click();}};
       setTimeout(function(){handle.focus();},20);
     }
     render();
   }
-
 
   // === END scripts/features/pigeon-delivery.js ===
 
@@ -6345,7 +7226,7 @@ try {
     if(getSupabaseSession()){openOnlineDtdPostWindow();return;}
     function suggestedHandle(){return ((state.account&&state.account.screenName)||'user').toLowerCase().replace(/[^a-z0-9._-]+/g,'.').replace(/^[._-]+|[._-]+$/g,'').slice(0,20)||'user';}
     function mailConstructionBar(){return '<div class="dtd-construction"><span>UNDER CONSTRUCTION · LOCAL DELIVERY ONLY</span></div>';}
-    function mailboxBody(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Note to Self</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="contacts">PenPals</button></div><div class="dtd-main"><div class="dtd-heading">Inbox</div><div class="dtd-list"></div></div></div>';}
+    function mailboxBody(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Note to Self</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="contacts">E-Buddies</button></div><div class="dtd-main"><div class="dtd-heading">Inbox</div><div class="dtd-list"></div></div></div>';}
     var setup='<div style="padding:18px;text-align:center"><div class="dtd-heading">Choose your Post Mail address</div><p style="font-size:11px;line-height:1.45;color:#555">Your address is separate from your screen name, so your screen name can change later without affecting your mail.</p><div style="display:flex;justify-content:center;align-items:center;gap:4px;margin:16px 0"><input id="dtd-handle" type="text" maxlength="20" value="'+escapeHtml(suggestedHandle())+'" style="width:130px;padding:6px;border:1px solid #888;text-align:right"><b style="font-size:11px">@desktopdiary.local</b></div><div id="dtd-address-status" style="min-height:28px;font-size:10px;color:#555">3–20 characters: letters, numbers, dots, dashes, or underscores.</div><button class="btn" id="dtd-reserve" style="padding:7px 16px">Reserve Address</button><div style="font-size:9px;color:#777;border-top:1px solid #ccc;margin-top:17px;padding-top:9px">This reserves the address in this copy of DesktopDiary. Worldwide availability will be added when DtD accounts connect online.</div></div>';
     var body='<div class="win-body">'+mailConstructionBar()+(state.mail.address?mailboxBody():setup)+'</div>';
     createWindow({title:'DtD Post Mail',extraClass:'dtd-win',initialLeft:74,initialTop:72,bodyHtml:body,type:'dtdmail',onClose:function(){detachPigeonFromMailWindow();pigeonIcon().classList.remove('mail-window-open');if(pigeonComposingActive)endPigeonComposing(false);},onMount:function(el){
@@ -6408,12 +7289,12 @@ try {
         var metaFrom=privateType?'You':msg.from,metaTo=privateType?mailDisplayParty(msg):msg.to,metaToHtml=privateType==='future-self'?mailDisplayPartyHtml(msg,metaTo):escapeHtml(metaTo);
         var disclaimer=privateType==='imaginary'?'<div style="padding:0 10px 8px;font-size:9px;font-weight:bold;color:#a3261e">This letter will never be sent to this person.</div>':'';
         var footerActions=folder==='scheduled'?'':'<button class="btn dtd-save-diary">Save to Diary</button>';
-        if(!hideActions)footerActions+=(footerActions?' ':'')+'<button class="btn dtd-save-contact">Save PenPal</button> <button class="btn dtd-reply">Reply</button>';
+        if(!hideActions)footerActions+=(footerActions?' ':'')+'<button class="btn dtd-save-contact">Save E-Buddy</button> <button class="btn dtd-reply">Reply</button>';
         footerActions+=(footerActions?' ':'')+'<button class="btn dtd-delete-mail">Delete</button>';
         main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(msg.subject||'(no subject)')+'</b><br>From: '+escapeHtml(metaFrom)+'<br>To: '+metaToHtml+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(folder==='scheduled'?msg.deliverAt:msg.ts))+'</div>'+disclaimer+'<div class="dtd-message">'+escapeHtml(msg.body||'')+'</div>'+(hideActions?'':'<div class="dtd-inline-reply" style="display:none"><textarea class="dtd-inline-reply-body" placeholder="Write a fresh letter back…"></textarea><div class="dtd-inline-reply-actions"><span class="dtd-inline-reply-note">The previous letter will not be included.</span><span><button class="btn dtd-reply-cancel">Cancel</button> <button class="btn dtd-reply-send">Send Reply</button></span></div><div class="signon-error dtd-reply-error"></div></div>')+'<div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button>'+(footerActions?'<span>'+footerActions+'</span>':'')+'</div>';
         main.querySelector('.dtd-back').onclick=renderList;
         if(main.querySelector('.dtd-save-diary'))main.querySelector('.dtd-save-diary').onclick=function(){saveDtdMailToDiary('local:'+msg.id,msg.subject,metaFrom,metaTo,msg.body,msg.ts);};
-        if(main.querySelector('.dtd-save-contact'))main.querySelector('.dtd-save-contact').onclick=function(){var contact=saveDtdContact(folder==='inbox'?msg.from:msg.to,'');openInfoWindow(contact?'Saved to PenPals.':'That DtD address is not valid.');};
+        if(main.querySelector('.dtd-save-contact'))main.querySelector('.dtd-save-contact').onclick=function(){var contact=saveDtdContact(folder==='inbox'?msg.from:msg.to,'');openInfoWindow(contact?'Saved to E-Buddies.':'That DtD address is not valid.');};
         if(main.querySelector('.dtd-delete-mail'))main.querySelector('.dtd-delete-mail').onclick=function(){deleteLocalMailById(msg.id);};
         if(main.querySelector('.dtd-reply'))main.querySelector('.dtd-reply').onclick=function(){var box=main.querySelector('.dtd-inline-reply');box.style.display='grid';main.querySelector('.dtd-reply').style.display='none';beginPigeonComposing();box.querySelector('textarea').focus();};
         if(main.querySelector('.dtd-reply-cancel'))main.querySelector('.dtd-reply-cancel').onclick=function(){main.querySelector('.dtd-inline-reply').style.display='none';main.querySelector('.dtd-reply').style.display='';endPigeonComposing(false);};
@@ -6504,7 +7385,7 @@ try {
   // === BEGIN scripts/features/post-mail-online.js ===
   function openOnlineDtdPostWindow(){
     function bar(){return '<div class="dtd-construction"><span>ONLINE TEST PHASE · UNDER CONSTRUCTION</span></div>';}
-    function shell(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Note to Self</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="contacts">PenPals</button><div class="dtd-delivery-note"><b>Daily delivery · 8:00 AM</b></div></div><div class="dtd-main"><div class="dtd-heading">Connecting…</div></div></div>';}
+    function shell(){return '<div class="dtd-shell"><div class="dtd-sidebar"><button class="btn" id="dtd-compose">Compose</button><button class="btn" id="dtd-future">Note to Self</button><button class="btn dtd-folder active" data-folder="inbox">Inbox</button><button class="btn dtd-folder" data-folder="sent">Sent</button><button class="btn dtd-folder" data-folder="contacts">E-Buddies</button><div class="dtd-delivery-note"><b>Daily delivery · 8:00 AM</b></div></div><div class="dtd-main"><div class="dtd-heading">Connecting…</div></div></div>';}
     createWindow({title:'DtD Post Mail',extraClass:'dtd-win',initialLeft:74,initialTop:72,bodyHtml:'<div class="win-body">'+bar()+'<div style="padding:28px;text-align:center">Connecting to DtD Post Mail…</div></div>',type:'dtdmail',onClose:function(){detachPigeonFromMailWindow();pigeonIcon().classList.remove('mail-window-open');if(pigeonComposingActive)endPigeonComposing(false);},onMount:function(el){
       pigeonIcon().classList.add('mail-window-open');
       attachPigeonToMailWindow(el);
@@ -6608,11 +7489,11 @@ try {
         }
         var profileHandle=folder==='inbox'?m.from_handle:m.to_handle,initials=(profileHandle||'?').slice(0,2).toUpperCase();
         var receivedTime=folder==='inbox'?(m.deliver_on||m.created_at):m.created_at;
-        main.innerHTML='<div class="dtd-meta"><button class="dtd-profile-link" title="View '+escapeHtml(profileHandle)+'\'s profile">'+escapeHtml(initials)+'</button><b>'+escapeHtml(m.message_subject||'(no subject)')+'</b><br>From: '+escapeHtml(address(m.from_handle))+'<br>To: '+escapeHtml(address(m.to_handle))+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(new Date(receivedTime).getTime()))+'</div><div class="dtd-message">'+escapeHtml(m.message_body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button><span><button class="btn dtd-save-diary">Save to Diary</button> <button class="btn dtd-save-contact">Save PenPal</button> <button class="btn dtd-reply">Reply</button> <button class="btn dtd-delete-mail">Delete</button></span></div>';
+        main.innerHTML='<div class="dtd-meta"><button class="dtd-profile-link" title="View '+escapeHtml(profileHandle)+'\'s profile">'+escapeHtml(initials)+'</button><b>'+escapeHtml(m.message_subject||'(no subject)')+'</b><br>From: '+escapeHtml(address(m.from_handle))+'<br>To: '+escapeHtml(address(m.to_handle))+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(new Date(receivedTime).getTime()))+'</div><div class="dtd-message">'+escapeHtml(m.message_body||'')+'</div><div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button><span><button class="btn dtd-save-diary">Save to Diary</button> <button class="btn dtd-save-contact">Save E-Buddy</button> <button class="btn dtd-reply">Reply</button> <button class="btn dtd-delete-mail">Delete</button></span></div>';
         var profileButton=main.querySelector('.dtd-profile-link');profileButton.onclick=function(){if(profileHandle===profile.handle)openViewProfileWindow();else openDtdPublicProfileWindow(profileHandle);};
         var contactDisplayName='';
         supabaseRpc('get_dtd_public_profile',{requested_handle:profileHandle}).then(function(p){if(!p)return;contactDisplayName=p.display_name||'';if(p.profile_picture)profileButton.innerHTML='<img src="'+escapeHtml(p.profile_picture)+'" alt="">';}).catch(function(){});
-        main.querySelector('.dtd-save-contact').onclick=function(){var contact=saveDtdContact(profileHandle,contactDisplayName);openInfoWindow(contact?'Saved to PenPals.':'That DtD address is not valid.');};
+        main.querySelector('.dtd-save-contact').onclick=function(){var contact=saveDtdContact(profileHandle,contactDisplayName);openInfoWindow(contact?'Saved to E-Buddies.':'That DtD address is not valid.');};
         main.querySelector('.dtd-save-diary').onclick=function(){saveDtdMailToDiary('online:'+m.message_id,m.message_subject,address(m.from_handle),address(m.to_handle),m.message_body,m.created_at);};
         main.querySelector('.dtd-delete-mail').onclick=function(){askToDeleteOnlineMessage(m.message_id);};
         var backButton=main.querySelector('.dtd-back'),reply=main.querySelector('.dtd-reply'),replyBox=main.querySelector('.dtd-inline-reply');
@@ -7084,7 +7965,7 @@ try {
             el.querySelector('#cs-push').addEventListener('click', function(){
               el.querySelector('#cs-status').textContent = 'Pushing…';
               el.querySelector('#cs-status').style.color = '#0850d0';
-              pushToCloud().then(function(){ el.querySelector('#cs-status').textContent = 'Backed up just now.'; })
+              markCloudProfileIdentityForExplicitPush().then(function(){return pushToCloud();}).then(function(){ el.querySelector('#cs-status').textContent = 'Backed up just now.'; })
                 .catch(function(e){ el.querySelector('#cs-status').style.color='#c0392b'; el.querySelector('#cs-status').textContent='Push failed: '+(e&&e.message?e.message:String(e)); });
             });
             el.querySelector('#cs-pull').addEventListener('click', function(){
@@ -7199,16 +8080,73 @@ try {
     createWindow({ title: 'HTML Help', extraClass: 'help-win', bodyHtml: body, type: 'profilehelp' });
   }
 
+  function openProfilePictureCropEditor(image,onDone){
+    var canvasSize=360,cropSize=320,zoom=1,offsetX=0,offsetY=0;
+    var body='<div class="win-body profile-crop-body">'+
+      '<div class="profile-crop-stage"><canvas class="profile-crop-canvas" width="'+canvasSize+'" height="'+canvasSize+'"></canvas></div>'+
+      '<div class="profile-crop-controls"><label for="profile-crop-zoom">Zoom</label><input id="profile-crop-zoom" type="range" min="100" max="250" value="100">'+
+        '<div class="profile-crop-help">Drag the picture to reposition it inside the square.</div>'+
+        '<div class="profile-crop-actions"><button class="btn profile-crop-reset">Reset</button><span></span><button class="btn profile-crop-cancel">Cancel</button><button class="btn profile-crop-use">Use This Crop</button></div>'+
+      '</div></div>';
+    createWindow({title:'Adjust Profile Photo',extraClass:'profile-crop-win',bodyHtml:body,type:'profilecrop',onMount:function(el,id){
+      var canvas=el.querySelector('canvas'),ctx=canvas.getContext('2d'),zoomEl=el.querySelector('#profile-crop-zoom');
+      function baseScale(){return Math.max(cropSize/image.naturalWidth,cropSize/image.naturalHeight);}
+      function clampOffsets(){
+        var scale=baseScale()*zoom;
+        var maxX=Math.max(0,(image.naturalWidth*scale-cropSize)/2);
+        var maxY=Math.max(0,(image.naturalHeight*scale-cropSize)/2);
+        offsetX=Math.max(-maxX,Math.min(maxX,offsetX));
+        offsetY=Math.max(-maxY,Math.min(maxY,offsetY));
+      }
+      function render(){
+        clampOffsets();
+        ctx.clearRect(0,0,canvasSize,canvasSize);
+        ctx.fillStyle='#c8d3df';ctx.fillRect(0,0,canvasSize,canvasSize);
+        ctx.save();ctx.beginPath();ctx.rect(20,20,cropSize,cropSize);ctx.clip();
+        ctx.fillStyle='#fff';ctx.fillRect(20,20,cropSize,cropSize);
+        var scale=baseScale()*zoom;
+        ctx.translate(canvasSize/2+offsetX,canvasSize/2+offsetY);
+        ctx.drawImage(image,-image.naturalWidth*scale/2,-image.naturalHeight*scale/2,image.naturalWidth*scale,image.naturalHeight*scale);
+        ctx.restore();
+        ctx.strokeStyle='#fff';ctx.lineWidth=8;ctx.strokeRect(16,16,cropSize+8,cropSize+8);
+        ctx.strokeStyle='#6f7e90';ctx.lineWidth=1;ctx.strokeRect(20.5,20.5,cropSize-1,cropSize-1);
+      }
+      function reset(){zoom=1;offsetX=0;offsetY=0;zoomEl.value='100';render();}
+      zoomEl.oninput=function(){zoom=Number(zoomEl.value)/100;render();};
+      canvas.addEventListener('pointerdown',function(ev){
+        ev.preventDefault();canvas.setPointerCapture(ev.pointerId);
+        var startX=ev.clientX,startY=ev.clientY,baseX=offsetX,baseY=offsetY,rect=canvas.getBoundingClientRect(),ratio=canvasSize/rect.width;
+        function move(moveEv){offsetX=baseX+(moveEv.clientX-startX)*ratio;offsetY=baseY+(moveEv.clientY-startY)*ratio;render();}
+        function up(){canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);}
+        canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+      });
+      el.querySelector('.profile-crop-reset').onclick=reset;
+      el.querySelector('.profile-crop-cancel').onclick=function(){closeWindow(id);};
+      el.querySelector('.profile-crop-use').onclick=function(){
+        clampOffsets();
+        var output=document.createElement('canvas'),outputSize=300,ratio=outputSize/cropSize,scale=baseScale()*zoom*ratio;
+        output.width=outputSize;output.height=outputSize;
+        var out=output.getContext('2d');
+        out.translate(outputSize/2+offsetX*ratio,outputSize/2+offsetY*ratio);
+        out.drawImage(image,-image.naturalWidth*scale/2,-image.naturalHeight*scale/2,image.naturalWidth*scale,image.naturalHeight*scale);
+        var data=output.toDataURL('image/webp',0.9);
+        closeWindow(id);onDone(data);
+      };
+      render();
+    }});
+  }
+
   function openEditProfileWindow(){
     trackDtdUsage('profile_editor_opened');
     var body =
       '<div class="win-body nm-body">' +
+        '<div style="text-align:right;margin-bottom:7px;"><span class="forgot-link" id="ep-preview-top">Preview Profile</span></div>' +
         '<div class="field-row"><label>Screen Name</label><input type="text" id="ep-screenname" value="'+escapeHtml((state.account&&state.account.screenName)||'')+'"></div>' +
         '<div class="profile-pic-edit">' +
           '<img id="ep-pic" class="ep-pic" style="display:none;">' +
           '<div class="ep-pic-ph" id="ep-pic-ph">No picture</div>' +
-          '<div><button class="btn" id="ep-pic-btn">Choose Picture</button>' +
-          '<button class="btn" id="ep-pic-clear" style="margin-top:4px;">Remove</button></div>' +
+          '<div class="profile-pic-actions"><button class="btn" id="ep-pic-btn">Choose Picture</button>' +
+          '<button class="btn" id="ep-pic-clear">Remove</button></div>' +
         '</div>' +
         '<div class="field-row" style="display:flex; align-items:center; justify-content:space-between;">' +
           '<label style="margin:0;">Customize with HTML</label>' +
@@ -7231,11 +8169,18 @@ try {
       type: 'editprofile',
       onMount: function(el, id){
         var picData = (state.profile && state.profile.pic) || '';
+        var picSourceData = picData;
         var img = el.querySelector('#ep-pic');
         var ph = el.querySelector('#ep-pic-ph');
         function showPic(){
           if(picData){ img.src = picData; img.style.display = 'block'; ph.style.display = 'none'; }
           else { img.style.display = 'none'; ph.style.display = 'flex'; }
+        }
+        function openCrop(source,onCrop){
+          var image=new Image();
+          image.onload=function(){openProfilePictureCropEditor(image,onCrop);};
+          image.onerror=function(){openInfoWindow('That picture could not be opened.');};
+          image.src=source;
         }
         showPic();
         el.querySelector('#ep-header').value = (state.profile && state.profile.header) || '';
@@ -7250,21 +8195,7 @@ try {
             if(file){
               var reader = new FileReader();
               reader.onload = function(e){
-                var im = new Image();
-                im.onload = function(){
-                  var maxDim = 300;
-                  var w = im.width, h = im.height;
-                  if(w > maxDim || h > maxDim){
-                    if(w >= h){ h = Math.round(h*maxDim/w); w = maxDim; }
-                    else { w = Math.round(w*maxDim/h); h = maxDim; }
-                  }
-                  var canvas = document.createElement('canvas');
-                  canvas.width = w; canvas.height = h;
-                  canvas.getContext('2d').drawImage(im, 0, 0, w, h);
-                  picData = canvas.toDataURL('image/jpeg', 0.8);
-                  showPic();
-                };
-                im.src = e.target.result;
+                openCrop(e.target.result,function(data){picSourceData=e.target.result;picData=data;showPic();});
               };
               reader.readAsDataURL(file);
             }
@@ -7272,7 +8203,7 @@ try {
           });
           input.click();
         });
-        el.querySelector('#ep-pic-clear').addEventListener('click', function(){ picData = ''; showPic(); });
+        el.querySelector('#ep-pic-clear').addEventListener('click', function(){ picData = ''; picSourceData=''; showPic(); });
 
         el.querySelector('#ep-help-btn').addEventListener('click', function(){
           openProfileHelpWindow();
@@ -7292,14 +8223,17 @@ try {
           }
         });
 
-        el.querySelector('#ep-preview').addEventListener('click', function(){
+        function previewProfile(){
           var h = sanitizeProfileHTML(el.querySelector('#ep-header').value);
           var a = sanitizeProfileHTML(el.querySelector('#ep-about').value);
-          openViewProfileWindow(h, a, picData);
-        });
+          openViewProfileWindow(h, a, picData, true);
+        }
+        el.querySelector('#ep-preview-top').addEventListener('click', previewProfile);
+        el.querySelector('#ep-preview').addEventListener('click', previewProfile);
         el.querySelector('#ep-save').addEventListener('click', function(){
           var newName = el.querySelector('#ep-screenname').value.trim();
           if(newName && state.account){
+            if(newName !== state.account.screenName) state.screenNameUpdatedAt = Date.now();
             state.account.screenName = newName;
             document.getElementById('bl-title-text').textContent = newName;
             document.getElementById('bl-me-name').textContent = newName;
@@ -7310,6 +8244,7 @@ try {
             aboutMe: sanitizeProfileHTML(el.querySelector('#ep-about').value),
             html: '' // kept for backward compat but no longer used
           };
+          state.profileUpdatedAt = Date.now();
           saveState();
           syncDtdPublicProfile().catch(function(){});
           refreshProfilePic();
@@ -7319,17 +8254,43 @@ try {
     });
   }
 
-  function openViewProfileWindow(previewHeader, previewAbout, previewPic){
-    var isPreview = (typeof previewHeader === 'string' && typeof previewAbout === 'string');
-    var pic = (typeof previewPic === 'string') ? previewPic : ((state.profile && state.profile.pic) || '');
-    var header = isPreview ? previewHeader : ((state.profile && state.profile.header) || '');
-    var aboutMe = isPreview ? previewAbout : ((state.profile && state.profile.aboutMe) || '');
-    var picHtml = pic ? '<img src="'+pic+'" class="vp-pic">' : '';
-    var name = escapeHtml(state.account.screenName);
+  function openViewProfileWindow(previewHeader, previewAbout, previewPic, isPreviewOverride){
+    var isPreview = !!(typeof isPreviewOverride === 'boolean' ? isPreviewOverride : (typeof previewHeader === 'string' && typeof previewAbout === 'string'));
+    function makeProfileData(overrides){
+      var baseStatus = (state.status && typeof state.status === 'object') ? state.status : {};
+      if(overrides && typeof overrides === 'object' && !Array.isArray(overrides)){
+        return {
+          pic: typeof overrides.pic === 'string' ? overrides.pic : ((state.profile && state.profile.pic) || ''),
+          header: typeof overrides.header === 'string' ? overrides.header : ((state.profile && state.profile.header) || ''),
+          aboutMe: typeof overrides.aboutMe === 'string' ? overrides.aboutMe : ((state.profile && state.profile.aboutMe) || ''),
+          name: (state.account && state.account.screenName) || '',
+          status: baseStatus,
+          blogPosts: Array.isArray(state.blogPosts) ? state.blogPosts : []
+        };
+      }
+      return {
+        pic: (state.profile && state.profile.pic) || '',
+        header: (state.profile && state.profile.header) || '',
+        aboutMe: (state.profile && state.profile.aboutMe) || '',
+        name: (state.account && state.account.screenName) || '',
+        status: baseStatus,
+        blogPosts: Array.isArray(state.blogPosts) ? state.blogPosts : []
+      };
+    }
+    var profileData = makeProfileData(isPreview ? {
+      pic: typeof previewPic === 'string' ? previewPic : '',
+      header: typeof previewHeader === 'string' ? previewHeader : '',
+      aboutMe: typeof previewAbout === 'string' ? previewAbout : ''
+    } : null);
 
-    function buildBlogBody(){
-      var profileStatus=(state.status&&state.status.label)||'',profileMood=(state.status&&state.status.mood)||'',profileMoodColor=profileMood?moodColor(profileMood):'#333333';
-      var posts = (state.blogPosts || []).filter(function(p){return p.shared;}).slice().sort(function(a,b){ return b.ts - a.ts; });
+    function buildBlogBody(data){
+      data = data || {};
+      var picHtml = data.pic ? '<img src="'+data.pic+'" class="vp-pic">' : '';
+      var name = escapeHtml(data.name || 'friend');
+      var profileStatus = (data.status && data.status.label) || '';
+      var profileMood = (data.status && data.status.mood) || '';
+      var profileMoodColor = profileMood ? moodColor(profileMood) : '#333333';
+      var posts = (data.blogPosts || []).filter(function(p){return p.shared;}).slice().sort(function(a,b){ return b.ts - a.ts; });
       var postsHtml = posts.length ? posts.map(function(post){
         return '<div class="blog-post" data-post-id="'+escapeHtml(post.id)+'">' +
           '<div class="blog-post-header">' +
@@ -7338,51 +8299,521 @@ try {
               '<div class="blog-post-date">' + fmtDayDivider(post.ts) + '</div>' +
             '</div>' +
           '</div>' +
-          '<div class="blog-post-body">' + (post.html || '') + '</div>' +
+          '<div class="blog-post-body">' + renderDiaryPostContent(post) + '</div>' +
         '</div>';
       }).join('') : '<div class="vp-empty">No diary entries have been shared to your profile yet.</div>';
 
       return '<div class="win-body vp-body" id="blog-view-body">' +
-        '<div class="vp-header">' + picHtml + '<div class="vp-name">' + name +(profileMood?' <span class="vp-mood">is <span style="color:'+profileMoodColor+'">'+escapeHtml(profileMood)+'</span></span>':'')+'</div>' +(profileStatus ? '<div class="vp-status"><b>Status:</b> '+escapeHtml(profileStatus)+(state.status&&state.status.ts?' <span style="color:#888">· '+escapeHtml(relTime(state.status.ts))+'</span>':'')+'</div>' : '')+'</div>' +
-        (header ? '<div class="vp-section">' + header + '</div>' : '') +
-        (aboutMe ? '<div class="vp-section">' + aboutMe + '</div>' : '') +
+        '<div class="vp-header" style="position:relative">' + picHtml + '<span class="forgot-link" id="vp-edit-profile-btn" style="position:absolute;top:8px;right:10px">Edit Profile</span><div class="vp-name">' + name +(profileMood?' <span class="vp-mood">is <span style="color:'+profileMoodColor+'">'+escapeHtml(profileMood)+'</span></span>':'')+'</div>' +(profileStatus ? '<div class="vp-status"><b>Status:</b> '+escapeHtml(profileStatus)+(data.status&&data.status.ts?' <span style="color:#888">· '+escapeHtml(relTime(data.status.ts))+'</span>':'')+'</div>' : '')+'</div>' +
+        (data.header ? '<div class="vp-section">' + data.header + '</div>' : '') +
+        (data.aboutMe ? '<div class="vp-section">' + data.aboutMe + '</div>' : '') +
         '<div class="vp-newpost-row" style="padding:16px 4px 4px;text-align:center;"><button class="btn" id="vp-newpost-btn">+ New Entry</button></div>' +
-        '<div style="text-align:center;padding:2px 4px 12px"><span class="forgot-link" id="vp-view-entries">View Entries</span></div>' +
+        '<div style="text-align:center;padding:2px 4px 12px"><span class="forgot-link" id="vp-view-entries">View Entries</span> <span style="color:#aaa">·</span> <span class="forgot-link" id="vp-view-guestbook">View My Guest Book</span></div>' +
         '<div class="blog-posts-list">' + postsHtml + '</div>' +
       '</div>';
     }
 
+    function wireProfileActions(el){
+      if(!el._isProfilePreview && isPreview){
+        el._profileData = profileData;
+      } else if(!isPreview){
+        el._profileData = makeProfileData();
+      } else if(!el._profileData){
+        el._profileData = profileData;
+      }
+      el._isProfilePreview = isPreview;
+      el._refreshProfile=function(){
+        if(!el._isProfilePreview) el._profileData = makeProfileData();
+        var wb=el.querySelector('.win-body');
+        if(wb)wb.outerHTML=buildBlogBody(el._profileData);
+        wireProfileActions(el);
+      };
+      var newPostBtn = el.querySelector('#vp-newpost-btn');
+      if(newPostBtn){
+        newPostBtn.onclick = function(){
+          openBlogPostEditor(null, function(){
+            el._refreshProfile();
+            openInfoWindow('Entry saved privately. Use View Entries when you want to read it or share it to your profile.');
+          });
+        };
+      }
+      var editProfileBtn = el.querySelector('#vp-edit-profile-btn');
+      if(editProfileBtn){
+        editProfileBtn.onclick = function(){
+          var existingEditor = openWindows.find(function(w){return w.type === 'editprofile';});
+          if(existingEditor) focusWindow(existingEditor.id);
+          else openEditProfileWindow();
+        };
+      }
+      var viewEntries=el.querySelector('#vp-view-entries');if(viewEntries)viewEntries.onclick=openDiaryEntriesWindow;
+      var viewGuestBook=el.querySelector('#vp-view-guestbook');if(viewGuestBook)viewGuestBook.onclick=openOwnDtdGuestBook;
+    }
+
+    var existingProfileWindow = null;
+    for(var i=openWindows.length-1;i>=0;i--){
+      var candidate = openWindows[i];
+      if(candidate && candidate.type === 'viewprofile'){
+        if(isPreview && candidate.el && candidate.el._isProfilePreview){
+          existingProfileWindow = candidate;
+          break;
+        }
+        if(!isPreview && existingProfileWindow === null){
+          existingProfileWindow = candidate;
+        }
+      }
+    }
+    if(isPreview && existingProfileWindow === null){
+      for(var j=openWindows.length-1;j>=0;j--){
+        if(openWindows[j].type === 'viewprofile' && openWindows[j].el){
+          existingProfileWindow = openWindows[j];
+          break;
+        }
+      }
+    }
+    if(existingProfileWindow && existingProfileWindow.el){
+      existingProfileWindow.el._profileData = profileData;
+      existingProfileWindow.el._isProfilePreview = isPreview;
+      var existingBody = existingProfileWindow.el.querySelector('.win-body');
+      if(existingBody) existingBody.outerHTML = buildBlogBody(profileData);
+      wireProfileActions(existingProfileWindow.el);
+      focusWindow(existingProfileWindow.id);
+      return { id: existingProfileWindow.id, el: existingProfileWindow.el };
+    }
     createWindow({
       title: 'Profile',
       extraClass: 'profile-win',
-      bodyHtml: buildBlogBody(),
+      bodyHtml: buildBlogBody(profileData),
       type: 'viewprofile',
       onMount: function(el, id){
-        function wireActions(){
-          el._refreshProfile=function(){var wb=el.querySelector('.win-body');if(wb)wb.outerHTML=buildBlogBody();wireActions();};
-          var newPostBtn = el.querySelector('#vp-newpost-btn');
-          if(newPostBtn){
-            newPostBtn.onclick = function(){
-              openBlogPostEditor(null, function(){
-                el._refreshProfile();
-                openInfoWindow('Entry saved privately. Use View Entries when you want to read it or share it to your profile.');
-              });
-            };
-          }
-          var viewEntries=el.querySelector('#vp-view-entries');if(viewEntries)viewEntries.onclick=openDiaryEntriesWindow;
-        }
-        wireActions();
+        el._profileData = profileData;
+        el._isProfilePreview = isPreview;
+        wireProfileActions(el);
       }
     });
   }
 
-
   // === END scripts/features/profiles.js ===
+
+  // === BEGIN scripts/features/guest-book.js ===
+  // ================= PROFILE GUEST BOOK =================
+  var GUEST_BOOK_PAGE_CAPACITY=16;
+  var GUEST_BOOK_UPLOAD_LIMIT=5*1024*1024;
+  var GUEST_BOOK_UPLOAD_DATA_LIMIT=320000;
+
+  function guestBookOwnHandle(){
+    var online=(state.mail&&state.mail.onlineAddress)||'';
+    var local=(state.mail&&state.mail.address)||'';
+    return String(online||local||'').trim().toLowerCase().split('@')[0];
+  }
+
+  function guestBookStickerFiles(){
+    if(typeof DTD_STICKER_FILES!=='undefined'&&Array.isArray(DTD_STICKER_FILES))return DTD_STICKER_FILES.slice();
+    var files=[];for(var i=1;i<=495;i++)files.push('stickers/s'+String(i).padStart(2,'0')+'.png');return files;
+  }
+
+  function guestBookDate(value){
+    var d=new Date(value||Date.now());
+    return d.toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'});
+  }
+
+  function guestBookGiftLabel(gift){
+    if(gift==='flower')return'Left a flower';
+    if(gift==='treat')return'Brought your companion a treat';
+    if(gift==='mystery')return'Left a mystery present';
+    return'';
+  }
+
+  function guestBookEntryImage(entry){
+    return String(entry.sticker_upload||entry.sticker_source||'stickers/s58.png');
+  }
+
+  function guestBookDefaultSettings(){
+    return{heading:'Sign My Guest Book',page_color:'#ffffff',font_key:'handwritten',font_color:'#222222',font_size:'large'};
+  }
+
+  function guestBookFontStack(key){
+    if(key==='comic')return'DiaryComicSans, "Comic Sans MS", cursive';
+    if(key==='artsy')return'DiaryEmoji, sans-serif';
+    if(key==='minecraft')return'DiaryMinecraft, monospace';
+    if(key==='oldenglish')return'DiaryOldEnglish, fantasy';
+    if(key==='serif')return'Georgia, "Times New Roman", serif';
+    if(key==='sans')return'Arial, Helvetica, sans-serif';
+    if(key==='typewriter')return'"Courier New", Courier, monospace';
+    return'"Comic Sans MS", "Trebuchet MS", cursive';
+  }
+
+  function openGuestBookCustomizer(ownerHandle,current,onSaved){
+    var settings=Object.assign(guestBookDefaultSettings(),current||{});
+    var body='<div class="win-body gb-customize-body">'+
+      '<div class="gb-customize-row"><label class="gb-sign-label" for="gb-heading-input">Guest Book heading</label><input id="gb-heading-input" class="gb-customize-heading" maxlength="48" value="'+escapeHtml(settings.heading)+'"></div>'+
+      '<div class="gb-customize-row"><label class="gb-sign-label" for="gb-page-color">Page color</label><input id="gb-page-color" class="gb-color-input" type="color" value="'+escapeHtml(settings.page_color)+'"></div>'+
+      '<div class="gb-customize-row"><label class="gb-sign-label" for="gb-font-choice">Font</label><select id="gb-font-choice" class="gb-font-choice">'+
+        '<option value="handwritten">Handwritten</option><option value="serif">Classic</option><option value="sans">Simple</option><option value="typewriter">Typewriter</option>'+
+        '<option value="comic">Comic Sans</option><option value="artsy">Artsy Cypher</option>'+
+        '<option value="minecraft">Minecraft</option><option value="oldenglish">Old English</option>'+
+      '</select></div>'+
+      '<div class="gb-customize-row"><label class="gb-sign-label" for="gb-font-color">Font color</label><input id="gb-font-color" class="gb-color-input" type="color" value="'+escapeHtml(settings.font_color)+'"></div>'+
+      '<div class="gb-customize-row"><span class="gb-sign-label">Font size</span><div class="gb-choice-row gb-heading-size-row">'+
+        '<button class="gb-choice" data-heading-size="small">Small</button><button class="gb-choice" data-heading-size="medium">Medium</button><button class="gb-choice" data-heading-size="large">Large</button>'+
+      '</div></div>'+
+      '<div class="gb-customize-preview"></div><div class="gb-sign-error"></div>'+
+      '<div class="gb-sign-actions"><button class="btn gb-customize-cancel">Cancel</button><button class="btn gb-customize-save">Save Page</button></div>'+
+    '</div>';
+    createWindow({title:'Customize Guest Book',extraClass:'guest-book-customize-win',bodyHtml:body,type:'guestbookcustomize',onMount:function(el,id){
+      var heading=el.querySelector('.gb-customize-heading'),pageColor=el.querySelector('#gb-page-color'),font=el.querySelector('.gb-font-choice'),fontColor=el.querySelector('#gb-font-color'),preview=el.querySelector('.gb-customize-preview'),error=el.querySelector('.gb-sign-error'),fontSize=settings.font_size;
+      font.value=settings.font_key;
+      el.querySelectorAll('[data-heading-size]').forEach(function(button){
+        button.classList.toggle('is-selected',button.dataset.headingSize===fontSize);
+        button.onclick=function(){fontSize=button.dataset.headingSize;el.querySelectorAll('[data-heading-size]').forEach(function(b){b.classList.toggle('is-selected',b===button);});updatePreview();};
+      });
+      function updatePreview(){
+        preview.textContent=heading.value.trim()||'Sign My Guest Book';
+        preview.style.backgroundColor=pageColor.value;
+        preview.style.color=fontColor.value;
+        preview.style.fontFamily=guestBookFontStack(font.value);
+        preview.classList.remove('gb-font-small','gb-font-medium','gb-font-large');
+        preview.classList.add('gb-font-'+fontSize);
+      }
+      [heading,pageColor,font,fontColor].forEach(function(input){input.addEventListener('input',updatePreview);input.addEventListener('change',updatePreview);});
+      el.querySelector('.gb-customize-cancel').onclick=function(){closeWindow(id);};
+      el.querySelector('.gb-customize-save').onclick=function(){
+        var next={heading:(heading.value.trim()||'Sign My Guest Book').slice(0,48),page_color:pageColor.value,font_key:font.value,font_color:fontColor.value,font_size:fontSize};
+        error.textContent='Saving…';
+        supabaseRpc('save_dtd_guestbook_settings',{
+          requested_handle:ownerHandle,
+          heading_text:next.heading,
+          selected_page_color:next.page_color,
+          selected_font_key:next.font_key,
+          selected_font_color:next.font_color,
+          selected_font_size:next.font_size
+        }).then(function(){closeWindow(id);onSaved(next);}).catch(function(err){error.textContent=err.message||'The page could not be saved.';});
+      };
+      updatePreview();
+    }});
+  }
+
+  function openGuestBookNote(entry,ownerHandle,onRemoved){
+    var gift=guestBookGiftLabel(entry.gift_choice);
+    var ownHandle=guestBookOwnHandle(),canRemove=ownHandle&&(ownHandle===ownerHandle||ownHandle===String(entry.signer_handle||'').toLowerCase());
+    var body='<div class="win-body gb-note-card">'+
+      '<img class="gb-note-stamp" src="'+escapeHtml(guestBookEntryImage(entry))+'" alt="">'+
+      '<div class="gb-note-name">'+escapeHtml(entry.signer_display_name||entry.signer_handle||'Guest')+'</div>'+
+      '<div class="gb-note-date">'+escapeHtml(guestBookDate(entry.created_at))+'</div>'+
+      '<div class="gb-note-message">'+escapeHtml(entry.message_text||((entry.signer_display_name||entry.signer_handle||'Guest')+' was here!'))+'</div>'+
+      (gift?'<div class="gb-note-gift">&#127873; '+escapeHtml(gift)+'</div>':'')+
+      (canRemove?'<div class="gb-note-actions"><span class="forgot-link gb-note-remove">Remove signing</span></div>':'')+
+      '</div>';
+    createWindow({title:'Guest Book Note',extraClass:'guest-book-note-win',bodyHtml:body,type:'guestbooknote',onMount:function(el,id){
+      var remove=el.querySelector('.gb-note-remove');
+      if(remove)remove.onclick=function(){
+        appConfirm('Remove this guest-book signing?',function(ok){
+          if(!ok)return;
+          supabaseRpc('remove_dtd_guestbook_signing',{signing_id:entry.signing_id}).then(function(){closeWindow(id);if(onRemoved)onRemoved();}).catch(function(err){openInfoWindow(err.message);});
+        });
+      };
+    }});
+  }
+
+  function guestBookNormalizeRows(rows){
+    if(!Array.isArray(rows))return[];
+    return rows.filter(function(row){return row&&row.signing_id;}).map(function(row){
+      row.page_no=Math.max(1,Number(row.page_no)||1);
+      row.sticker_x=Math.max(5,Math.min(95,Number(row.sticker_x)||50));
+      row.sticker_y=Math.max(7,Math.min(93,Number(row.sticker_y)||50));
+      row.sticker_rotation=Math.max(-180,Math.min(180,Number(row.sticker_rotation)||0));
+      row.sticker_size=/^(small|medium|large)$/.test(row.sticker_size)?row.sticker_size:'medium';
+      return row;
+    });
+  }
+
+  function openGuestBookWindow(ownerHandle,displayName,canSign){
+    ownerHandle=String(ownerHandle||'').trim().toLowerCase();
+    if(!ownerHandle){openInfoWindow('Set up your online DesktopDiary address before opening your Guest Book.');return;}
+    var existing=openWindows.find(function(w){return w.type==='guestbook'&&w.dtdHandle===ownerHandle;});
+    if(existing){focusWindow(existing.id);return;}
+    createWindow({
+      title:(displayName||ownerHandle)+'\'s Guest Book',
+      extraClass:'guest-book-win',
+      bodyHtml:'<div class="win-body"><div class="gb-loading">Opening the Guest Book…</div></div>',
+      type:'guestbook',
+      onMount:function(el){
+        var record=openWindows.find(function(w){return w.el===el;});if(record)record.dtdHandle=ownerHandle;
+        var rows=[],visiblePage=1,settings=guestBookDefaultSettings();
+        function load(){
+          return Promise.all([
+            supabaseRpc('get_dtd_guestbook',{requested_handle:ownerHandle}),
+            supabaseRpc('get_dtd_guestbook_settings',{requested_handle:ownerHandle}).catch(function(){return guestBookDefaultSettings();})
+          ]).then(function(found){
+            rows=guestBookNormalizeRows(found[0]);
+            settings=Object.assign(guestBookDefaultSettings(),found[1]||{});
+            visiblePage=rows.length?Math.max.apply(null,rows.map(function(row){return row.page_no;})):1;
+            render();
+          }).catch(function(err){
+            el.querySelector('.win-body').innerHTML='<div class="gb-shell"><div class="gb-error">'+escapeHtml(err.message||'The Guest Book could not be opened.')+'</div></div>';
+          });
+        }
+        function render(){
+          var storedMaxPage=rows.length?Math.max.apply(null,rows.map(function(row){return row.page_no;})):1;
+          var maxPage=Math.max(storedMaxPage,visiblePage);
+          visiblePage=Math.max(1,Math.min(maxPage,visiblePage));
+          var pageRows=rows.filter(function(row){return row.page_no===visiblePage;});
+          var stickers=pageRows.map(function(entry){
+            var own=String(entry.signer_handle||'').toLowerCase()===guestBookOwnHandle();
+            return '<button class="gb-sticker gb-size-'+entry.sticker_size+(own?' is-own':'')+'" data-signing-id="'+escapeHtml(entry.signing_id)+'" style="left:'+entry.sticker_x+'%;top:'+entry.sticker_y+'%;--gb-rotation:'+entry.sticker_rotation+'deg" title="Open '+escapeHtml(entry.signer_display_name||entry.signer_handle||'guest')+'\'s note"><img src="'+escapeHtml(guestBookEntryImage(entry))+'" alt=""></button>';
+          }).join('');
+          var newest=visiblePage===maxPage;
+          var ownBook=ownerHandle===guestBookOwnHandle();
+          var pageStyle='background-color:'+escapeHtml(settings.page_color)+';color:'+escapeHtml(settings.font_color)+';font-family:'+escapeHtml(guestBookFontStack(settings.font_key));
+          var body='<div class="gb-shell">'+
+            '<div class="gb-toolbar"><div class="gb-title">'+escapeHtml(settings.heading||'Sign My Guest Book')+'</div><div class="gb-toolbar-actions">'+
+              (ownBook?'<button class="btn gb-customize-button">Customize Page</button>':'')+
+              (canSign&&newest?'<button class="btn gb-sign-button">Sign My Guest Book!</button>':'')+
+            '</div></div>'+
+            '<div class="gb-paper-stack gb-stack-'+Math.min(3,maxPage)+'"><div class="gb-page gb-font-'+escapeHtml(settings.font_size)+'" data-page="'+visiblePage+'" style="'+pageStyle+'"><div class="gb-page-heading">'+escapeHtml(settings.heading||'Sign My Guest Book')+'</div>'+
+              (!pageRows.length?'<div class="gb-empty">Be the first E-Buddy to sign this guest book!</div>':'')+stickers+
+            '</div></div>'+
+            '<div class="gb-page-nav"><button class="btn gb-newer" '+(newest?'disabled':'')+'>&larr; Newer Page</button><span class="gb-page-count">Page '+visiblePage+' of '+maxPage+'</span><button class="btn gb-older" '+(visiblePage<=1?'disabled':'')+'>Older Page &rarr;</button></div>'+
+          '</div>';
+          el.querySelector('.win-body').outerHTML='<div class="win-body">'+body+'</div>';
+          wire();
+        }
+        function wire(){
+          var newer=el.querySelector('.gb-newer'),older=el.querySelector('.gb-older');
+          if(newer)newer.onclick=function(){visiblePage++;render();};
+          if(older)older.onclick=function(){visiblePage--;render();};
+          var sign=el.querySelector('.gb-sign-button');
+          if(sign)sign.onclick=function(){openGuestBookSigner(ownerHandle,displayName,function(draft){beginPlacement(draft);});};
+          var customize=el.querySelector('.gb-customize-button');
+          if(customize)customize.onclick=function(){openGuestBookCustomizer(ownerHandle,settings,function(next){settings=next;render();});};
+          el.querySelectorAll('.gb-sticker[data-signing-id]').forEach(function(button){
+            button.onclick=function(){var entry=rows.find(function(row){return String(row.signing_id)===button.dataset.signingId;});if(entry)openGuestBookNote(entry,ownerHandle,load);};
+          });
+        }
+        function beginPlacement(draft){
+          visiblePage=rows.length?Math.max.apply(null,rows.map(function(row){return row.page_no;})):1;
+          var onPage=rows.filter(function(row){return row.page_no===visiblePage;});
+          if(onPage.length>=GUEST_BOOK_PAGE_CAPACITY)visiblePage++;
+          render();
+          var page=el.querySelector('.gb-page');
+          if(!page)return;
+          var empty=page.querySelector('.gb-empty');if(empty)empty.remove();
+          el.querySelectorAll('.gb-sign-button').forEach(function(button){button.disabled=true;});
+          attachGuestBookPlacement(page,draft,ownerHandle,function(){
+            el.querySelector('.win-body').innerHTML='<div class="gb-loading">Saving your signing…</div>';
+            supabaseRpc('sign_dtd_guestbook',{
+              requested_owner_handle:ownerHandle,
+              note_text:draft.note,
+              selected_sticker_source:draft.source||'',
+              uploaded_sticker_data:draft.upload||'',
+              uploaded_sticker_shape:draft.shape||'',
+              selected_sticker_size:draft.size,
+              sticker_x_percent:draft.x,
+              sticker_y_percent:draft.y,
+              sticker_rotation_degrees:draft.rotation,
+              selected_gift:draft.gift||''
+            }).then(load).catch(function(err){openInfoWindow(err.message);load();});
+          },function(){visiblePage=rows.length?Math.max.apply(null,rows.map(function(row){return row.page_no;})):1;render();});
+        }
+        el._refreshGuestBook=load;
+        load();
+      }
+    });
+  }
+
+  function attachGuestBookPlacement(page,draft,ownerHandle,onFinish,onCancel){
+    draft.x=50;draft.y=52;draft.rotation=-6;
+    var sticker=document.createElement('div');
+    sticker.className='gb-sticker gb-draft-sticker gb-size-'+draft.size;
+    sticker.style.left=draft.x+'%';sticker.style.top=draft.y+'%';sticker.style.setProperty('--gb-rotation',draft.rotation+'deg');
+    sticker.innerHTML='<span class="gb-rotate-handle" title="Drag to rotate">&#8635;</span><img src="'+escapeHtml(draft.upload||draft.source)+'" alt="Your guest-book sticker">';
+    page.appendChild(sticker);
+    var panel=document.createElement('div');panel.className='gb-placement-panel';panel.innerHTML='<button class="btn gb-placement-cancel">Cancel</button><button class="btn gb-placement-finish">Finish</button>';page.appendChild(panel);
+    var help=document.createElement('div');help.className='gb-placement-help';help.textContent='Drag your sticker anywhere on the page. Use the round handle to rotate it.';page.appendChild(help);
+    function update(){
+      sticker.style.left=draft.x+'%';sticker.style.top=draft.y+'%';sticker.style.setProperty('--gb-rotation',draft.rotation+'deg');
+    }
+    function pointerPosition(ev){
+      var rect=page.getBoundingClientRect();
+      return{x:(ev.clientX-rect.left)/rect.width*100,y:(ev.clientY-rect.top)/rect.height*100,rect:rect};
+    }
+    sticker.addEventListener('pointerdown',function(ev){
+      if(ev.target.closest('.gb-rotate-handle'))return;
+      ev.preventDefault();sticker.setPointerCapture(ev.pointerId);
+      function move(moveEv){var p=pointerPosition(moveEv);draft.x=Math.max(4,Math.min(96,p.x));draft.y=Math.max(6,Math.min(94,p.y));update();}
+      function up(){sticker.removeEventListener('pointermove',move);sticker.removeEventListener('pointerup',up);sticker.removeEventListener('pointercancel',up);}
+      sticker.addEventListener('pointermove',move);sticker.addEventListener('pointerup',up);sticker.addEventListener('pointercancel',up);
+    });
+    sticker.querySelector('.gb-rotate-handle').addEventListener('pointerdown',function(ev){
+      ev.preventDefault();ev.stopPropagation();var handle=ev.currentTarget;handle.setPointerCapture(ev.pointerId);
+      function move(moveEv){var rect=sticker.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;draft.rotation=Math.round(Math.atan2(moveEv.clientY-cy,moveEv.clientX-cx)*180/Math.PI+90);update();}
+      function up(){handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',up);handle.removeEventListener('pointercancel',up);}
+      handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',up);handle.addEventListener('pointercancel',up);
+    });
+    panel.querySelector('.gb-placement-cancel').onclick=function(){if(onCancel)onCancel();};
+    panel.querySelector('.gb-placement-finish').onclick=function(){onFinish();};
+  }
+
+  function openGuestBookSigner(ownerHandle,displayName,onReady){
+    var files=guestBookStickerFiles(),pageIndex=0,pageSize=40,selected=files[0]||'stickers/s58.png',uploaded='',shape='',size='medium',gift='';
+    var body='<div class="win-body gb-sign-body">'+
+      '<p class="gb-sign-intro">Write a note, choose a sticker, then place it anywhere on '+escapeHtml(displayName||ownerHandle)+'\'s newest Guest Book page.</p>'+
+      '<div class="gb-sign-row"><label class="gb-sign-label" for="gb-note-input">Note (optional)</label><textarea class="gb-note-input" id="gb-note-input" maxlength="180" placeholder="'+escapeHtml(((state.account&&state.account.screenName)||'Guest')+' was here!')+'"></textarea></div>'+
+      '<div class="gb-sign-row"><span class="gb-sign-label">Choose your sticker</span><div class="gb-sticker-source-tabs"><button class="btn gb-built-in-tab">Built-in Stickers</button><button class="btn gb-upload-button">Upload Your Own…</button></div></div>'+
+      '<div class="gb-picker"><div class="gb-picker-grid"></div><div class="gb-picker-nav"><button class="btn gb-picker-prev">&larr;</button><span class="gb-picker-page"></span><button class="btn gb-picker-next">&rarr;</button></div></div>'+
+      '<div class="gb-upload-summary"><img alt="Uploaded sticker preview"><div><b>Your uploaded sticker</b><div style="margin-top:5px"><button class="btn gb-change-upload">Adjust or replace…</button></div></div></div>'+
+      '<div class="gb-sign-row"><span class="gb-sign-label">Sticker size</span><div class="gb-choice-row gb-size-row"><button class="gb-choice" data-size="small">Small</button><button class="gb-choice is-selected" data-size="medium">Medium</button><button class="gb-choice" data-size="large">Large</button></div></div>'+
+      '<div class="gb-sign-error"></div><div class="gb-sign-actions"><button class="btn gb-sign-cancel">Cancel</button><button class="btn gb-place-button">Place Sticker</button></div>'+
+      '</div>';
+    createWindow({title:'Sign My Guest Book!',extraClass:'guest-book-sign-win',bodyHtml:body,type:'guestbooksign',onMount:function(el,id){
+      var picker=el.querySelector('.gb-picker'),summary=el.querySelector('.gb-upload-summary'),error=el.querySelector('.gb-sign-error');
+      function renderPicker(){
+        var pages=Math.max(1,Math.ceil(files.length/pageSize));pageIndex=Math.max(0,Math.min(pages-1,pageIndex));
+        var slice=files.slice(pageIndex*pageSize,pageIndex*pageSize+pageSize);
+        el.querySelector('.gb-picker-grid').innerHTML=slice.map(function(src){return '<button class="gb-picker-item'+(!uploaded&&src===selected?' is-selected':'')+'" data-src="'+escapeHtml(src)+'"><img src="'+escapeHtml(src)+'" alt=""></button>';}).join('');
+        el.querySelector('.gb-picker-page').textContent=(pageIndex+1)+' / '+pages;
+        el.querySelector('.gb-picker-prev').disabled=pageIndex===0;el.querySelector('.gb-picker-next').disabled=pageIndex>=pages-1;
+        el.querySelectorAll('.gb-picker-item').forEach(function(button){button.onclick=function(){uploaded='';shape='';selected=button.dataset.src;summary.classList.remove('is-ready');picker.style.display='block';renderPicker();};});
+      }
+      function chooseUpload(){
+        var input=document.createElement('input');input.type='file';input.accept='image/png,image/jpeg,image/webp';input.style.display='none';document.body.appendChild(input);
+        input.onchange=function(){
+          var file=input.files&&input.files[0];input.remove();if(!file)return;
+          if(file.size>GUEST_BOOK_UPLOAD_LIMIT){error.textContent='Choose an image smaller than 5 MB.';return;}
+          if(!/^image\/(png|jpeg|webp)$/i.test(file.type)){error.textContent='Choose a PNG, JPEG, or WebP image.';return;}
+          var reader=new FileReader();reader.onload=function(event){
+            var image=new Image();image.onload=function(){
+              if(!image.naturalWidth||!image.naturalHeight||image.naturalWidth*image.naturalHeight>40000000){error.textContent='That picture is too large to process safely. Choose one under 40 megapixels.';return;}
+              openGuestBookUploadEditor(image,function(result){uploaded=result.data;shape=result.shape;selected='';summary.querySelector('img').src=uploaded;summary.classList.add('is-ready');picker.style.display='none';error.textContent='';});
+            };image.onerror=function(){error.textContent='That image could not be opened.';};image.src=event.target.result;
+          };reader.readAsDataURL(file);
+        };input.click();
+      }
+      el.querySelector('.gb-picker-prev').onclick=function(){pageIndex--;renderPicker();};
+      el.querySelector('.gb-picker-next').onclick=function(){pageIndex++;renderPicker();};
+      el.querySelector('.gb-built-in-tab').onclick=function(){picker.style.display='block';};
+      el.querySelector('.gb-upload-button').onclick=chooseUpload;
+      el.querySelector('.gb-change-upload').onclick=chooseUpload;
+      el.querySelectorAll('[data-size]').forEach(function(button){button.onclick=function(){size=button.dataset.size;el.querySelectorAll('[data-size]').forEach(function(b){b.classList.toggle('is-selected',b===button);});};});
+      el.querySelector('.gb-sign-cancel').onclick=function(){closeWindow(id);};
+      el.querySelector('.gb-place-button').onclick=function(){
+        if(!selected&&!uploaded){error.textContent='Choose a sticker first.';return;}
+        var note=el.querySelector('.gb-note-input').value.trim();
+        if(!note)note=((state.account&&state.account.screenName)||'Guest')+' was here!';
+        closeWindow(id);onReady({note:note.slice(0,180),source:selected,upload:uploaded,shape:shape,size:size,gift:gift});
+      };
+      renderPicker();
+    }});
+  }
+
+  function guestBookCanvasData(canvas){
+    var quality=.9,data=canvas.toDataURL('image/webp',quality);
+    while(data.length>GUEST_BOOK_UPLOAD_DATA_LIMIT&&quality>.45){quality-=.1;data=canvas.toDataURL('image/webp',quality);}
+    if(!/^data:image\/webp/i.test(data))data=canvas.toDataURL('image/png');
+    return data;
+  }
+
+  function openGuestBookUploadEditor(image,onDone){
+    var shape='square',mode='fit',zoom=1,offsetX=0,offsetY=0,rotation=0;
+    var body='<div class="win-body gb-upload-body">'+
+      '<div class="gb-choice-row" style="justify-content:center"><button class="gb-choice is-selected" data-shape="square">Square</button><button class="gb-choice" data-shape="circle">Circle</button></div>'+
+      '<div class="gb-upload-stage"><canvas class="gb-upload-canvas" width="420" height="420"></canvas></div>'+
+      '<div class="gb-upload-controls"><span class="gb-sign-label">Zoom</span><input class="gb-upload-zoom" type="range" min="35" max="250" value="100">'+
+        '<div class="gb-upload-actions"><button class="btn gb-upload-fit">Fit Entire Image</button><button class="btn gb-upload-fill">Fill Shape</button><button class="btn gb-upload-rotate">Rotate 90°</button><button class="btn gb-upload-reset">Reset</button></div>'+
+        '<div class="gb-upload-help">Drag the image to reposition it. Zooming out adds white space so the whole picture can fit without being cropped.</div>'+
+        '<div class="gb-sign-error"></div><div class="gb-sign-actions"><button class="btn gb-upload-cancel">Cancel</button><button class="btn gb-upload-use">Use This Sticker</button></div>'+
+      '</div></div>';
+    createWindow({title:'Make Your Sticker',extraClass:'guest-book-upload-win',bodyHtml:body,type:'guestbookupload',onMount:function(el,id){
+      var canvas=el.querySelector('canvas'),ctx=canvas.getContext('2d'),zoomEl=el.querySelector('.gb-upload-zoom'),error=el.querySelector('.gb-sign-error');
+      function orientedSize(){return rotation%180===0?{w:image.naturalWidth,h:image.naturalHeight}:{w:image.naturalHeight,h:image.naturalWidth};}
+      function baseScale(){var s=orientedSize();return mode==='fill'?Math.max(384/s.w,384/s.h):Math.min(384/s.w,384/s.h);}
+      function roundedSquarePath(context,x,y,w,h,r){
+        context.beginPath();context.moveTo(x+r,y);context.arcTo(x+w,y,x+w,y+h,r);context.arcTo(x+w,y+h,x,y+h,r);context.arcTo(x,y+h,x,y,r);context.arcTo(x,y,x+w,y,r);context.closePath();
+      }
+      function shapePath(context,x,y,size){
+        if(shape==='circle'){context.beginPath();context.arc(x+size/2,y+size/2,size/2,0,Math.PI*2);context.closePath();}
+        else roundedSquarePath(context,x,y,size,size,9);
+      }
+      function render(){
+        ctx.clearRect(0,0,420,420);ctx.save();shapePath(ctx,18,18,384);ctx.fillStyle='#fff';ctx.fill();ctx.clip();
+        var s=orientedSize(),scale=baseScale()*zoom,dw=s.w*scale,dh=s.h*scale;
+        ctx.translate(210+offsetX,210+offsetY);ctx.rotate(rotation*Math.PI/180);
+        ctx.drawImage(image,-image.naturalWidth*scale/2,-image.naturalHeight*scale/2,image.naturalWidth*scale,image.naturalHeight*scale);
+        ctx.restore();ctx.save();shapePath(ctx,18,18,384);ctx.strokeStyle='#fff';ctx.lineWidth=16;ctx.stroke();ctx.restore();
+      }
+      function reset(nextMode){mode=nextMode||'fit';zoom=1;offsetX=0;offsetY=0;zoomEl.value='100';render();}
+      el.querySelectorAll('[data-shape]').forEach(function(button){button.onclick=function(){shape=button.dataset.shape;el.querySelectorAll('[data-shape]').forEach(function(b){b.classList.toggle('is-selected',b===button);});render();};});
+      zoomEl.oninput=function(){zoom=Number(zoomEl.value)/100;render();};
+      el.querySelector('.gb-upload-fit').onclick=function(){reset('fit');};
+      el.querySelector('.gb-upload-fill').onclick=function(){reset('fill');};
+      el.querySelector('.gb-upload-rotate').onclick=function(){rotation=(rotation+90)%360;offsetX=0;offsetY=0;render();};
+      el.querySelector('.gb-upload-reset').onclick=function(){rotation=0;reset('fit');};
+      canvas.addEventListener('pointerdown',function(ev){
+        ev.preventDefault();canvas.setPointerCapture(ev.pointerId);var startX=ev.clientX,startY=ev.clientY,baseX=offsetX,baseY=offsetY,rect=canvas.getBoundingClientRect(),ratio=420/rect.width;
+        function move(moveEv){offsetX=baseX+(moveEv.clientX-startX)*ratio;offsetY=baseY+(moveEv.clientY-startY)*ratio;render();}
+        function up(){canvas.removeEventListener('pointermove',move);canvas.removeEventListener('pointerup',up);canvas.removeEventListener('pointercancel',up);}
+        canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+      });
+      el.querySelector('.gb-upload-cancel').onclick=function(){closeWindow(id);};
+      el.querySelector('.gb-upload-use').onclick=function(){
+        var data=guestBookCanvasData(canvas);
+        if(data.length>GUEST_BOOK_UPLOAD_DATA_LIMIT){error.textContent='This image is still too detailed to use. Try zooming out or choosing a simpler image.';return;}
+        closeWindow(id);onDone({data:data,shape:shape});
+      };
+      render();
+    }});
+  }
+
+  function openOwnDtdGuestBook(){
+    var handle=guestBookOwnHandle();
+    if(handle){openGuestBookWindow(handle,(state.account&&state.account.screenName)||handle,false);return;}
+    if(!getSupabaseSession()){openInfoWindow('Connect your DesktopDiary account online and reserve a Post Mail address first.');return;}
+    ensureSupabaseSession().then(function(session){
+      return supabaseRestRequest('dtd_profiles?select=handle,display_name&user_id=eq.'+encodeURIComponent(session.user.id)+'&limit=1');
+    }).then(function(rows){
+      var profile=rows&&rows[0];if(!profile)throw new Error('Reserve your online DesktopDiary address in Post Mail first.');
+      state.mail=state.mail||{};state.mail.onlineAddress=profile.handle+'@desktopdiary.local';saveState();
+      openGuestBookWindow(profile.handle,profile.display_name||profile.handle,false);
+    }).catch(function(err){openInfoWindow(err.message);});
+  }
+
+  // === END scripts/features/guest-book.js ===
 
   // === BEGIN scripts/features/penpals.js ===
   var dtdPenPalNotificationTimer=null,penPalNotificationCheckInFlight=false;
+  var dtdFriendSyncInFlight=null;
   function penPalNotificationState(){return state.companion.penPalNotifications;}
   function uniqueHandles(handles){return handles.filter(function(handle,index,list){return handle&&list.indexOf(handle)===index;});}
+  function syncDtdFriendsFromServer(){
+    if(!getSupabaseSession())return Promise.resolve(false);
+    if(dtdFriendSyncInFlight)return dtdFriendSyncInFlight;
+    var syncStorageKey=activeStorageKey;
+    dtdFriendSyncInFlight=supabaseRpc('list_dtd_friends',{}).then(function(rows){
+      if(activeStorageKey!==syncStorageKey||!getSupabaseSession())return false;
+      var existingByHandle={};
+      (state.mail.contacts||[]).forEach(function(contact){
+        var handle=dtdContactHandle(contact&&contact.handle);
+        if(handle&&!existingByHandle[handle])existingByHandle[handle]=contact;
+      });
+      var seen={},nextContacts=[];
+      (rows||[]).forEach(function(friend){
+        var handle=dtdContactHandle(friend&&friend.handle);
+        if(!handle||seen[handle])return;
+        seen[handle]=true;
+        var existing=existingByHandle[handle];
+        nextContacts.push({
+          id:existing&&existing.id?existing.id:uid(),
+          handle:handle,
+          name:existing&&existing.name?existing.name:String(friend.display_name||'').trim()
+        });
+      });
+      nextContacts.sort(function(a,b){return a.handle.localeCompare(b.handle);});
+      var current=(state.mail.contacts||[]).map(function(contact){return{id:contact.id,handle:dtdContactHandle(contact.handle),name:String(contact.name||'').trim()};}).sort(function(a,b){return a.handle.localeCompare(b.handle);});
+      if(JSON.stringify(current)===JSON.stringify(nextContacts))return false;
+      state.mail.contacts=nextContacts;
+      return saveState().then(function(){return true;});
+    }).catch(function(){return false;}).then(function(changed){dtdFriendSyncInFlight=null;return changed;});
+    return dtdFriendSyncInFlight;
+  }
   function refreshKobaPendingAlerts(){
     var alerts=penPalNotificationState().unreadAlerts,companion=document.getElementById('desktop-companion');
     if(companion)companion.classList.toggle('has-pending-notification',alerts.length>0);
@@ -7411,6 +8842,7 @@ try {
     if(!document.body.classList.contains('signed-in')||!getSupabaseSession()||penPalNotificationCheckInFlight)return Promise.resolve();
     refreshKobaPendingAlerts();
     penPalNotificationCheckInFlight=true;
+    syncDtdFriendsFromServer();
     return supabaseRpc('list_dtd_friend_requests',{}).then(function(rows){
       rows=rows||[];
       var notificationState=penPalNotificationState();
@@ -7431,6 +8863,7 @@ try {
         results.forEach(function(result){
           var profile=result.profile,status=profile&&profile.friend_status;
           if(status==='friends'){
+            upsertDtdContact(result.handle,profile.display_name||'');
             addPenPalAlert('accepted:'+result.handle,(profile.display_name||result.handle)+' accepted your PenPal request! Click me to dismiss this message.',false);
           }else if(!profile||status==='pending_outgoing')nextPending.push(result.handle);
         });
@@ -7444,21 +8877,60 @@ try {
 
   function openFriendRequestsWindow(){
     var existing=openWindows.find(function(w){return w.type==='dtdfriendrequests';});if(existing){focusWindow(existing.id);return;}
-    createWindow({title:'PenPal Requests',extraClass:'profile-win',bodyHtml:'<div class="win-body vp-body"><div class="vp-empty">Loading…</div></div>',type:'dtdfriendrequests',onMount:function(el){
-      function row(r){
+    createWindow({title:'E-Buddies',extraClass:'profile-win dtd-ebuddies-win',bodyHtml:'<div class="win-body vp-body"><div class="vp-empty">Loading E-Buddies…</div></div>',type:'dtdfriendrequests',onMount:function(el){
+      function requestRow(r){
         var actions=r.direction==='incoming'
-          ?'<button class="btn dtd-fr-accept" data-handle="'+escapeHtml(r.handle)+'">Accept</button> <span class="forgot-link dtd-fr-decline" data-handle="'+escapeHtml(r.handle)+'">Decline</span>'
+          ?'<button class="btn dtd-fr-accept" data-handle="'+escapeHtml(r.handle)+'" data-name="'+escapeHtml(r.display_name||'')+'">Accept</button> <span class="forgot-link dtd-fr-decline" data-handle="'+escapeHtml(r.handle)+'">Decline</span>'
           :'<span class="forgot-link dtd-fr-cancel" data-handle="'+escapeHtml(r.handle)+'">Cancel</span>';
-        return '<div class="dtd-row" style="cursor:default"><span class="dtd-fr-name" data-handle="'+escapeHtml(r.handle)+'" style="cursor:pointer;text-decoration:underline">'+escapeHtml(r.display_name||r.handle)+'</span><span style="font-size:9px;color:#777;margin-left:6px">'+(r.direction==='incoming'?'wants to be PenPals':'PenPal request sent')+'</span><span style="margin-left:auto;display:flex;gap:6px;align-items:center">'+actions+'</span></div>';
+        return '<div class="dtd-row dtd-ebuddy-row" style="cursor:default"><span class="dtd-fr-name" data-handle="'+escapeHtml(r.handle)+'" style="cursor:pointer;text-decoration:underline">'+escapeHtml(r.display_name||r.handle)+'</span><span class="dtd-ebuddy-address">'+escapeHtml(r.handle)+'@desktopdiary.local</span><span class="dtd-ebuddy-actions">'+actions+'</span></div>';
+      }
+      function friendRow(friend){
+        var contact=(state.mail.contacts||[]).find(function(item){return dtdContactHandle(item&&item.handle)===dtdContactHandle(friend.handle);});
+        var displayName=(contact&&contact.name)||friend.display_name||friend.handle;
+        var initials=String(displayName||'?').slice(0,2).toUpperCase();
+        var avatar=friend.profile_picture?'<img src="'+escapeHtml(friend.profile_picture)+'" alt="">':escapeHtml(initials);
+        return '<div class="dtd-contact-row dtd-ebuddy-contact" data-ebuddy-handle="'+escapeHtml(friend.handle)+'">'+
+          '<button class="dtd-contact-avatar dtd-ebuddy-profile" title="View profile" data-handle="'+escapeHtml(friend.handle)+'">'+avatar+'</button>'+
+          '<button class="dtd-contact-name dtd-ebuddy-profile" title="View profile" data-handle="'+escapeHtml(friend.handle)+'">'+escapeHtml(displayName)+'<span class="dtd-contact-address">'+escapeHtml(friend.handle)+'@desktopdiary.local</span></button>'+
+          '<button class="btn dtd-contact-action dtd-ebuddy-write" data-handle="'+escapeHtml(friend.handle)+'">Write</button>'+
+          '<button class="btn dtd-contact-action dtd-ebuddy-profile" data-handle="'+escapeHtml(friend.handle)+'">View Profile</button>'+
+          '<button class="btn dtd-contact-action dtd-ebuddy-nickname" data-handle="'+escapeHtml(friend.handle)+'">Nickname</button>'+
+          '<button class="btn dtd-ebuddy-remove" data-handle="'+escapeHtml(friend.handle)+'" data-name="'+escapeHtml(displayName)+'" title="Remove E-Buddy">×</button>'+
+        '</div>';
+      }
+      function section(title,rows,emptyText){
+        return '<section class="dtd-ebuddy-section"><div class="dtd-ebuddy-heading">'+title+'</div>'+(rows.length?'<div class="dtd-list">'+rows.join('')+'</div>':'<div class="dtd-ebuddy-empty">'+emptyText+'</div>')+'</section>';
       }
       function load(){
-        if(!getSupabaseSession()){el.querySelector('.win-body').innerHTML='<div class="vp-empty">PenPal requests are only available with an online account.</div>';return;}
-        el.querySelector('.win-body').innerHTML='<div class="vp-empty">Loading…</div>';
-        supabaseRpc('list_dtd_friend_requests',{}).then(function(rows){
-          rows=rows||[];
-          el.querySelector('.win-body').innerHTML=rows.length?('<div class="dtd-list">'+rows.map(row).join('')+'</div>'):'<div class="vp-empty">No pending PenPal requests.</div>';
+        if(!getSupabaseSession()){el.querySelector('.win-body').innerHTML='<div class="vp-empty">E-Buddies are only available with an online account.</div>';return;}
+        el.querySelector('.win-body').innerHTML='<div class="vp-empty">Loading E-Buddies…</div>';
+        Promise.all([supabaseRpc('list_dtd_friends',{}),supabaseRpc('list_dtd_friend_requests',{})]).then(function(results){
+          var friends=results[0]||[],requests=results[1]||[];
+          var incoming=requests.filter(function(row){return row.direction==='incoming';});
+          var outgoing=requests.filter(function(row){return row.direction==='outgoing';});
+          el.querySelector('.win-body').innerHTML='<div class="dtd-ebuddies-page">'+
+            section('E-Buddies',friends.map(friendRow),'No E-Buddies yet.')+
+            section('Incoming Requests',incoming.map(requestRow),'No incoming requests.')+
+            section('Outgoing Requests',outgoing.map(requestRow),'No outgoing requests.')+
+          '</div>';
           el.querySelectorAll('.dtd-fr-name').forEach(function(s){s.onclick=function(){openDtdPublicProfileWindow(s.dataset.handle);};});
-          el.querySelectorAll('.dtd-fr-accept').forEach(function(b){b.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:b.dataset.handle,accept:true}).then(function(){acknowledgePenPalAlert('incoming:'+b.dataset.handle);return load();}).catch(function(err){openInfoWindow(err.message);});};});
+          el.querySelectorAll('.dtd-ebuddy-profile').forEach(function(b){b.onclick=function(){openDtdPublicProfileWindow(b.dataset.handle);};});
+          el.querySelectorAll('.dtd-ebuddy-write').forEach(function(b){b.onclick=function(){openNewMessageWindow(b.dataset.handle);};});
+          el.querySelectorAll('.dtd-ebuddy-nickname').forEach(function(b){b.onclick=function(){
+            var handle=b.dataset.handle,contact=(state.mail.contacts||[]).find(function(item){return dtdContactHandle(item&&item.handle)===dtdContactHandle(handle);});
+            if(!contact)contact=upsertDtdContact(handle,'');
+            appTextPrompt('Nickname for '+handle+'@desktopdiary.local',contact&&contact.name||'',function(name){
+              if(name===null||!contact)return;
+              contact.name=name.trim().slice(0,50);saveState();load();
+            });
+          };});
+          el.querySelectorAll('.dtd-ebuddy-remove').forEach(function(b){b.onclick=function(){
+            appConfirm('Remove '+(b.dataset.name||b.dataset.handle)+' from E-Buddies?',function(ok){
+              if(!ok)return;
+              supabaseRpc('remove_dtd_friend',{other_handle:b.dataset.handle}).then(function(){removeDtdContact(b.dataset.handle);return load();}).catch(function(err){openInfoWindow(err.message);});
+            });
+          };});
+          el.querySelectorAll('.dtd-fr-accept').forEach(function(b){b.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:b.dataset.handle,accept:true}).then(function(){upsertDtdContact(b.dataset.handle,b.dataset.name||'');acknowledgePenPalAlert('incoming:'+b.dataset.handle);syncDtdFriendsFromServer();return load();}).catch(function(err){openInfoWindow(err.message);});};});
           el.querySelectorAll('.dtd-fr-decline').forEach(function(s){s.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:s.dataset.handle,accept:false}).then(function(){acknowledgePenPalAlert('incoming:'+s.dataset.handle);return load();}).catch(function(err){openInfoWindow(err.message);});};});
           el.querySelectorAll('.dtd-fr-cancel').forEach(function(s){s.onclick=function(){supabaseRpc('remove_dtd_friend',{other_handle:s.dataset.handle}).then(load).catch(function(err){openInfoWindow(err.message);});};});
         }).catch(function(err){el.querySelector('.win-body').innerHTML='<div class="vp-empty">'+escapeHtml(err.message)+'</div>';});
@@ -7469,13 +8941,14 @@ try {
 
   function openDtdPublicProfileWindow(handle){
     var existing=openWindows.find(function(w){return w.type==='dtdpublicprofile'&&w.dtdHandle===handle;});if(existing){focusWindow(existing.id);return;}
-    createWindow({title:handle+'\'s Profile',extraClass:'profile-win',bodyHtml:'<div class="win-body vp-body"><div class="vp-empty">Loading profile…</div></div>',type:'dtdpublicprofile',onMount:function(el){var rec=openWindows.find(function(w){return w.el===el;});if(rec)rec.dtdHandle=handle;
+    createWindow({title:handle+'\'s Profile',extraClass:'profile-win',bodyHtml:'<div class="win-body vp-body"><div class="vp-empty">Loading profile…</div></div>',type:'dtdpublicprofile',onMount:function(el){var rec=openWindows.find(function(w){return w.el===el;});if(rec)rec.dtdHandle=handle;var profileData=null;
       function load(){
         el.querySelector('.win-body').innerHTML='<div class="vp-empty">Loading profile…</div>';
-        supabaseRpc('get_dtd_public_profile',{requested_handle:handle}).then(function(p){if(!p)throw new Error('This profile is unavailable.');
+        supabaseRpc('get_dtd_public_profile',{requested_handle:handle}).then(function(p){if(!p)throw new Error('This profile is unavailable.');profileData=p;
           var pic=p.profile_picture?'<img src="'+escapeHtml(p.profile_picture)+'" class="vp-pic">':'',header=sanitizeProfileHTML(p.profile_header||''),about=sanitizeProfileHTML(p.profile_about||''),statusRaw=String(p.profile_status||''),statusLabel='',statusMood='',statusMoodColor='#333333';
           try{var parsedStatus=JSON.parse(statusRaw);statusLabel=parsedStatus.label||'';statusMood=parsedStatus.mood||'';if(/^#[0-9a-f]{6}$/i.test(parsedStatus.color||''))statusMoodColor=parsedStatus.color;}catch(e){statusLabel=statusRaw;}
           var friendStatus=p.friend_status||'none',authorized=friendStatus==='friends'||friendStatus==='self';
+          if(friendStatus==='friends')upsertDtdContact(handle,p.display_name||'');
           var entries=Array.isArray(p.entries)?p.entries:[];
           var posts=authorized?(entries.length?entries.map(function(entry){return '<div class="blog-post"><div class="blog-post-header"><div><div class="blog-post-title">'+escapeHtml(entry.title||'Untitled')+'</div><div class="blog-post-date">'+fmtDayDivider(Number(entry.ts)||Date.now())+'</div></div></div><div class="blog-post-body">'+sanitizeHTML(entry.html||'')+'</div></div>';}).join(''):'<div class="vp-empty">No diary entries have been shared.</div>'):'';
           var actionHtml='';
@@ -7484,7 +8957,8 @@ try {
           else if(friendStatus==='pending_incoming')actionHtml='<span style="font-size:10px;color:#555">Wants to be PenPals</span> <button class="btn" id="dtd-friend-accept">Accept</button> <span class="forgot-link" id="dtd-friend-decline">Decline</span>';
           else if(friendStatus==='friends')actionHtml='<span style="font-size:10px;color:#18752c">&#10003; PenPals</span> <span class="forgot-link" id="dtd-friend-remove">Remove PenPal</span>';
           var gateNote=(!authorized)?'<div class="vp-empty" style="font-size:10px">Add '+escapeHtml(p.display_name||p.handle)+' as a PenPal to see their profile and diary entries.</div>':'';
-          el.querySelector('.win-body').outerHTML='<div class="win-body vp-body"><div class="vp-header">'+pic+'<div class="vp-name">'+escapeHtml(p.display_name||p.handle)+(statusMood?' <span class="vp-mood">is <span style="color:'+statusMoodColor+'">'+escapeHtml(statusMood)+'</span></span>':'')+'</div>'+(statusLabel?'<div class="vp-status"><b>Status:</b> '+escapeHtml(statusLabel)+'</div>':'')+'<div style="font-size:10px;color:#777">'+escapeHtml(p.handle)+'@desktopdiary.local</div>'+(actionHtml?'<div class="dtd-friend-actions" style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px">'+actionHtml+'</div>':'')+'<div class="signon-error dtd-friend-error" style="text-align:center"></div></div>'+gateNote+(header?'<div class="vp-section">'+header+'</div>':'')+(about?'<div class="vp-section">'+about+'</div>':'')+(authorized?'<div class="blog-posts-list">'+posts+'</div>':'')+'</div>';
+          var guestBookLink=authorized&&friendStatus==='friends'?'<div style="padding:12px;text-align:center;border-top:1px solid #e0ddd5"><button class="btn" id="dtd-sign-guestbook">Sign My Guest Book!</button></div>':'';
+          el.querySelector('.win-body').outerHTML='<div class="win-body vp-body"><div class="vp-header">'+pic+'<div class="vp-name">'+escapeHtml(p.display_name||p.handle)+(statusMood?' <span class="vp-mood">is <span style="color:'+statusMoodColor+'">'+escapeHtml(statusMood)+'</span></span>':'')+'</div>'+(statusLabel?'<div class="vp-status"><b>Status:</b> '+escapeHtml(statusLabel)+'</div>':'')+'<div style="font-size:10px;color:#777">'+escapeHtml(p.handle)+'@desktopdiary.local</div>'+(actionHtml?'<div class="dtd-friend-actions" style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px">'+actionHtml+'</div>':'')+'<div class="signon-error dtd-friend-error" style="text-align:center"></div></div>'+gateNote+(header?'<div class="vp-section">'+header+'</div>':'')+(about?'<div class="vp-section">'+about+'</div>':'')+guestBookLink+(authorized?'<div class="blog-posts-list">'+posts+'</div>':'')+'</div>';
           wire();
         }).catch(function(err){el.querySelector('.win-body').innerHTML='<div class="vp-empty">'+escapeHtml(err.message)+'</div>';});
       }
@@ -7493,14 +8967,14 @@ try {
         function onErr(err){if(errEl)errEl.textContent=err.message;}
         var addBtn=el.querySelector('#dtd-friend-add');if(addBtn)addBtn.onclick=function(){addBtn.disabled=true;supabaseRpc('send_dtd_friend_request',{recipient_handle:handle}).then(function(){rememberPendingPenPalRequest(handle);return load();}).catch(function(err){onErr(err);addBtn.disabled=false;});};
         var cancelBtn=el.querySelector('#dtd-friend-cancel');if(cancelBtn)cancelBtn.onclick=function(){supabaseRpc('remove_dtd_friend',{other_handle:handle}).then(load).catch(onErr);};
-        var acceptBtn=el.querySelector('#dtd-friend-accept');if(acceptBtn)acceptBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:true}).then(function(){acknowledgePenPalAlert('incoming:'+handle);return load();}).catch(onErr);};
+        var acceptBtn=el.querySelector('#dtd-friend-accept');if(acceptBtn)acceptBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:true}).then(function(){upsertDtdContact(handle,profileData&&profileData.display_name);acknowledgePenPalAlert('incoming:'+handle);syncDtdFriendsFromServer();return load();}).catch(onErr);};
         var declineBtn=el.querySelector('#dtd-friend-decline');if(declineBtn)declineBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:false}).then(function(){acknowledgePenPalAlert('incoming:'+handle);return load();}).catch(onErr);};
-        var removeBtn=el.querySelector('#dtd-friend-remove');if(removeBtn)removeBtn.onclick=function(){appConfirm('Remove '+handle+' as a PenPal?',function(ok){if(!ok)return;supabaseRpc('remove_dtd_friend',{other_handle:handle}).then(load).catch(onErr);});};
+        var removeBtn=el.querySelector('#dtd-friend-remove');if(removeBtn)removeBtn.onclick=function(){appConfirm('Remove '+handle+' as a PenPal?',function(ok){if(!ok)return;supabaseRpc('remove_dtd_friend',{other_handle:handle}).then(function(){removeDtdContact(handle);return load();}).catch(onErr);});};
+        var guestBookBtn=el.querySelector('#dtd-sign-guestbook');if(guestBookBtn)guestBookBtn.onclick=function(){openGuestBookWindow(handle,(profileData&&profileData.display_name)||handle,true);};
       }
       load();
     }});
   }
-
 
   // === END scripts/features/penpals.js ===
 
@@ -7511,13 +8985,15 @@ try {
     function refreshProfile(){var p=openWindows.find(function(w){return w.type==='viewprofile';});if(p&&p.el&&p.el._refreshProfile)p.el._refreshProfile();}
     function buildEntriesBody(){
       var entries=(state.blogPosts||[]).slice().sort(function(a,b){return b.ts-a.ts;});
-      var rows=entries.length?entries.map(function(entry){return '<article class="blog-post" data-entry-id="'+escapeHtml(entry.id)+'"><div class="blog-post-header"><div><div class="blog-post-title">'+escapeHtml(entry.title||'Untitled')+'</div><div class="blog-post-date">'+fmtDayDivider(entry.ts)+' · <b style="color:'+(entry.shared?'#257a35':'#777')+'">'+(entry.shared?'Shared on Profile':'Private')+'</b></div></div></div><div class="blog-post-body">'+(entry.html||'')+'</div><div style="display:flex;justify-content:flex-end;gap:6px;margin-top:10px"><button class="btn de-share">'+(entry.shared?'Remove from Profile':'Share to Profile')+'</button><button class="btn de-edit">Edit</button><button class="btn de-delete">Delete</button></div></article>';}).join(''):'<div class="vp-empty">No private diary entries yet. Use New Entry on your profile to write one.</div>';
-      return '<div class="win-body vp-body"><div style="padding:12px;border-bottom:1px solid #ccc;background:#f5f5f5"><b>Private Diary Entries</b><div style="font-size:10px;color:#666;margin-top:3px">Entries remain private unless you choose Share to Profile.</div></div><div class="blog-posts-list">'+rows+'</div></div>';
+      var rows=entries.length?entries.map(function(entry){return '<article class="blog-post" data-entry-id="'+escapeHtml(entry.id)+'"><div class="blog-post-header"><div><div class="blog-post-title">'+escapeHtml(entry.title||'Untitled')+'</div><div class="blog-post-date">'+fmtDayDivider(entry.ts)+' · <b style="color:'+(entry.shared?'#257a35':'#777')+'">'+(entry.shared?'Shared on Profile':'Private')+'</b></div></div></div><div class="blog-post-body">'+renderDiaryPostContent(entry)+'</div><div style="display:flex;justify-content:flex-end;gap:6px;margin-top:10px"><button class="btn de-share">'+(entry.shared?'Remove from Profile':'Share to Profile')+'</button><button class="btn de-edit">Edit</button><button class="btn de-delete">Delete</button></div></article>';}).join(''):'<div class="vp-empty">No private diary entries yet. Use New Entry on your profile to write one.</div>';
+      return '<div class="win-body vp-body"><div style="display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid #ccc;background:#f5f5f5"><div style="flex:1"><b>Private Diary Entries</b><div style="font-size:10px;color:#666;margin-top:3px">Entries remain private unless you choose Share to Profile.</div></div><button class="btn" id="diary-entries-new">+ New Entry</button></div><div class="blog-posts-list">'+rows+'</div></div>';
     }
     createWindow({title:'Diary Entries',extraClass:'profile-win',bodyHtml:buildEntriesBody(),type:'diaryentries',onMount:function(el){
       function render(){var body=el.querySelector('.win-body');if(body)body.outerHTML=buildEntriesBody();wire();}
       el._refreshDiaryEntries=render;
       function wire(){
+        var newEntryBtn=el.querySelector('#diary-entries-new');
+        if(newEntryBtn)newEntryBtn.onclick=function(){openBlogPostEditor(null,function(){refreshProfile();render();});};
         el.querySelectorAll('[data-entry-id]').forEach(function(row){var entry=(state.blogPosts||[]).find(function(p){return p.id===row.dataset.entryId;});if(!entry)return;
           row.querySelector('.de-share').onclick=function(){entry.shared=!entry.shared;saveState();syncDtdPublicEntry(entry).catch(function(){});refreshProfile();render();};
           row.querySelector('.de-edit').onclick=function(){openBlogPostEditor(entry,function(){saveState();syncDtdPublicEntry(entry).catch(function(){});refreshProfile();render();});};
@@ -7528,22 +9004,147 @@ try {
     }});
   }
 
-
   // === END scripts/features/profile-diary.js ===
 
   // === BEGIN scripts/features/diary.js ===
   // ================= DIARY ENTRY EDITOR =================
-  function openBlogPostEditor(existingPost, onSave, initialHtml){
+  function normalizeDiaryStickerList(list){
+    if(!Array.isArray(list)) return [];
+    return list.filter(function(st){return st && isDtdStickerSrc(st.src||'');}).map(function(st,index){
+      var size=Number(st.size),x=Number(st.x),y=Number(st.y),z=Number(st.zIndex);
+      return {
+        id:st.id||uid(),
+        src:st.src,
+        x:Number.isFinite(x)?Math.max(0,Math.min(92,x)):42,
+        y:Number.isFinite(y)?Math.max(0,Math.min(88,y)):38,
+        size:Number.isFinite(size)?Math.max(8,Math.min(40,size)):16,
+        zIndex:Number.isFinite(z)?z:index+1,
+        flipX:!!st.flipX
+      };
+    });
+  }
+
+  function renderDiaryPostContent(post){
+    var html=(post&&post.html)||'',stickers=normalizeDiaryStickerList(post&&post.stickers);
+    if(!stickers.length) return html;
+    var placed=stickers.map(function(st){
+      return '<img class="diary-saved-sticker" src="'+st.src+'" alt="sticker" draggable="false" style="left:'+st.x+'%;top:'+st.y+'%;width:'+st.size+'%;z-index:'+st.zIndex+';transform:'+(st.flipX?'scaleX(-1)':'none')+'">';
+    }).join('');
+    return '<div class="diary-rendered-entry"><div class="diary-rendered-text">'+html+'</div><div class="diary-rendered-sticker-layer">'+placed+'</div></div>';
+  }
+
+  function wireDiaryStickerCanvas(composeEl, initialStickers){
+    var canvas=document.createElement('div'),layer=document.createElement('div'),stickers=normalizeDiaryStickerList(initialStickers),selectedId=null;
+    canvas.className='diary-compose-canvas';
+    layer.className='diary-compose-sticker-layer';
+    composeEl.parentNode.insertBefore(canvas,composeEl);
+    canvas.appendChild(composeEl);
+    canvas.appendChild(layer);
+
+    function nextLayer(){
+      return stickers.reduce(function(max,st){return Math.max(max,Number(st.zIndex)||0);},0)+1;
+    }
+    function selectSticker(id){
+      selectedId=id;
+      Array.prototype.forEach.call(layer.querySelectorAll('.diary-placed-sticker'),function(el){
+        el.classList.toggle('selected',el.dataset.stickerId===id);
+      });
+    }
+    function render(){
+      layer.innerHTML='';
+      stickers.forEach(function(st){
+        var wrap=document.createElement('div');
+        wrap.className='diary-placed-sticker'+(st.id===selectedId?' selected':'');
+        wrap.dataset.stickerId=st.id;
+        wrap.style.left=st.x+'%';
+        wrap.style.top=st.y+'%';
+        wrap.style.width=st.size+'%';
+        wrap.style.zIndex=st.zIndex;
+        var img=document.createElement('img');
+        img.src=st.src;img.alt='';img.draggable=false;
+        img.style.transform=st.flipX?'scaleX(-1)':'';
+        wrap.appendChild(img);
+        var remove=document.createElement('button');
+        remove.type='button';remove.className='diary-sticker-remove';remove.textContent='✕';remove.title='Remove sticker';
+        remove.onclick=function(e){e.preventDefault();e.stopPropagation();stickers=stickers.filter(function(item){return item.id!==st.id;});selectedId=null;render();};
+        wrap.appendChild(remove);
+        var resize=document.createElement('button');
+        resize.type='button';resize.className='diary-sticker-resize';resize.title='Drag to resize sticker';resize.setAttribute('aria-label','Resize sticker');
+        wrap.appendChild(resize);
+
+        wrap.addEventListener('click',function(e){e.stopPropagation();selectSticker(st.id);});
+        wrap.addEventListener('dblclick',function(e){e.preventDefault();e.stopPropagation();st.flipX=!st.flipX;img.style.transform=st.flipX?'scaleX(-1)':'';});
+
+        var dragging=false,dragPointer=null,startX=0,startY=0,startLeft=0,startTop=0;
+        function dragMove(e){
+          if(!dragging||e.pointerId!==dragPointer)return;
+          e.preventDefault();
+          var rect=canvas.getBoundingClientRect(),maxX=Math.max(0,100-st.size),maxY=Math.max(0,100-(wrap.offsetHeight/Math.max(1,rect.height))*100);
+          st.x=Math.max(0,Math.min(maxX,startLeft+((e.clientX-startX)/rect.width)*100));
+          st.y=Math.max(0,Math.min(maxY,startTop+((e.clientY-startY)/rect.height)*100));
+          wrap.style.left=st.x+'%';wrap.style.top=st.y+'%';
+        }
+        function dragEnd(e){
+          if(!dragging||(e&&e.pointerId!==dragPointer))return;
+          dragging=false;dragPointer=null;wrap.classList.remove('dragging');
+          window.removeEventListener('pointermove',dragMove);window.removeEventListener('pointerup',dragEnd);window.removeEventListener('pointercancel',dragEnd);
+        }
+        wrap.addEventListener('pointerdown',function(e){
+          if(e.target===resize||e.target===remove)return;
+          e.preventDefault();e.stopPropagation();selectSticker(st.id);
+          st.zIndex=nextLayer();wrap.style.zIndex=st.zIndex;
+          dragging=true;dragPointer=e.pointerId;startX=e.clientX;startY=e.clientY;startLeft=st.x;startTop=st.y;wrap.classList.add('dragging');
+          window.addEventListener('pointermove',dragMove);window.addEventListener('pointerup',dragEnd);window.addEventListener('pointercancel',dragEnd);
+        });
+
+        var resizing=false,resizePointer=null,resizeStartX=0,resizeStartSize=0;
+        function resizeMove(e){
+          if(!resizing||e.pointerId!==resizePointer)return;
+          e.preventDefault();e.stopPropagation();
+          var rect=canvas.getBoundingClientRect();
+          st.size=Math.max(8,Math.min(40,resizeStartSize+((e.clientX-resizeStartX)/rect.width)*100));
+          wrap.style.width=st.size+'%';
+        }
+        function resizeEnd(e){
+          if(!resizing||(e&&e.pointerId!==resizePointer))return;
+          resizing=false;resizePointer=null;
+          window.removeEventListener('pointermove',resizeMove);window.removeEventListener('pointerup',resizeEnd);window.removeEventListener('pointercancel',resizeEnd);
+          if(e)e.stopPropagation();
+        }
+        resize.addEventListener('pointerdown',function(e){
+          e.preventDefault();e.stopPropagation();selectSticker(st.id);
+          st.zIndex=nextLayer();wrap.style.zIndex=st.zIndex;
+          resizing=true;resizePointer=e.pointerId;resizeStartX=e.clientX;resizeStartSize=st.size;
+          window.addEventListener('pointermove',resizeMove);window.addEventListener('pointerup',resizeEnd);window.addEventListener('pointercancel',resizeEnd);
+        });
+        layer.appendChild(wrap);
+      });
+    }
+    canvas.addEventListener('pointerdown',function(e){if(e.target===canvas||e.target===composeEl)selectSticker(null);});
+    composeEl._addFreeSticker=function(src){
+      stickers.push({id:uid(),src:src,x:42,y:38,size:16,zIndex:nextLayer(),flipX:false});
+      selectedId=stickers[stickers.length-1].id;
+      render();
+    };
+    render();
+    return {
+      getStickers:function(){return normalizeDiaryStickerList(stickers);},
+      setStickers:function(next){stickers=normalizeDiaryStickerList(next);selectedId=null;render();}
+    };
+  }
+
+  function openBlogPostEditor(existingPost, onSave, initialHtml, initialStickers){
     var composeId = 'blog-compose-' + uid();
     var isEdit = !!existingPost;
     var body =
       '<div class="win-body nm-body">' +
         '<div class="field-row"><label>Title</label><input type="text" id="bp-title" value="'+escapeHtml(existingPost && existingPost.title ? existingPost.title : '')+'"></div>' +
-        richComposeHtml(composeId, '') +
+        richComposeHtml(composeId, '', 'stickers') +
         '<div class="nm-send-row" style="margin-top:8px;">' +
           '<button class="btn" id="bp-save">'+(isEdit?'Save Changes':'Save Private Entry')+'</button>' +
         '</div>' +
         '<div class="draft-links"><span class="draft-save-link">Save Draft</span> &nbsp;|&nbsp; <span class="draft-view-link">Drafts</span></div>' +
+        '<div class="diary-sticker-section"><div class="diary-sticker-label">Stickers</div><div class="diary-sticker-dock"></div></div>' +
       '</div>';
     createWindow({
       title: isEdit ? 'Edit Diary Entry' : 'New Diary Entry',
@@ -7551,8 +9152,10 @@ try {
       bodyHtml: body,
       type: 'blogpost',
       onMount: function(el, id){
-        wireRichToolbar(el, composeId);
         var composeEl = el.querySelector('#'+composeId);
+        wireRichToolbar(el, composeId);
+        composeEl._mountStickerDock(el.querySelector('.diary-sticker-dock'));
+        var stickerEditor=wireDiaryStickerCanvas(composeEl,existingPost&&existingPost.stickers||initialStickers||[]);
         var titleInput = el.querySelector('#bp-title');
         if(existingPost && existingPost.html) composeEl.innerHTML = existingPost.html;
         else if(!isEdit && initialHtml) composeEl.innerHTML = initialHtml;
@@ -7560,14 +9163,16 @@ try {
         el.querySelector('#bp-save').addEventListener('click', function(){
           var title = titleInput.value.trim() || 'Untitled';
           var html = isRichEmpty(composeEl) ? '' : sanitizeHTML(composeEl.innerHTML);
+          var stickers=stickerEditor.getStickers();
           if(!html && !title){ composeEl.focus(); return; }
           if(isEdit){
             existingPost.title = title;
             existingPost.html = html;
+            existingPost.stickers = stickers;
             existingPost.editedAt = Date.now();
           } else {
             state.blogPosts = state.blogPosts || [];
-            state.blogPosts.push({ id: uid(), title: title, html: html, ts: Date.now(), shared:false });
+            state.blogPosts.push({ id: uid(), title: title, html: html, stickers:stickers, ts: Date.now(), shared:false });
             trackDtdUsage('diary_entry_created');
           }
           saveState();
@@ -7575,13 +9180,15 @@ try {
           closeWindow(id);
         });
         el.querySelector('.draft-save-link').addEventListener('click', function(){
-          if(isRichEmpty(composeEl)){ openInfoWindow('Nothing to save \u2014 the compose box is empty.'); return; }
-          saveDraftFor('__blog__', sanitizeHTML(composeEl.innerHTML));
+          var draftStickers=stickerEditor.getStickers();
+          if(isRichEmpty(composeEl)&&!draftStickers.length){ openInfoWindow('Nothing to save \u2014 the compose box is empty.'); return; }
+          saveDraftFor('__blog__', sanitizeHTML(composeEl.innerHTML), null, {stickers:draftStickers});
           openInfoWindow('Draft saved.');
         });
         el.querySelector('.draft-view-link').addEventListener('click', function(){
-          openDraftsListWindowFor('__blog__', 'Diary', function(html){
+          openDraftsListWindowFor('__blog__', 'Diary', function(html,draft){
             composeEl.innerHTML = html;
+            stickerEditor.setStickers(draft&&draft.stickers);
             composeEl.focus();
           });
         });
@@ -7598,7 +9205,7 @@ try {
         '<div class="field-row"><label>New Password (optional)</label><input type="password" id="acc-newpw"></div>' +
         '<div class="field-row"><label>Confirm New Password</label><input type="password" id="acc-newpw2"></div>' +
         '<div class="field-row"><label>Current Password (required)</label><input type="password" id="acc-current"></div>' +
-        '<div class="privacy-usage-box"><label><input type="checkbox" id="usage-identifiable-opt-in" disabled> Share identifiable feature feedback</label><div style="margin:5px 0 0 23px">Desktop Diary records only an approved feature name, the server timestamp, and mobile/tablet/desktop. When this is off, no member ID is stored. When it is on, the database may attach your signed-in account ID so the administrator can understand which features members use. Diary text, letters, profile content, searches, drawings, and other private content are never sent.</div><div class="privacy-usage-status" id="usage-privacy-status" aria-live="polite">Identifiable sharing is off while this setting loads.</div></div>' +
+        '<div class="privacy-usage-box"><label><input type="checkbox" id="usage-identifiable-opt-in" checked disabled> Share identifiable feature feedback</label><div style="margin:5px 0 0 23px">Identifiable sharing is on by default for online accounts and can be turned off at any time. Desktop Diary records only an approved feature name, the server timestamp, and mobile/tablet/desktop. When this is off, no member ID is stored. When it is on, the database may attach your signed-in account ID so the administrator can understand which features members use. Diary text, letters, profile content, searches, drawings, and other private content are never sent.</div><div class="privacy-usage-status" id="usage-privacy-status" aria-live="polite">Loading identifiable sharing preference…</div></div>' +
         '<div class="signon-error" id="acc-error"></div>' +
         '<div class="nm-send-row"><button class="btn" id="acc-submit">Save Changes</button></div>' +
       '</div>';
@@ -7609,7 +9216,9 @@ try {
       type: 'setup',
       onMount: function(el, id){
         var usageOptIn=el.querySelector('#usage-identifiable-opt-in'),usageStatus=el.querySelector('#usage-privacy-status');
-        // The checkbox starts unchecked. Its saved value comes only from the
+        // The checkbox starts checked because accounts with no saved choice
+        // default to identifiable sharing on. Explicit opt-outs remain off.
+        // Its authoritative value comes only from the
         // private Supabase preference RPC, never from localStorage.
         if(!getSupabaseSession()){
           usageStatus.textContent='Identifiable sharing is off. Connect an online account to change it.';
@@ -7660,6 +9269,7 @@ try {
           submit.disabled=true;errEl.style.color='#555';errEl.textContent='Saving account changes…';
           var request=session?ensureSupabaseSession().then(function(fresh){return supabaseUserRequest('PUT',payload,fresh.access_token);}):Promise.resolve(null);
           request.then(function(user){
+            if(newName!==state.account.screenName)state.screenNameUpdatedAt=Date.now();
             state.account.screenName=newName;
             if(newPw)state.account.password=newPw;
             if(emailChanged){
@@ -7679,7 +9289,6 @@ try {
       }
     });
   }
-
 
   // === END scripts/features/diary.js ===
 
