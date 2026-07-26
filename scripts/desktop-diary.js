@@ -3143,6 +3143,7 @@ try {
     var connectingWindow=document.getElementById('connecting-wrap');
     connectingWindow.style.zIndex=++zCounter;
     connectingWindow.style.display='block';
+    playSiteSound('buddyOn', 0.9);
     setTimeout(function(){
       document.getElementById('connecting-wrap').style.display = 'none';
       showBuddyList();
@@ -3495,7 +3496,8 @@ try {
     signOffInProgress = true;
     var closePageAfterSound = closePage === true;
     var signOffStartedAt = Date.now();
-    var signOffSoundSequenceMs = 0;
+    var signOffSoundSequenceMs = 470;
+    playSiteSound('buddyOut', 0.9);
     setActiveSession(false);
     dtdUsageSessionTracked=false;
     setSupabaseSession(null);

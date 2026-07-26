@@ -7325,11 +7325,8 @@ try {
     signOffInProgress = true;
     var closePageAfterSound = closePage === true;
     var signOffStartedAt = Date.now();
-    var signOffSoundSequenceMs = closePageAfterSound ? 4470 : 470;
+    var signOffSoundSequenceMs = 470;
     playSiteSound('buddyOut', 0.9);
-    if(closePageAfterSound){
-      setTimeout(function(){ playSiteSound('logOff', 0.85); }, 470);
-    }
     setActiveSession(false);
     dtdUsageSessionTracked=false;
     setSupabaseSession(null);
