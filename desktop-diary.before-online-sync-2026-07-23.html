@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>DesktopDiary redirect</title>
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+    <script>
+      (function(){
+        var dest = 'desktop-diary.html';
+        var sep = dest.indexOf('?') === -1 ? '?' : '&';
+        window.location.replace(dest + sep + 'v=restore-' + Date.now());
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to the restored DesktopDiary build…</p>
+  </body>
+</html>
