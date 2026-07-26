@@ -25,3 +25,8 @@ artwork, a font, or the Sudoku game changes.
 - Do not upload the development-only `scripts` or `styles` source folders here.
 - Saved diary data is stored by the browser and cloud services; this repository
   does not contain anyone's saved diary entries.
+
+## Project preference
+
+- You are now responsible for pushing changes. I will not push from here unless you ask for it explicitly.
+- After I make edits, please run verification and push locally from your terminal.
