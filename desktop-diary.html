@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="preload" href="log%20on.wav" as="audio">
+<!-- Logon chime disabled (keep buddy sounds intact). -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>DesktopDiary</title>
@@ -842,48 +842,6 @@ var runtime={
   #desktop-companion.over-buddy-list { z-index:999998; }
   #desktop-companion.searching, #desktop-companion.waking, #desktop-companion.digging, #desktop-companion.burying, #desktop-companion.actions-open, #desktop-companion.interacting { z-index:120600; }
   .desktop-icon img { display:block; filter:drop-shadow(1px 1px 2px rgba(0,0,0,.6)); pointer-events:none; -webkit-user-drag:none; user-drag:none; }
-  #suggestion-desktop-icon {
-    right:8px;
-    left:auto;
-    top:auto;
-    bottom:72px;
-  }
-  #suggestion-desktop-icon .suggestion-desktop-art {
-    width:52px;
-    height:52px;
-    display:block;
-    object-fit:contain;
-    padding:0;
-    filter:none;
-    background:transparent;
-    border:none;
-    box-shadow:none;
-    box-sizing:border-box;
-  }
-  /* Lightweight previews for the standalone pet habitats. */
-  body:not(.signed-in) #ant-farm-desktop-icon,
-  body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
-  #ant-farm-desktop-icon { top:71vh; left:auto; right:144px; bottom:auto; }
-  #fish-tank-desktop-icon { top:62vh; left:auto; right:44px; bottom:auto; }
-  @media (max-height:800px){
-    #ant-farm-desktop-icon { top:calc(100vh - 248px); }
-    #fish-tank-desktop-icon { top:calc(100vh - 316px); }
-  }
-  .pet-desktop-icon { width:72px; }
-  .pet-desktop-art { position:relative; width:64px; height:58px; display:grid; place-items:center; overflow:visible; pointer-events:none; }
-  .pet-desktop-art > img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; image-rendering:pixelated; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.5)); }
-  .pet-mini-fish { position:absolute; z-index:2; left:18px; top:27px; width:14px; height:9px; border:1px solid #5e2515; border-radius:55% 48% 48% 55%; background:#ff8d1d; box-shadow:inset 0 2px 0 #ffbd42; animation:dtd-mini-fish-swim 4.6s ease-in-out infinite alternate; }
-  .pet-mini-fish:before { position:absolute; left:-6px; top:1px; border-top:4px solid transparent; border-bottom:4px solid transparent; border-right:7px solid #ee6f18; content:""; }
-  .pet-mini-fish:after { position:absolute; right:2px; top:2px; width:2px; height:2px; border-radius:50%; background:#261716; box-shadow:0 0 0 1px #fff5d1; content:""; }
-  .pet-mini-bubble { position:absolute; z-index:2; left:37px; top:24px; width:3px; height:3px; border:1px solid rgba(226,252,255,.9); border-radius:50%; animation:dtd-mini-bubble-rise 2.4s ease-out infinite; }
-  .pet-ant-window { position:absolute; z-index:2; left:9px; top:18px; width:46px; height:18px; overflow:hidden; }
-  .pet-mini-ant { position:absolute; left:7px; top:11px; width:4px; height:4px; border-radius:50%; background:#23150f; box-shadow:4px 0 0 #23150f,8px 0 0 #23150f; animation:dtd-mini-ant-crawl 6.8s linear infinite; }
-  .pet-mini-ant.second { top:13px; animation-delay:-3.4s; animation-duration:8.2s; }
-  @keyframes dtd-mini-fish-swim { 0%{transform:translateX(0) translateY(1px) scaleX(1)} 47%{transform:translateX(20px) translateY(-2px) scaleX(1)} 53%{transform:translateX(20px) translateY(-2px) scaleX(-1)} 100%{transform:translateX(0) translateY(2px) scaleX(-1)} }
-  @keyframes dtd-mini-bubble-rise { 0%{transform:translate(0,6px);opacity:0} 25%{opacity:.9} 100%{transform:translate(4px,-15px);opacity:0} }
-  @keyframes dtd-mini-ant-crawl { 0%{transform:translateX(0) translateY(0)} 45%{transform:translateX(26px) translateY(-2px)} 50%{transform:translateX(26px) translateY(-2px) scaleX(-1)} 95%,100%{transform:translateX(0) translateY(1px) scaleX(-1)} }
-  @media (prefers-reduced-motion:reduce){.pet-mini-fish,.pet-mini-bubble,.pet-mini-ant{animation:none}}
-
   .desktop-icon span {
     color:#fff; font-size:11px; text-align:center; text-shadow:1px 1px 2px rgba(0,0,0,.8);
     padding:1px 3px; border-radius:2px;
@@ -892,9 +850,17 @@ var runtime={
   body:not(.signed-in) #dtd-mailbox-icon { display:none; }
   /* The mailbox follows the same stacking rules as every other desktop icon. */
   #dtd-mailbox-icon { top:400px; left:100px; }
+  #typewriter-desktop-icon { top:290px; left:100px; }
   #dtd-mailbox-icon.mail-window-open { z-index:auto !important; }
   #dtd-mailbox-icon.mail-window-open .dtd-pigeon { z-index:100000 !important; }
   #dtd-mailbox-icon .dtd-mailbox-art { display:block; width:62px; height:62px; object-fit:contain; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
+  #typewriter-desktop-icon .typewriter-desktop-icon-art {
+    display:block;
+    width:62px;
+    height:62px;
+    object-fit:contain;
+    filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55));
+  }
   #dtd-mailbox-icon .dtd-pigeon { position:absolute; top:-58px; right:-12px; width:68px; height:68px; display:none; padding:0; border-radius:0; pointer-events:none; transform-origin:50% 100%; background:url('companions/sprites/pigeon/pigeon-perched.png') no-repeat center / contain; image-rendering:pixelated; }
   #dtd-mailbox-icon:active .dtd-pigeon { background-color:transparent; }
   /* The 68px flight/compose sheet also lands on the mailbox-body baseline. */
@@ -1023,8 +989,6 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   body:not(.signed-in) #trash-desktop-icon { display:none; }
   body:not(.signed-in) #arinet-desktop-icon { display:none; }
   #trash-desktop-icon { top:480px; left:16px; right:auto; bottom:auto; }
-  #signon-icon { top:16px; right:16px; left:auto; bottom:auto; }
-  body.signed-in #signon-icon { display:none !important; }
   .trash-icon-art { position:relative; width:52px; height:52px; }
   .trash-icon-art img { position:absolute; width:auto; height:52px; left:50%; top:50%; max-width:none; transform:translate(-50%,-50%); image-rendering:pixelated; filter:drop-shadow(0 0 1px #18ef28) drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
   .trash-icon-art.is-wiggling { animation:trash-desktop-wiggle 420ms ease-in-out 1; transform-origin:50% 85%; }
@@ -1303,6 +1267,57 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .im-entry.prompt-entry .txt { color:#5b4900; font-style:italic; background:#fff8e1; padding:4px 6px; border-radius:4px; display:inline-block; }
   .status-tag { font-size:9px; color:#0850d0; font-weight:bold; display:inline-block; margin-bottom:2px; }
   .pct-key { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:9px; color:#888; padding:3px 6px; background:#f5f5f0; border-top:1px solid #e5e2d5; }
+
+/*=== END styles/source/messages-and-compose.css ===*/
+
+/*=== BEGIN styles/source/sticky-notes.css ===*/
+  /* ---- sticky notes ---- */
+  #sticky-layer { position:absolute; inset:0; pointer-events:none; }
+  body:not(.signed-in) #sticky-layer { display:none; }
+  .sticky {
+    position:absolute; pointer-events:all;
+    display:flex; flex-direction:column;
+    min-width:140px; min-height:100px;
+    border-radius:3px; box-shadow:2px 3px 10px rgba(0,0,0,.35);
+    overflow:hidden;
+  }
+  .sticky-resize-handle {
+    position:absolute; bottom:0; right:0; width:20px; height:20px; cursor:se-resize;
+    display:flex; align-items:flex-end; justify-content:flex-end; padding:3px;
+  }
+  .sticky-resize-handle::after {
+    content:''; display:block; width:10px; height:10px;
+    border-right:2px solid rgba(0,0,0,.3); border-bottom:2px solid rgba(0,0,0,.3);
+    border-radius:0 0 2px 0;
+  }
+  .sticky-bar {
+    display:flex; align-items:center; gap:5px; padding:4px 6px;
+    cursor:move; flex-shrink:0; user-select:none; -webkit-user-select:none;
+  }
+  .sticky-bar-title {
+    flex:1; min-width:0; border:none; border-radius:2px;
+    padding:0 4px; height:20px;
+    background:transparent;
+    color:#222; font: 10px/20px Arial, sans-serif;
+    outline:none;
+  }
+  .sticky input.sticky-bar-title { font-size:10px; line-height:20px; }
+  .sticky-bar-title::placeholder { color:rgba(34,34,34,.7); }
+  .sticky-min-btn {
+    width:16px; height:16px; border-radius:2px; border:none;
+    background:rgba(0,0,0,.2); color:#fff; font-size:12px; line-height:1;
+    cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  }
+  .sticky-min-btn:hover { background:rgba(0,0,0,.35); }
+  .sticky-color-btn { width:16px; height:16px; border-radius:50%; border:2px solid rgba(0,0,0,.25); cursor:pointer; flex-shrink:0; }
+  .sticky-delete { position:absolute; left:3px; bottom:3px; z-index:2; width:19px; height:19px; padding:0; border-radius:2px; border:none; background:rgba(0,0,0,.18); color:#333; font-size:12px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .sticky-delete:hover { background:rgba(0,0,0,.35); color:#fff; }
+  .sticky-body {
+    flex:1; resize:none; border:none; outline:none; padding:8px 8px 26px;
+    font-family:inherit; font-size:13px; line-height:1.5;
+    background:transparent; color:#333;
+    -webkit-overflow-scrolling:touch;
+  }
   .im-action-row { display:flex; align-items:center; gap:4px; padding:5px 6px; background:#ece9d8; border-top:1px solid #ccc; }
   .action-btn { display:flex; flex-direction:column; align-items:center; gap:1px; font-size:9px; color:#333;
     border:1px solid #b0aca0; border-radius:4px; background:#fff; padding:3px 7px; cursor:pointer; }
@@ -1398,16 +1413,19 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .dtd-construction span { display:inline-block; padding:3px 9px; border:1px solid #111; background:#ffd836; }
   .dtd-shell { flex:1 1 auto; min-height:0; display:grid; grid-template-columns:105px minmax(0,1fr); background:#fff; }
   .dtd-sidebar { padding:8px; background:#ece9d8; border-right:1px solid #aaa; }
-  .dtd-sidebar .btn { width:100%; padding:6px 5px; margin-bottom:6px; font-size:11px; white-space:nowrap; }
+  .dtd-sidebar .btn { width:100%; padding:6px 5px; margin-bottom:6px; font-size:11px; }
   .dtd-delivery-note { margin-top:10px; padding:7px 5px; border:1px solid #b6ad8d; background:#fffbe6; color:#5c563f; font-size:9px; line-height:1.35; text-align:center; }
   .dtd-folder.active { border-style:inset; filter:brightness(.92); }
   .dtd-main { min-width:0; min-height:0; display:flex; flex-direction:column; }
   .dtd-heading { padding:8px 10px; font-weight:bold; background:#f5f5f0; border-bottom:1px solid #ccc; }
   .dtd-list { flex:1; min-height:0; overflow:auto; }
-  .dtd-row { display:grid; grid-template-columns:minmax(90px,.8fr) minmax(120px,1.3fr) auto; gap:8px; padding:9px 10px; border-bottom:1px solid #ddd; cursor:pointer; align-items:center; }
+  .dtd-row { display:grid; grid-template-columns:minmax(110px,1fr) minmax(100px,1.1fr) auto auto; gap:8px; padding:9px 10px; border-bottom:1px solid #ddd; cursor:pointer; align-items:center; }
   .dtd-row:hover { background:#eef4ff; }
   .dtd-row.unread { font-weight:bold; background:#f6f9ff; }
   .dtd-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dtd-row-delete { grid-column:4; justify-self:end; border:1px solid transparent; border-radius:12px; background:none; padding:1px 4px; font-size:14px; line-height:1; min-width:0; cursor:pointer; }
+  .dtd-row-delete:hover { border-color:transparent; background:none; }
+  .dtd-row-delete:active { border-color:transparent; background:none; transform:none; }
   .dtd-future-me { text-transform:none; font-variant:normal; }
   .dtd-contact-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto auto auto; gap:6px; align-items:center; padding:7px 8px; border-bottom:1px solid #ddd; }
   .dtd-contact-name { min-width:0; font-weight:bold; color:#164f91; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -1427,7 +1445,6 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .dtd-profile-link { float:left; width:44px; height:44px; padding:0; margin:0 9px 2px 0; overflow:hidden; border:1px solid #888; border-radius:3px; background:#dce7f5; color:#164f91; font-weight:bold; cursor:pointer; }
   .dtd-profile-link img { width:100%; height:100%; object-fit:cover; display:block; }
   .dtd-inline-reply { flex:none; padding:9px 10px; border-top:1px solid #ccc; background:#f7f7f3; display:grid; gap:6px; }
-  .dtd-inline-reply-subject { box-sizing:border-box; width:100%; padding:6px 7px; font:12px/1.4 Tahoma,Arial,sans-serif; }
   .dtd-inline-reply textarea { box-sizing:border-box; width:100%; height:82px; resize:vertical; padding:7px; font:12px/1.4 Tahoma,Arial,sans-serif; }
   .dtd-inline-reply-actions { display:flex; align-items:center; justify-content:space-between; gap:6px; }
   .dtd-inline-reply-note { color:#666; font-size:9px; }
@@ -1438,7 +1455,7 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .dtd-address-suffix { flex:none; padding:0 6px 0 2px; color:#555; font-size:10px; white-space:nowrap; user-select:none; }
   .dtd-compose textarea { height:210px; resize:none; }
   .dtd-compose-actions { display:flex; justify-content:flex-end; gap:6px; }
-  @media(max-width:500px){.dtd-win{height:min(520px,82vh)}.dtd-shell{grid-template-columns:96px minmax(0,1fr)}.dtd-row{grid-template-columns:1fr auto}.dtd-row .dtd-subject{grid-column:1/-1}.dtd-compose label{grid-template-columns:1fr}.dtd-compose textarea{height:190px}}
+  @media(max-width:500px){.dtd-win{height:min(520px,82vh)}.dtd-shell{grid-template-columns:82px minmax(0,1fr)}.dtd-row{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) auto auto;padding:5px 6px;gap:5px}.dtd-row .dtd-subject{grid-column:auto}.dtd-row-delete{grid-column:4}.dtd-compose label{grid-template-columns:1fr}.dtd-compose textarea{height:190px}}
   @media(max-width:700px){
     /* The 68px flight/compose sheet has about 10px of transparent space below
        the pigeon's feet, so its visible perch sits lower than its image box. */
@@ -1462,7 +1479,7 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .paint-history-btn:active:not(.disabled) { border-style:inset; transform:translateY(1px); }
   .paint-history-btn.disabled { opacity:.4; filter:grayscale(.2); cursor:default; pointer-events:none; }
   .paint-main { display:flex; flex:1; min-height:0; background:#8d858c; }
-  .paint-tools { width:78px; padding:5px; flex-shrink:0; background:linear-gradient(180deg,#f9d4e1,#e8afc4); border-right:1px solid #a9657f; overflow:auto; }
+  .paint-tools { width:78px; padding:5px; flex-shrink:0; background:linear-gradient(180deg,#f9d4e1,#e8afc4); border-right:1px solid #a9657f; overflow:hidden; }
   .paint-tools-title { margin:0 0 5px; font-size:10px; font-weight:bold; color:#444; }
   .paint-tool-grid { display:grid; grid-template-columns:repeat(2,32px); gap:2px; }
   button.btn.paint-tool-btn { display:flex; align-items:center; justify-content:center; padding:1px; width:32px; height:32px; box-sizing:border-box; line-height:1; border-radius:5px; }
@@ -1623,14 +1640,8 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .vp-status b { color:#202020; }
   .vp-header .vp-status { width:100%; margin:0; text-align:center; }
   #tb-tray { display:flex; align-items:center; gap:4px; margin-left:auto; flex:none; }
-  #tb-tray-right { height:34px; display:flex; align-items:center; flex:none; }
+  #tb-tray-right { width:27px; height:34px; }
   #tb-search-wrap { position:relative; flex:none; }
-  .tb-mini-btn { width:27px; height:27px; padding:1px; display:flex; align-items:center; justify-content:center; border:1px solid var(--th-clock-border); border-radius:3px; background:linear-gradient(180deg,var(--th-clock-1),var(--th-clock-2)); color:var(--th-font-color,#fff); font-size:15px; line-height:1; cursor:pointer; box-sizing:border-box; }
-  .tb-mini-btn:active, .tb-mini-btn[aria-expanded="true"] { filter:brightness(.88); border-style:inset; }
-  #tb-notebook-taskbar { width:27px; height:27px; padding:2px; }
-  #tb-notebook-taskbar .notebook-taskbar-icon { width:20px; height:20px; border-radius:3px; background:url('notepad2.png') center / cover no-repeat; filter:drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
-  #tb-notebook-taskbar[aria-expanded="true"] { filter:brightness(.88); border-style:inset; }
-  body:not(.signed-in) #tb-notebook-taskbar { display:none; }
   #tb-search-toggle { width:27px; height:27px; padding:1px; display:flex; align-items:center; justify-content:center; border:1px solid var(--th-clock-border); border-radius:3px; background:linear-gradient(180deg,var(--th-clock-1),var(--th-clock-2)); color:var(--th-font-color,#fff); font-size:15px; line-height:1; cursor:pointer; }
   #tb-search-toggle img { display:block; width:23px; height:23px; margin:auto; object-fit:contain; }
   #tb-search-toggle > span { display:block; font-size:19px; line-height:22px; }
@@ -1849,8 +1860,7 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .profile-pic-actions { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
   .ep-pic { width:70px; height:70px; border-radius:6px; object-fit:cover; border:1px solid #b0aca0; }
   .ep-pic-ph { width:70px; height:70px; border-radius:6px; border:1px dashed #b0aca0; background:#f0f0ea; color:#999; display:flex; align-items:center; justify-content:center; font-size:10px; text-align:center; }
-  .profile-pic-actions { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
-  .profile-crop-win { width:min(420px,96vw); height:min(560px,90vh); z-index:120700 !important; }
+  .profile-crop-win { width:min(420px,96vw); height:min(560px,90vh); }
   .profile-crop-body { padding:10px; overflow:auto; }
   .profile-crop-stage { width:min(360px,calc(100vw - 64px)); aspect-ratio:1; margin:0 auto 9px; border:1px solid #718096; background:#c8d3df; box-shadow:inset 0 0 0 1px #fff; }
   .profile-crop-canvas { display:block; width:100%; height:100%; cursor:grab; touch-action:none; }
@@ -1859,7 +1869,7 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .profile-crop-controls label { display:block; margin-bottom:2px; font-size:11px; font-weight:bold; }
   .profile-crop-controls input[type="range"] { width:100%; }
   .profile-crop-help { margin-top:5px; color:#555; font-size:10px; text-align:center; }
-  .profile-crop-actions { display:grid; grid-template-columns:auto 1fr auto auto; gap:6px; align-items:center; margin-top:8px; }
+  .profile-crop-actions { display:grid; grid-template-columns:auto 1fr auto auto; gap:6px; align-items:center; margin-top:9px; }
   .vp-body { padding:0; }
   .vp-header { display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px; background:linear-gradient(180deg,#dce8f7,#f5f5f0); border-bottom:1px solid #ccc; }
   .vp-pic { width:90px; height:90px; border-radius:6px; object-fit:cover; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.3); }
@@ -2021,14 +2031,14 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); background:#fff; padding:6px; gap:1px; }
   .cal-grid { grid-auto-rows: 24px; }
   .cal-wd,
-  .cal-cell {
-    text-align:center;
-    font-size:10px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    box-sizing:border-box;
-    min-height:24px;
+  .cal-cell { 
+    text-align:center; 
+    font-size:10px; 
+    display:flex; 
+    align-items:center; 
+    justify-content:center; 
+    box-sizing:border-box; 
+    min-height:24px; 
     height:24px;
   }
   .cal-wd { font-weight:bold; color:var(--th-font-color,#fff); background: var(--th-cal-days,#8f8b7a); padding:0; }
@@ -2067,16 +2077,13 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
 
   /* ---------- mobile: popups float over the mini buddy list, draggable but screen-bound ---------- */
   @media (max-width: 700px) {
-    #signon-wrap { width:min(240px, 69vw); }
+    #signon-wrap { width:min(250px, 72vw); }
     #signon-wrap .win-body { padding:12px 14px; }
     #signon-wrap .sub { margin-bottom:8px; }
     #signon-wrap .field-row { margin-bottom:6px; }
     #signon-wrap .signon-bottom { margin-top:8px; }
     #dtd-mailbox-icon { top:auto; left:85px; right:auto; bottom:150px; }
     #trash-desktop-icon { top:auto; left:16px; right:auto; bottom:100px; }
-    #fish-tank-desktop-icon { top:auto; left:auto; right:14px; bottom:153px; }
-    #ant-farm-desktop-icon { top:auto; left:auto; right:94px; bottom:105px; }
-    #desktop-companion { top:auto; left:52%; right:auto; bottom:40px; }
     .im-win, .nm-win, .addbuddy-win, .bgedit-win, .themeedit-win, .paint-win, .arinet-win {
       box-shadow: 0 6px 24px rgba(0,0,0,.55);
     }
@@ -2461,6 +2468,7 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
 @keyframes dd-loader-puppy-loop{from{background-position:0 0}to{background-position:100% 0}}
 
 /*=== END styles/source/loader.css ===*/
+
 </style>
 
 <style data-bundled-from="styles/notebook.css">
@@ -3109,7 +3117,7 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   var bootSound;
   var bootSoundPlayed = false;
   var bootSoundInFlight = false;
-  var bootSoundRetryArmed = false;
+    var bootSoundRetryArmed = false;
   var loaderDismissRequestedAt = 0;
 
   var bar = document.getElementById('dd-loader-bar');
@@ -3139,7 +3147,8 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
   var loaderBlackFadeHoldMs = 3050;
   var loaderDismissDelayMs = loaderBlackFadeHoldMs;
   var loaderDismissForcedByClick = false;
-  var bootSoundDisabled = false;
+  // Logon chime disabled in source; keep buddy sound effects elsewhere.
+  var bootSoundDisabled = true;
   var ddBootLockClass = 'dd-booting';
   var startupLockReleased = false;
 
@@ -3566,9 +3575,7 @@ body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
       bootSound = null;
     }
 
-    var candidates = [
-      'log%20on.wav'
-    ];
+    var candidates = [];
 
     var armRetry = function(){
       if(bootSoundRetryArmed || bootSoundPlayed) return;
@@ -3873,6 +3880,11 @@ function forceLoaderInteractionRecovery(){
     <span>DtD Post</span>
   </div>
 
+  <div id="typewriter-desktop-icon" class="desktop-icon" role="button" tabindex="0" title="Open Daily Memo planner">
+    <img class="typewriter-desktop-icon-art" src="assets/embedded/typewriter-printer.png" alt="">
+    <span>Daily Memo</span>
+  </div>
+
   <div id="arinet-desktop-icon" class="desktop-icon" role="button" tabindex="0" title="Click to spin; double-click to open AriNet Browser">
     <div class="arinet-desktop-icon-art" aria-hidden="true"></div>
     <span>AriNet</span>
@@ -4141,7 +4153,13 @@ try {
   var SUPABASE_SESSION_KEY = 'desktop-diary-supabase-session';
 
   function getSupabaseSession(){try{return JSON.parse(localStorage.getItem(SUPABASE_SESSION_KEY)||'null');}catch(e){return null;}}
-  function supabaseSessionOwner(session){session=session||getSupabaseSession();return String(session&&session.user&&(session.user.id||session.user.email)||(typeof state!=='undefined'&&state.account&&state.account.email)||'').trim().toLowerCase();}
+  function supabaseSessionOwner(){
+    var session=getSupabaseSession();
+    if(!session||!session.user) return '';
+    if(session.user.id) return String(session.user.id);
+    if(session.user.email) return String(session.user.email).trim().toLowerCase();
+    return '';
+  }
   function rememberAccountEmail(email){
     var normalized=String(email||'').trim().toLowerCase();
     if(!normalized)return;
@@ -4313,8 +4331,9 @@ try {
     customMoods: [],        // user-added moods: ['Grateful', 'Hopeful', ...]
     customMoodColors: {},   // mood name -> hex color override
     groups: [ { id: 'default', name: 'Buddy Lists' } ],
-    buddies: [],            // { id, name, addedAt, groupId }
+    buddies: [],            // { id, name, addedAt, updatedAt, groupId }
     entries: {},            // buddyId -> [ { id, html, ts, kind:'entry'|'prompt' } ]
+    buddyEntryTombstones: {}, // deleted entry id -> { buddyId, deletedAt }; prevents cloud resurrection
     drafts: {},             // buddyId -> [ { id, html, ts }, ... ] saved draft log
     anonymousTips: [], // anonymous suggestions sent from this device
     mail: { address: '', inbox: [], sent: [], scheduled: [], contacts: [] }, // DtD Post Mail account, messages, and address book
@@ -4329,7 +4348,11 @@ try {
       state.groups = [{ id: 'default', name: 'Buddy Lists' }];
     }
     if(!Array.isArray(state.buddies)) state.buddies = [];
-    state.buddies.forEach(function(b){ if(!b.groupId) b.groupId = 'default'; });
+    state.buddies.forEach(function(b){
+      if(!b.groupId) b.groupId = 'default';
+      b.addedAt = Number.isFinite(Number(b.addedAt)) ? Number(b.addedAt) : 0;
+      b.updatedAt = Number.isFinite(Number(b.updatedAt)) ? Number(b.updatedAt) : b.addedAt;
+    });
     if(!state.status) state.status = { label: '', html: '', ts: null };
     if(!Array.isArray(state.statusLog)) state.statusLog = [];
     state.statusLog.forEach(function(e){ if(!e.id) e.id = uid(); });
@@ -4435,9 +4458,29 @@ try {
     state.trash = state.trash.filter(function(item){return item&&item.deletedAt&&Date.now()-item.deletedAt<7*24*60*60*1000;});
     if(!Array.isArray(state.customMoods)) state.customMoods = [];
     if(!state.customMoodColors || typeof state.customMoodColors !== 'object') state.customMoodColors = {};
-    state.entries = state.entries || {};
+    state.entries = state.entries && typeof state.entries === 'object' ? state.entries : {};
     Object.keys(state.entries).forEach(function(bid){
-      (state.entries[bid] || []).forEach(function(e){ if(!e.kind) e.kind = 'entry'; });
+      if(!Array.isArray(state.entries[bid])) state.entries[bid] = [];
+      state.entries[bid] = state.entries[bid].filter(function(e){ return e && typeof e === 'object'; });
+      state.entries[bid].forEach(function(e){
+        if(!e.id) e.id = uid();
+        if(!e.kind) e.kind = 'entry';
+      });
+    });
+    if(!state.buddyEntryTombstones || typeof state.buddyEntryTombstones !== 'object' || Array.isArray(state.buddyEntryTombstones)){
+      state.buddyEntryTombstones = {};
+    }
+    Object.keys(state.buddyEntryTombstones).forEach(function(entryId){
+      var marker=state.buddyEntryTombstones[entryId];
+      var deletedAt=Number(marker&&marker.deletedAt);
+      if(!entryId || !marker || typeof marker!=='object' || !Number.isFinite(deletedAt) || deletedAt<=0){
+        delete state.buddyEntryTombstones[entryId];
+        return;
+      }
+      state.buddyEntryTombstones[entryId]={
+        buddyId:String(marker.buddyId||''),
+        deletedAt:deletedAt
+      };
     });
     if(!state.drafts || typeof state.drafts !== 'object') state.drafts = {};
     Object.keys(state.drafts).forEach(function(bid){
@@ -5126,36 +5169,6 @@ try {
       var maxY=Math.max(0,window.innerHeight-TASKBAR_H-icon.offsetHeight);
       return {x:Math.max(0,Math.min(x,maxX)),y:Math.max(0,Math.min(y,maxY))};
     }
-    function mailboxDefaultPos(){
-      var desktop = document.getElementById('desktop');
-      var mailbox = document.getElementById('dtd-mailbox-icon');
-      var desktopWidth = (desktop && desktop.clientWidth) || window.innerWidth;
-      var desktopHeight = (desktop && desktop.clientHeight) || window.innerHeight;
-      var mailboxHeight = (mailbox && mailbox.offsetHeight) || 80;
-      var defaultY = window.matchMedia('(max-width: 700px)').matches
-        ? desktopHeight - mailboxHeight - 150
-        : 400;
-      return {
-        x: Math.max(0, Math.min(100, Math.max(0, desktopWidth - 100))),
-        y: Math.max(0, Math.min(defaultY, desktopHeight - mailboxHeight))
-      };
-    }
-    function sanitizeSavedIconPoint(icon,saved){
-      if(!saved || typeof saved!=='object') return null;
-      var x = Number(saved.x), y = Number(saved.y);
-      if(!Number.isFinite(x) || !Number.isFinite(y)) return null;
-      if(icon.id==='dtd-mailbox-icon' && saved.userPlaced !== true) return null;
-      // Older automatic fish-tank coordinates can overlap the Buddy List on
-      // narrow screens. Use the current responsive default unless the person
-      // deliberately dragged the tank somewhere else.
-      if(icon.id==='fish-tank-desktop-icon' && saved.userPlaced !== true) return null;
-      return {
-        x: x,
-        y: y,
-        overBuddyList: !!saved.overBuddyList,
-        userPlaced: saved.userPlaced === true
-      };
-    }
     function place(icon,x,y){
       var p=boundsFor(icon,x,y);
       icon.style.left=Math.round(p.x)+'px';
@@ -5208,7 +5221,6 @@ try {
           saveState();
           return;
         }
-        if(icon.id==='desktop-companion')window.__ddKobaDragSuppressTaskbarUntil=Date.now()+700;
         var perched=overlapsBuddyList(icon);
         if(icon.id==='desktop-companion')icon.classList.toggle('over-buddy-list',perched);
         state.desktopIconPositions[icon.id]={x:icon.offsetLeft,y:icon.offsetTop,overBuddyList:perched,userPlaced:true};
@@ -5236,24 +5248,15 @@ try {
         document.addEventListener('pointerup',finishDrag);
         document.addEventListener('pointercancel',finishDrag);
       });
-      icon.addEventListener('click',function(e){if(Date.now()>=suppressClickUntil)return;e.preventDefault();e.stopImmediatePropagation();},true);
+      icon.addEventListener('click',function(e){
+        if(Date.now() < suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}
+      },true);
     });
     window.addEventListener('resize',function(){
       icons.forEach(function(icon){
         var saved=state.desktopIconPositions[icon.id];
-        if(!saved) return;
-        var normalized = sanitizeSavedIconPoint(icon, saved);
-        if(icon.id==='dtd-mailbox-icon' && !normalized){
-          var mailboxDefault = mailboxDefaultPos();
-          normalized = {
-            x: mailboxDefault.x,
-            y: mailboxDefault.y,
-            overBuddyList: false,
-            userPlaced: false
-          };
-        }
-        if(!normalized) return;
-        var p=place(icon,normalized.x,normalized.y);
+        if(!saved)return;
+        var p=place(icon,Number(saved.x)||0,Number(saved.y)||0);
         if(saved.userPlaced!==true){saved.x=p.x;saved.y=p.y;}
       });
       keepPetIconsClearOfBuddyList();
@@ -5298,17 +5301,61 @@ try {
     openDtdPostWindow();
   });
   var mailboxIcon=document.getElementById('dtd-mailbox-icon'),mailboxClickTimer=null;
-  mailboxIcon.addEventListener('click',function(e){e.stopPropagation();clearTimeout(mailboxClickTimer);if(e.detail>1)return;mailboxClickTimer=setTimeout(function(){mailboxClickTimer=null;if(mailboxIcon.dataset.pigeonSceneLocked!=='true')mailboxIcon.classList.add('pigeon-click-perched');},300);});
-  mailboxIcon.addEventListener('dblclick',function(e){e.preventDefault();e.stopPropagation();clearTimeout(mailboxClickTimer);mailboxClickTimer=null;mailboxIcon.classList.remove('pigeon-click-perched');openDtdPostWindow();});
-  mailboxIcon.addEventListener('keydown',function(e){if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();e.stopPropagation();clearTimeout(mailboxClickTimer);mailboxClickTimer=null;mailboxIcon.classList.remove('pigeon-click-perched');openDtdPostWindow();});
+  function openMailboxFromDesktopIcon(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    clearTimeout(mailboxClickTimer);
+    mailboxClickTimer=null;
+    mailboxIcon.classList.remove('pigeon-click-perched');
+    if(mailboxIcon.dataset.pigeonSceneLocked==='true')return;
+    openDtdPostWindow();
+  }
+  var typewriterPlannerUrl = (function(){
+    if (window.DTD_TYPEWRITER_URL) return String(window.DTD_TYPEWRITER_URL).trim();
+    if (window.location && window.location.protocol === 'file:') {
+      return 'file:///Users/ari/Documents/Codex/2026-07-26/build-me-a-simple-digital-typewriter/outputs/daily-typewriter-planner.html';
+    }
+    return 'outputs/daily-typewriter-planner.html';
+  })();
+  function openTypewriterFromDesktopIcon(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    window.open(typewriterPlannerUrl,'_blank','noopener');
+  }
+  mailboxIcon.addEventListener('click',function(e){openMailboxFromDesktopIcon(e);});
+  mailboxIcon.addEventListener('dblclick',openMailboxFromDesktopIcon);
+  mailboxIcon.addEventListener('keydown',function(e){
+    if(e.key!=='Enter'&&e.key!==' ')return;
+    openMailboxFromDesktopIcon(e);
+  });
+  var typewriterIcon=document.getElementById('typewriter-desktop-icon');
+  if(typewriterIcon){
+    typewriterIcon.addEventListener('click',function(e){openTypewriterFromDesktopIcon(e);});
+    typewriterIcon.addEventListener('dblclick',openTypewriterFromDesktopIcon);
+    typewriterIcon.addEventListener('keydown',function(e){
+      if(e.key!=='Enter'&&e.key!==' ')return;
+      openTypewriterFromDesktopIcon(e);
+    });
+  }
   (function(){
     var tbNotepad=document.getElementById('tb-notebook-taskbar');
     var suggestionIcon=document.getElementById('suggestion-desktop-icon');
     if(suggestionIcon){
-      suggestionIcon.addEventListener('click', function(e){e.stopPropagation();openSuggestionBoxWindow();});
-      suggestionIcon.addEventListener('dblclick', function(e){e.preventDefault();e.stopPropagation();openSuggestionBoxWindow();});
-      suggestionIcon.addEventListener('keydown', function(e){if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();e.stopPropagation();openSuggestionBoxWindow();});
+      suggestionIcon.addEventListener('click',function(e){
+        e.stopPropagation();
+        openSuggestionBoxWindow();
+      });
+      suggestionIcon.addEventListener('dblclick',function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        openSuggestionBoxWindow();
+      });
+      suggestionIcon.addEventListener('keydown',function(e){
+        if(e.key!=='Enter'&&e.key!==' ')return;
+        e.preventDefault();
+        e.stopPropagation();
+        openSuggestionBoxWindow();
+      });
     }
+
     function wirePetDesktopIcon(id,path){
       var icon=document.getElementById(id);
       if(!icon)return;
@@ -5324,37 +5371,35 @@ try {
 
     function toggleNotebookWindow(){
       if(!document.body.classList.contains('signed-in')){
-        if(typeof showSignon === 'function') showSignon();
+        if(typeof showSignon==='function')showSignon();
         return;
       }
-      // Keep the taskbar control usable if a modular build omits the compact
-      // embedded notebook implementation.
-      if(typeof openNotebookWindow !== 'function'){
+      if(typeof openNotebookWindow!=='function'){
         window.open('MyNotepad.html','_blank','noopener');
         return;
       }
       function updateNotebookTaskbarIcon(){
-        var r = openWindows.find(function(w){ return w.type === 'notebook'; });
-        var isOpen = !!r && !r.minimized && r.el.style.display !== 'none';
-        if(tbNotepad) tbNotepad.setAttribute('aria-expanded', String(isOpen));
+        var r=openWindows.find(function(w){return w.type==='notebook';});
+        var isOpen=!!r&&!r.minimized&&r.el.style.display!=='none';
+        if(tbNotepad)tbNotepad.setAttribute('aria-expanded',String(isOpen));
       }
-      var rec = openWindows.find(function(w){ return w.type === 'notebook'; });
+      var rec=openWindows.find(function(w){return w.type==='notebook';});
       if(!rec){
         openNotebookWindow();
         updateNotebookTaskbarIcon();
         return;
       }
-      if(rec.minimized || rec.el.style.display === 'none'){
+      if(rec.minimized||rec.el.style.display==='none'){
         focusWindow(rec.id);
-      } else if(activeWindowId === rec.id){
+      }else if(activeWindowId===rec.id){
         minimizeWindow(rec);
-      } else {
+      }else{
         focusWindow(rec.id);
       }
       updateNotebookTaskbarIcon();
     }
     if(tbNotepad){
-      tbNotepad.addEventListener('click', function(e){
+      tbNotepad.addEventListener('click',function(e){
         e.preventDefault();
         e.stopPropagation();
         toggleNotebookWindow();
@@ -5370,6 +5415,13 @@ try {
     var trashIcon=document.getElementById('trash-desktop-icon');
     var trashArt=trashIcon&&trashIcon.querySelector('.trash-icon-art');
     var trashClickTimer=0;
+    function openTrashFromDesktopIcon(e){
+      if(e){e.preventDefault();e.stopPropagation();}
+      clearTimeout(trashClickTimer);
+      trashClickTimer=0;
+      wiggleTrash();
+      openTrashWindow();
+    }
     function wiggleTrash(){
       trashClickTimer=0;
       if(!trashArt)return;
@@ -5378,24 +5430,11 @@ try {
       trashArt.classList.add('is-wiggling');
     }
     trashArt.addEventListener('animationend',function(e){if(e.animationName==='trash-desktop-wiggle')trashArt.classList.remove('is-wiggling');});
-    trashIcon.addEventListener('click',function(e){
-      e.stopPropagation();
-      clearTimeout(trashClickTimer);
-      if(e.detail>1)return;
-      trashClickTimer=setTimeout(wiggleTrash,260);
-    });
-    trashIcon.addEventListener('dblclick',function(e){
-      e.preventDefault();e.stopPropagation();
-      clearTimeout(trashClickTimer);trashClickTimer=0;
-      trashArt.classList.remove('is-wiggling');
-      openTrashWindow();
-    });
+    trashIcon.addEventListener('click',openTrashFromDesktopIcon);
+    trashIcon.addEventListener('dblclick',openTrashFromDesktopIcon);
     trashIcon.addEventListener('keydown',function(e){
       if(e.key!=='Enter'&&e.key!==' ')return;
-      e.preventDefault();e.stopPropagation();
-      clearTimeout(trashClickTimer);trashClickTimer=0;
-      trashArt.classList.remove('is-wiggling');
-      openTrashWindow();
+      openTrashFromDesktopIcon(e);
     });
   })();
   (function(){
@@ -6016,6 +6055,136 @@ try {
     return chunks;
   }
 
+  function buddyEntryRevision(entry){
+    entry=entry&&typeof entry==='object'?entry:{};
+    return Math.max(Number(entry.restoredAt)||0,Number(entry.editedAt)||0,Number(entry.ts)||0);
+  }
+  function stableLegacyBuddyEntryId(entry,buddyId){
+    var source=[
+      String(buddyId||''),
+      String(entry&&entry.ts||''),
+      String(entry&&entry.kind||''),
+      String(entry&&entry.author||''),
+      String(entry&&(entry.html!==undefined?entry.html:entry.text)||'')
+    ].join('|');
+    var hash=2166136261;
+    for(var i=0;i<source.length;i++){
+      hash^=source.charCodeAt(i);
+      hash=Math.imul(hash,16777619);
+    }
+    return 'legacy-'+(hash>>>0).toString(36);
+  }
+  function mergeBuddyEntryTombstones(localMarkers,cloudMarkers){
+    var merged={};
+    function include(markers){
+      if(!markers||typeof markers!=='object'||Array.isArray(markers))return;
+      Object.keys(markers).forEach(function(entryId){
+        var marker=markers[entryId],deletedAt=Number(marker&&marker.deletedAt)||0;
+        if(!entryId||!deletedAt)return;
+        if(!merged[entryId]||deletedAt>merged[entryId].deletedAt){
+          merged[entryId]={buddyId:String(marker.buddyId||''),deletedAt:deletedAt};
+        }
+      });
+    }
+    include(localMarkers);
+    include(cloudMarkers);
+    return merged;
+  }
+  function chooseBuddyEntryVersion(first,second){
+    var firstRevision=buddyEntryRevision(first),secondRevision=buddyEntryRevision(second);
+    if(firstRevision!==secondRevision)return firstRevision>secondRevision?first:second;
+    return JSON.stringify(first)>=JSON.stringify(second)?first:second;
+  }
+  function mergeBuddyEntryCollections(localEntries,cloudEntries,localMarkers,cloudMarkers){
+    var byId={},buddyById={},markers=mergeBuddyEntryTombstones(localMarkers,cloudMarkers);
+    function include(collection){
+      if(!collection||typeof collection!=='object')return;
+      Object.keys(collection).forEach(function(buddyId){
+        var entries=Array.isArray(collection[buddyId])?collection[buddyId]:[];
+        entries.forEach(function(rawEntry){
+          if(!rawEntry||typeof rawEntry!=='object')return;
+          var entry=Object.assign({},rawEntry);
+          entry.id=String(entry.id||stableLegacyBuddyEntryId(entry,buddyId));
+          var existing=byId[entry.id];
+          if(!existing||chooseBuddyEntryVersion(existing,entry)===entry){
+            byId[entry.id]=entry;
+            buddyById[entry.id]=String(buddyId);
+          }
+        });
+      });
+    }
+    include(localEntries);
+    include(cloudEntries);
+    var mergedEntries={};
+    Object.keys(byId).forEach(function(entryId){
+      var entry=byId[entryId],marker=markers[entryId];
+      if(marker&&marker.deletedAt>=buddyEntryRevision(entry))return;
+      if(marker)delete markers[entryId];
+      var buddyId=buddyById[entryId]||String(marker&&marker.buddyId||'');
+      if(!buddyId)return;
+      if(!mergedEntries[buddyId])mergedEntries[buddyId]=[];
+      mergedEntries[buddyId].push(entry);
+    });
+    Object.keys(mergedEntries).forEach(function(buddyId){
+      mergedEntries[buddyId].sort(function(a,b){
+        var timeDifference=(Number(a.ts)||0)-(Number(b.ts)||0);
+        return timeDifference||String(a.id).localeCompare(String(b.id));
+      });
+    });
+    return {entries:mergedEntries,tombstones:markers};
+  }
+  function recordBuddyEntryDeletion(buddyId,entry){
+    if(!entry||!entry.id)return;
+    if(!state.buddyEntryTombstones||typeof state.buddyEntryTombstones!=='object')state.buddyEntryTombstones={};
+    var deletedAt=Date.now(),existing=state.buddyEntryTombstones[entry.id];
+    if(existing&&Number(existing.deletedAt)>=deletedAt)deletedAt=Number(existing.deletedAt)+1;
+    state.buddyEntryTombstones[entry.id]={buddyId:String(buddyId||''),deletedAt:deletedAt};
+  }
+  function recordBuddyEntriesDeletion(buddyId,entries){
+    (Array.isArray(entries)?entries:[]).forEach(function(entry){recordBuddyEntryDeletion(buddyId,entry);});
+  }
+  function mergeCloudBuddyLists(localBuddies,cloudBuddies,requiredCloudBuddyIds){
+    var byId={},requiredIds=null;
+    if(Array.isArray(requiredCloudBuddyIds)){
+      requiredIds={};
+      requiredCloudBuddyIds.forEach(function(id){requiredIds[String(id)]=true;});
+    }
+    function include(list,filterCloudOnly){
+      (Array.isArray(list)?list:[]).forEach(function(rawBuddy){
+        if(!rawBuddy||!rawBuddy.id)return;
+        var buddy=Object.assign({},rawBuddy),existing=byId[buddy.id];
+        if(filterCloudOnly&&requiredIds&&!existing&&!requiredIds[String(buddy.id)])return;
+        var buddyRevision=Math.max(Number(buddy.updatedAt)||0,Number(buddy.addedAt)||0);
+        var existingRevision=Math.max(Number(existing&&existing.updatedAt)||0,Number(existing&&existing.addedAt)||0);
+        if(!existing||buddyRevision>existingRevision||
+           (buddyRevision===existingRevision&&JSON.stringify(buddy)>JSON.stringify(existing))){
+          byId[buddy.id]=buddy;
+        }
+      });
+    }
+    include(localBuddies,false);
+    include(cloudBuddies,true);
+    return Object.keys(byId).map(function(id){return byId[id];}).sort(function(a,b){
+      return (Number(a.addedAt)||0)-(Number(b.addedAt)||0)||String(a.id).localeCompare(String(b.id));
+    });
+  }
+  function fetchCloudBuddyEntries(uid,chunkCounts){
+    chunkCounts=chunkCounts&&typeof chunkCounts==='object'?chunkCounts:{};
+    var cloudEntries={};
+    var fetches=Object.keys(chunkCounts).map(function(buddyId){
+      var count=Math.max(0,Math.floor(Number(chunkCounts[buddyId])||0)),docFetches=[];
+      for(var i=0;i<count;i++){
+        docFetches.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).get());
+      }
+      return Promise.all(docFetches).then(function(snaps){
+        var all=[];
+        snaps.forEach(function(s){if(s.exists)all=all.concat((s.data()||{}).entries||[]);});
+        cloudEntries[buddyId]=all;
+      });
+    });
+    return Promise.all(fetches).then(function(){return cloudEntries;});
+  }
+
   function cloudMetaContentCount(meta){
     meta = meta || {};
     var count = 0;
@@ -6100,7 +6269,7 @@ try {
       profileUpdatedAt:profileChoice.revision
     };
   }
-  function pushCloudMetaTransaction(metaRef,proposedMeta,prepareMeta){
+  function pushCloudMetaTransaction(metaRef,proposedMeta,prepareMeta,writeRelatedDocuments){
     var localIdentity=currentCloudProfileIdentity();
     return db.runTransaction(function(transaction){
       return transaction.get(metaRef).then(function(existingSnap){
@@ -6120,6 +6289,7 @@ try {
         candidateMeta.accountEmail=mergedIdentity.accountEmail;
         if(typeof prepareMeta==='function')prepareMeta(candidateMeta,existingMeta);
         transaction.set(metaRef,candidateMeta);
+        if(typeof writeRelatedDocuments==='function')writeRelatedDocuments(transaction,candidateMeta);
         return candidateMeta;
       });
     });
@@ -6134,64 +6304,116 @@ try {
   function pushToCloud(){
     if(!db || !cloudUser) return Promise.reject(new Error('Not signed in.'));
     if(!canUseCloudForActiveAccount(cloudUser))return Promise.reject(new Error('Google Cloud Sync must use the same signed-in DesktopDiary account.'));
-    var uid = cloudUser.uid;
-    var meta = {
-      screenName: state.account ? state.account.screenName : '',
-      groups: state.groups,
-      buddies: state.buddies,
-      status: state.status,
-      statusLog: state.statusLog,
-      statusPresets: state.statusPresets,
-      moodLog: state.moodLog,
-      drafts: state.drafts,
-      profile: state.profile,
-      accountEmail: cloudIdentityEmail(state.account&&state.account.email),
-      screenNameUpdatedAt: Number(state.screenNameUpdatedAt)||0,
-      profileUpdatedAt: Number(state.profileUpdatedAt)||0,
-      blogPosts: state.blogPosts,
-      bgColor: (state.background && state.background.color) || '',
-      hasBgImage: !!(state.background && state.background.image),
-      customFonts: state.customFonts,
-      customMoods: state.customMoods,
-      customMoodColors: state.customMoodColors,
-      theme: state.theme,
-      customThemePresets: state.customThemePresets,
-      notebook: {
-        pages:(state.notebook && Array.isArray(state.notebook.pages) ? state.notebook.pages : []).map(function(page){
-          return {
-            id: page.id,
-            title: page.title || '',
-            text: page.text || '',
-            createdAt: Number(page.createdAt) || 0,
-            updatedAt: Number(page.updatedAt) || 0,
-            order: Number(page.order) || 0
-          };
-        }),
-        currentPageId: state.notebook && state.notebook.currentPageId ? state.notebook.currentPageId : null
-      },
-      chunkCounts: {},
-      updatedAt: Date.now()
-    };
-    var entryChunks = {};
-    Object.keys(state.entries).forEach(function(buddyId){
-      entryChunks[buddyId] = chunkEntries(state.entries[buddyId]);
-      meta.chunkCounts[buddyId] = entryChunks[buddyId].length;
-    });
-    var metaRef = db.collection('users').doc(uid).collection('diary').doc('meta');
-    var writes = [];
-      Object.keys(entryChunks).forEach(function(buddyId){
-        entryChunks[buddyId].forEach(function(chunk, i){
-          writes.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).set({ entries: chunk }));
+    return pushBuddySafeCloudSnapshot(cloudUser.uid,0);
+  }
+
+  function pushBuddySafeCloudSnapshot(uid,retryCount){
+    var metaRef=db.collection('users').doc(uid).collection('diary').doc('meta');
+    return metaRef.get().then(function(baseSnap){
+      var baseMeta=baseSnap.exists?(baseSnap.data()||{}):{};
+      var baseBuddyRevision=Number(baseMeta.buddyEntriesRevision)||0;
+      return fetchCloudBuddyEntries(uid,baseMeta.chunkCounts).then(function(cloudEntries){
+        var mergedMessages=mergeBuddyEntryCollections(
+          state.entries,
+          cloudEntries,
+          state.buddyEntryTombstones,
+          baseMeta.buddyEntryTombstones
+        );
+        state.entries=mergedMessages.entries;
+        state.buddyEntryTombstones=mergedMessages.tombstones;
+        state.buddies=mergeCloudBuddyLists(state.buddies,baseMeta.buddies,Object.keys(state.entries));
+        var entryChunks={};
+        var meta = {
+          screenName: state.account ? state.account.screenName : '',
+          groups: state.groups,
+          buddies: state.buddies,
+          status: state.status,
+          statusLog: state.statusLog,
+          statusPresets: state.statusPresets,
+          moodLog: state.moodLog,
+          drafts: state.drafts,
+          profile: state.profile,
+          accountEmail: cloudIdentityEmail(state.account&&state.account.email),
+          screenNameUpdatedAt: Number(state.screenNameUpdatedAt)||0,
+          profileUpdatedAt: Number(state.profileUpdatedAt)||0,
+          blogPosts: state.blogPosts,
+          bgColor: (state.background && state.background.color) || '',
+          hasBgImage: !!(state.background && state.background.image),
+          customFonts: state.customFonts,
+          customMoods: state.customMoods,
+          customMoodColors: state.customMoodColors,
+          theme: state.theme,
+          customThemePresets: state.customThemePresets,
+          notebook: {
+            pages:(state.notebook && Array.isArray(state.notebook.pages) ? state.notebook.pages : []).map(function(page){
+              return {
+                id: page.id,
+                title: page.title || '',
+                text: page.text || '',
+                createdAt: Number(page.createdAt) || 0,
+                updatedAt: Number(page.updatedAt) || 0,
+                order: Number(page.order) || 0
+              };
+            }),
+            currentPageId: state.notebook && state.notebook.currentPageId ? state.notebook.currentPageId : null
+          },
+          buddyEntryTombstones: state.buddyEntryTombstones,
+          buddyEntriesRevision: baseBuddyRevision+1,
+          chunkCounts: {},
+          updatedAt: Date.now()
+        };
+        function prepareBuddyChunks(candidateMeta,latestMeta){
+          var latestBuddyRevision=Number(latestMeta.buddyEntriesRevision)||0;
+          if(latestBuddyRevision!==baseBuddyRevision){
+            var retryError=new Error('Buddy messages changed in cloud while syncing. Retrying with the newer copy.');
+            retryError.code='cloud-buddy-retry';
+            throw retryError;
+          }
+          var finalMessages=mergeBuddyEntryCollections(
+            state.entries,
+            {},
+            state.buddyEntryTombstones,
+            latestMeta.buddyEntryTombstones
+          );
+          state.entries=finalMessages.entries;
+          state.buddyEntryTombstones=finalMessages.tombstones;
+          state.buddies=mergeCloudBuddyLists(state.buddies,latestMeta.buddies,Object.keys(state.entries));
+          candidateMeta.buddies=state.buddies;
+          candidateMeta.buddyEntryTombstones=state.buddyEntryTombstones;
+          candidateMeta.buddyEntriesRevision=baseBuddyRevision+1;
+          candidateMeta.chunkCounts={};
+          entryChunks={};
+          Object.keys(state.entries).forEach(function(buddyId){
+            entryChunks[buddyId]=chunkEntries(state.entries[buddyId]);
+            candidateMeta.chunkCounts[buddyId]=entryChunks[buddyId].length;
+          });
+        }
+        function writeBuddyChunks(transaction){
+          Object.keys(entryChunks).forEach(function(buddyId){
+            entryChunks[buddyId].forEach(function(chunk,i){
+              var chunkRef=db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i);
+              transaction.set(chunkRef,{entries:chunk});
+            });
+          });
+        }
+        return pushCloudMetaTransaction(metaRef,meta,prepareBuddyChunks,writeBuddyChunks).then(function(){
+          var writes=[];
+          // Background images remain separate because a data URI can approach
+          // Firestore's per-document size limit.
+          if(state.background&&state.background.image){
+            writes.push(db.collection('users').doc(uid).collection('diary').doc('background').set({image:state.background.image}));
+          }else{
+            writes.push(db.collection('users').doc(uid).collection('diary').doc('background').delete().catch(function(){}));
+          }
+          return Promise.all(writes);
         });
       });
-      // background image lives in its own doc (can be a large data URI) so it never
-      // risks pushing the meta doc over Firestore's ~1MB document size limit
-      if(state.background && state.background.image){
-        writes.push(db.collection('users').doc(uid).collection('diary').doc('background').set({ image: state.background.image }));
-      } else {
-        writes.push(db.collection('users').doc(uid).collection('diary').doc('background').delete().catch(function(){}));
+    }).catch(function(error){
+      if(error&&error.code==='cloud-buddy-retry'&&retryCount<3){
+        return pushBuddySafeCloudSnapshot(uid,retryCount+1);
       }
-    return pushCloudMetaTransaction(metaRef,meta).then(function(){return Promise.all(writes);});
+      throw error;
+    });
   }
 
   function pullFromCloud(){
@@ -6202,21 +6424,8 @@ try {
     return db.collection('users').doc(uid).collection('diary').doc('meta').get().then(function(snap){
       if(!snap.exists) return false;
       var meta = snap.data() || {};
-      var chunkCounts = meta.chunkCounts || {};
-      var buddyIds = Object.keys(chunkCounts);
-      var cloudEntries = {};
-      var fetches = buddyIds.map(function(buddyId){
-        var n = chunkCounts[buddyId];
-        var docFetches = [];
-        for(var i=0;i<n;i++){
-          docFetches.push(db.collection('users').doc(uid).collection('entries').doc(buddyId+'_'+i).get());
-        }
-        return Promise.all(docFetches).then(function(snaps){
-          var all = [];
-          snaps.forEach(function(s){ if(s.exists) all = all.concat((s.data()||{}).entries || []); });
-          cloudEntries[buddyId] = all;
-        });
-      });
+      var cloudEntries={};
+      var entriesFetch=fetchCloudBuddyEntries(uid,meta.chunkCounts).then(function(entries){cloudEntries=entries;});
       var cloudBackground = { color: meta.bgColor || '', image: '' };
       // background image lives in its own doc; only fetch it if push indicated one exists
       var bgFetch = meta.hasBgImage
@@ -6226,11 +6435,10 @@ try {
             cloudBackground.image = '';
           })
         : Promise.resolve();
-      return Promise.all(fetches.concat([bgFetch])).then(function(){
+      return Promise.all([entriesFetch,bgFetch]).then(function(){
         // Do not let an older cloud snapshot overwrite edits made while it was loading.
         if(stateRevision !== pullStartedRevision) return false;
         state.groups = meta.groups || state.groups;
-        state.buddies = meta.buddies || [];
         state.status = meta.status || { label:'', html:'', ts:null };
         state.statusLog = meta.statusLog || [];
         state.statusPresets = meta.statusPresets || [];
@@ -6252,7 +6460,17 @@ try {
         else if(Array.isArray(meta.stickyNotes)) state.stickyNotes = meta.stickyNotes;
         if(state.account && mergedIdentity.screenName) state.account.screenName = mergedIdentity.screenName;
         state.screenNameUpdatedAt = mergedIdentity.screenNameUpdatedAt;
-        state.entries = cloudEntries;
+        var mergedMessages=mergeBuddyEntryCollections(
+          state.entries,
+          cloudEntries,
+          state.buddyEntryTombstones,
+          meta.buddyEntryTombstones
+        );
+        state.entries = mergedMessages.entries;
+        state.buddyEntryTombstones = mergedMessages.tombstones;
+        // Cloud Buddy Lists remain authoritative, while any local list that
+        // still owns a surviving unsynced message is retained.
+        state.buddies = mergeCloudBuddyLists(meta.buddies,state.buddies,Object.keys(state.entries));
         state.background = cloudBackground;
         normalizeState();
         return saveState().then(function(){ return true; });
@@ -6274,8 +6492,7 @@ try {
   var SITE_SOUND_PATHS = {
     buddyOn: 'buddy%20on.mp3',
     buddyOut: 'buddy-out.mp3',
-    imSent: 'IM%20Sent.mp3',
-    logOff: 'log%20off.wav'
+    imSent: 'IM%20Sent.mp3'
   };
   var siteSoundTemplates = {};
 
@@ -6514,12 +6731,19 @@ try {
     }else if(item.type==='buddy'){
       var pack=item.data||{},restoredBuddy=pack.buddy;if(!restoredBuddy)return false;
       if(!state.groups.some(function(g){return g.id===restoredBuddy.groupId;}))restoredBuddy.groupId='default';
+      restoredBuddy.updatedAt=Date.now();
       if(!state.buddies.some(function(b){return b.id===restoredBuddy.id;}))state.buddies.push(restoredBuddy);
       state.entries[restoredBuddy.id]=Array.isArray(pack.entries)?pack.entries:[];
+      state.entries[restoredBuddy.id].forEach(function(entry){
+        entry.restoredAt=Date.now();
+        if(state.buddyEntryTombstones)delete state.buddyEntryTombstones[entry.id];
+      });
       state.drafts[restoredBuddy.id]=Array.isArray(pack.drafts)?pack.drafts:[];
     }else if(item.type==='buddyEntry'){
       var buddy=state.buddies.find(function(b){return b.id===item.meta.buddyId;});if(!buddy){openInfoWindow('That diary no longer exists, so this entry cannot be restored.');return false;}
       state.entries[item.meta.buddyId]=state.entries[item.meta.buddyId]||[];
+      item.data.restoredAt=Date.now();
+      if(state.buddyEntryTombstones)delete state.buddyEntryTombstones[item.data.id];
       if(!state.entries[item.meta.buddyId].some(function(e){return e.id===item.data.id;}))state.entries[item.meta.buddyId].push(item.data);
     }else if(item.type==='diaryPost'){
       state.blogPosts=state.blogPosts||[];
@@ -6755,7 +6979,8 @@ try {
     if(!name) return null;
     var existing = findBuddyByName(name);
     if(existing) return existing;
-    var b = { id: uid(), name: name, addedAt: Date.now(), groupId: groupId || 'default' };
+    var now=Date.now();
+    var b = { id: uid(), name: name, addedAt: now, updatedAt: now, groupId: groupId || 'default' };
     state.buddies.push(b);
     state.entries[b.id] = [];
     return b;
@@ -6834,68 +7059,6 @@ try {
       document.getElementById('in-savepw').checked = false;
       document.getElementById('in-autologin').checked = false;
     }
-  }
-
-  var GUEST_ISOLATION_RECOVERY_KEY=STORAGE_KEY+'-pre-guest-isolation-recovery';
-  function isExplicitGuestState(candidate){
-    var account=candidate&&candidate.account;
-    if(!account||String(account.email||'').trim())return false;
-    var name=String(account.screenName||'').trim().toLowerCase();
-    return account.mode==='guest'||!name||name==='guest';
-  }
-  function preserveSuspiciousGuestState(store,rawValue){
-    if(!store||!rawValue)return Promise.resolve();
-    return store.get(GUEST_ISOLATION_RECOVERY_KEY,false).then(function(existing){
-      if(!existing||!existing.value)return store.set(GUEST_ISOLATION_RECOVERY_KEY,rawValue,false);
-    }).catch(function(){});
-  }
-  function loadIsolatedGuestState(){
-    var store=getLocalStore();
-    if(!store)return Promise.resolve(makeFreshState());
-    return store.get(STORAGE_KEY,false).then(function(saved){
-      var candidate=null;
-      if(saved&&saved.value){
-        try{candidate=JSON.parse(saved.value);}catch(e){}
-      }
-      if(isExplicitGuestState(candidate))return candidate;
-      return preserveSuspiciousGuestState(store,saved&&saved.value).then(function(){
-        return makeFreshState();
-      });
-    }).catch(function(){return makeFreshState();});
-  }
-  function prepareGuestState(candidate){
-    state=candidate||makeFreshState();
-    normalizeState();
-    state.savePassword=false;
-    state.autoLogin=false;
-    state.account=state.account||{};
-    state.account.mode='guest';
-    state.account.screenName=String(state.account.screenName||'').trim()||'Guest';
-    state.account.email='';
-    state.account.password='';
-    delete state.account.pendingEmail;
-  }
-  function continueOfflineFromSignon(){
-    var errEl = document.getElementById('signon-error');
-    if(errEl){
-      errEl.style.color = '#2a7d2a';
-      errEl.textContent = 'Entering offline mode…';
-    }
-    document.getElementById('signon-wrap').style.display = 'none';
-    document.getElementById('signon-icon').style.display = 'none';
-    // Invalidate a Firebase pull that may already be in flight before changing
-    // identities. Its revision check will then refuse to apply account data.
-    stateRevision++;
-    setSupabaseSession(null);
-    activeStorageKey = STORAGE_KEY;
-    var cloudSignOut=signOutCloud().catch(function(){});
-    return Promise.all([loadIsolatedGuestState(),cloudSignOut]).then(function(results){
-      prepareGuestState(results[0]);
-      return saveState();
-    }).then(function(){return enterDesktop();}).catch(function(){
-      prepareGuestState(makeFreshState());
-      return saveState().catch(function(){}).then(function(){return enterDesktop();});
-    });
   }
 
   document.getElementById('account-switch').addEventListener('click',function(){
@@ -7136,15 +7299,6 @@ try {
       return;
     }
     setActiveSession(true);
-    document.body.classList.remove('koba-minimized');
-    document.body.classList.add('signed-in');
-    document.getElementById('signon-icon').style.display = 'none';
-    if(window.anchorKobaPlayBallHome)window.anchorKobaPlayBallHome(true);
-    if(window.placeKobaInKennel)window.placeKobaInKennel();
-    if(typeof window.__ddStartupBlockersClear === 'function'){
-      window.__ddStartupBlockersClear();
-    }
-    setActiveSession(true);
     document.body.classList.add('signed-in');
     document.getElementById('signon-icon').style.display = 'none';
     if(!dtdUsageSessionTracked){dtdUsageSessionTracked=true;trackDtdUsage('session_started');}
@@ -7158,7 +7312,6 @@ try {
     var connectingWindow=document.getElementById('connecting-wrap');
     connectingWindow.style.zIndex=++zCounter;
     connectingWindow.style.display='block';
-    playSiteSound('buddyOn', 0.9);
     setTimeout(function(){
       document.getElementById('connecting-wrap').style.display = 'none';
       showBuddyList();
@@ -7189,11 +7342,10 @@ try {
     var blRect = bl.getBoundingClientRect();
     var tbRect = toolbar.getBoundingClientRect();
     var iw = icon.offsetWidth || 110, ih = icon.offsetHeight || 120;
-    var taskbarHeight = taskbar ? taskbar.offsetHeight : TASKBAR_H;
-    var left = desktop.clientWidth<=700
-      ? Math.max(0,Math.min(desktop.clientWidth*.52,desktop.clientWidth-iw))
-      : Math.max(0,desktop.clientWidth-iw-8);
-    var top = Math.max(0, desktop.clientHeight - taskbarHeight - ih - 6);
+    var left = blRect.left + (blRect.width - iw) / 2;
+    var top = tbRect.top - ih + 16;
+    left = Math.max(0, Math.min(left, window.innerWidth - iw));
+    top = Math.max(0, Math.min(top, window.innerHeight - TASKBAR_H - ih));
     icon.style.left = Math.round(left) + 'px';
     icon.style.top = Math.round(top) + 'px';
     icon.style.right = 'auto';
@@ -7280,6 +7432,20 @@ try {
     }
   }
 
+  function editBuddyName(buddy,onRenamed){
+    if(!buddy)return;
+    appTextPrompt('Edit buddy name',buddy.name,function(nextName){
+      if(nextName===null)return;
+      nextName=nextName.trim();
+      if(!nextName||nextName===buddy.name)return;
+      buddy.name=nextName;
+      buddy.updatedAt=Date.now();
+      saveState();
+      renderBuddyList();
+      if(typeof onRenamed==='function')onRenamed(nextName);
+    });
+  }
+
   var buddyListWinRecord = null;
   function registerBuddyListWindow(){
     if(buddyListWinRecord) return buddyListWinRecord;
@@ -7364,8 +7530,20 @@ try {
           '<span class="bl-name-wrap">' +
             '<span class="bl-name">' + escapeHtml(b.name) + '</span>' +
             '<span class="bl-sub">' + (ts ? relTime(ts) : 'new buddy') + '</span>' +
-          '</span>';
+          '</span>' +
+          '<span class="bl-group-rename bl-buddy-edit" role="button" tabindex="0" aria-label="Edit '+escapeHtml(b.name)+'">Edit</span>';
         row.addEventListener('click', function(){ openIMWindow(b.id); });
+        var editBuddy=row.querySelector('.bl-buddy-edit');
+        function beginBuddyEdit(e){
+          e.preventDefault();
+          e.stopPropagation();
+          editBuddyName(b);
+        }
+        editBuddy.addEventListener('click',beginBuddyEdit);
+        editBuddy.addEventListener('keydown',function(e){
+          if(e.key!=='Enter'&&e.key!==' ')return;
+          beginBuddyEdit(e);
+        });
         listEl.appendChild(row);
       });
     });
@@ -7472,32 +7650,6 @@ try {
     var profileWindow=openWindows.find(function(w){return w.type==='viewprofile';});if(profileWindow&&profileWindow.el&&profileWindow.el._refreshProfile)profileWindow.el._refreshProfile();
   });
 
-  function closeWindowIfPossible(){
-    try {
-      window.close();
-    } catch (e) {}
-    setTimeout(function(){
-      if(!window.closed){
-        try{ window.location.replace('about:blank'); }
-        catch(e){ document.documentElement.innerHTML = ''; }
-      }
-    }, 150);
-  }
-
-  function logOffAndClose(){
-    var isSignedInNow = document.body && document.body.classList ? document.body.classList.contains('signed-in') : false;
-    if(!isSignedInNow){
-      playSiteSound('logOff', 0.85);
-      setTimeout(closeWindowIfPossible, 4000);
-      return;
-    }
-    signOff({
-      suppressSignon: true,
-      playLogOffSound: true,
-      onComplete: closeWindowIfPossible
-    });
-  }
-
   var signOffInProgress = false;
   function closeDesktopDiaryPage(){
     try{ window.close(); }catch(e){}
@@ -7512,12 +7664,7 @@ try {
     signOffInProgress = true;
     var closePageAfterSound = closePage === true;
     var signOffStartedAt = Date.now();
-    var shouldPlayLogOffSound = closePageAfterSound;
-    var signOffSoundSequenceMs = shouldPlayLogOffSound ? 4470 : 470;
-    playSiteSound('buddyOut', 0.9);
-    if(closePageAfterSound){
-      setTimeout(function(){ playSiteSound('logOff', 0.85); }, 470);
-    }
+    var signOffSoundSequenceMs = 0;
     setActiveSession(false);
     dtdUsageSessionTracked=false;
     setSupabaseSession(null);
@@ -7604,8 +7751,7 @@ try {
 
   function createWindow(opts){
     // opts: title, bodyHtml, onMount(el), onClose(), extraClass, type, buddyId,
-    //       initialLeft/initialTop (optional desktop opening position),
-    //       hideMinimize/hideMaximize/hideClose, addToTaskbar
+    //       initialLeft/initialTop (optional desktop opening position)
     var id = uid();
     var el = document.createElement('div');
     el.className = 'win ' + (opts.extraClass || '');
@@ -7613,14 +7759,10 @@ try {
     el.style.zIndex = ++zCounter;
 
     var bodyHtml=opts.bodyHtml||'',hasOwnConstruction=/dtd-construction/.test(bodyHtml),constructionHtml=(opts.constructionBar===false||hasOwnConstruction)?'':constructionBar();
-    var titlebarButtons = '';
-    if(!opts.hideMinimize) titlebarButtons += '<button class="win-btn min-btn" title="Minimize">&#8211;</button>';
-    if(!opts.hideMaximize) titlebarButtons += '<button class="win-btn max-btn" title="Maximize">&#9723;</button>';
-    if(!opts.hideClose) titlebarButtons += '<button class="win-btn close-btn">X</button>';
     el.innerHTML =
       '<div class="titlebar">' +
         '<span class="t-title">' + mascotSVG(15) + '<span>' + escapeHtml(opts.title) + '</span></span>' +
-        '<span class="t-btns">' + titlebarButtons + '</span>' +
+        '<span class="t-btns"><button class="win-btn min-btn" title="Minimize">&#8211;</button><button class="win-btn max-btn" title="Maximize">&#9723;</button><button class="win-btn close-btn">X</button></span>' +
       '</div>' +
       (opts.menuHtml || '') +
       constructionHtml +
@@ -7652,31 +7794,20 @@ try {
 
     var record = { id: id, el: el, type: opts.type, buddyId: opts.buddyId, onClose: opts.onClose, maximized: false, prevRect: null, minimized: false };
     openWindows.push(record);
-    if(opts.addToTaskbar !== false){
-      addTaskbarItem(record, opts.title);
-    }
+    addTaskbarItem(record, opts.title);
 
-    var closeBtn = el.querySelector('.close-btn');
-    var minBtn = el.querySelector('.min-btn');
-    var maxBtn = el.querySelector('.max-btn');
-    if(closeBtn){
-      closeBtn.addEventListener('click', function(){ closeWindow(id); });
-    }
-    if(minBtn){
-      minBtn.addEventListener('click', function(e){
-        e.stopPropagation();
-        minimizeWindow(record);
-      });
-    }
-    if(maxBtn){
-      maxBtn.addEventListener('click', function(e){
-        e.stopPropagation();
-        toggleMaximize(record);
-      });
-    }
+    el.querySelector('.close-btn').addEventListener('click', function(){ closeWindow(id); });
+    el.querySelector('.min-btn').addEventListener('click', function(e){
+      e.stopPropagation();
+      minimizeWindow(record);
+    });
+    el.querySelector('.max-btn').addEventListener('click', function(e){
+      e.stopPropagation();
+      toggleMaximize(record);
+    });
     el.addEventListener('mousedown', function(){ focusWindow(id); });
     el.addEventListener('touchstart', function(){ focusWindow(id); }, { passive: true });
-    makeDraggable(el, el.querySelector('.titlebar'), opts.onDragEnd);
+    makeDraggable(el, el.querySelector('.titlebar'));
     focusWindow(id);
 
     if(opts.onMount) opts.onMount(el, id);
@@ -8405,10 +8536,11 @@ try {
 
     var inputId = 'input-'+buddyId;
     var body =
+      '<div class="im-stats" id="stats-'+buddyId+'"></div>' +
       '<div class="im-log" id="log-'+buddyId+'"></div>' +
       '<div class="editing-banner" id="editbanner-'+buddyId+'" style="display:none;">Editing &mdash; <span class="edit-cancel">Cancel</span> &nbsp; <label class="lock-toggle"><input type="checkbox" id="edit-lock-'+buddyId+'"> 🔒 Private</label></div>' +
       '<div class="im-compose-row">' +
-        richComposeHtml(inputId, '', true) +
+        richComposeHtml(inputId, '') +
       '</div>' +
       '<div class="im-action-row">' +
         '<button class="action-btn" title="Send a writing prompt" id="prompt-'+buddyId+'">'+iconSVG('bulb')+'<span>Prompt</span></button>' +
@@ -8417,7 +8549,7 @@ try {
         '<button class="send-btn-gold" id="send-'+buddyId+'">'+iconSVG('send')+'<span id="send-label-'+buddyId+'">Send</span></button>' +
       '</div>' +
       '<div class="draft-links" style="text-align:right;padding-right:8px;"><span class="draft-save-link-'+buddyId+'">Save Draft</span></div>' +
-      '<div class="pct-key"><span>%t = time &nbsp; %d = date</span><span class="im-stats" id="stats-'+buddyId+'"></span></div>';
+      '<div class="pct-key">%t = time &nbsp; %d = date</div>';
 
     createWindow({
       title: buddy.name,
@@ -8426,7 +8558,6 @@ try {
       bodyHtml: body,
       type: 'im',
       buddyId: buddyId,
-      constructionBar: false,
       onMount: function(el, id){
         renderLog(buddyId);
         renderStats(buddyId);
@@ -8525,13 +8656,10 @@ try {
 
         el.querySelector('#send-'+buddyId).addEventListener('click', handleSendOrSave);
         input.addEventListener('keydown', function(e){
-          if(e.key !== 'Enter' || e.isComposing) return;
-          e.preventDefault();
-          if(e.shiftKey){
-            document.execCommand('insertLineBreak', false, null);
-            return;
+          if(e.key === 'Enter' && !e.shiftKey && !isMobile()){
+            e.preventDefault();
+            handleSendOrSave();
           }
-          handleSendOrSave();
         });
 
         el.querySelector('#prompt-'+buddyId).addEventListener('click', function(){
@@ -10140,10 +10268,12 @@ try {
 
   function generateConversationPDF(list, buddyName){
     var entriesHtml = list.map(function(e){
-      var sender = e.kind === 'prompt' ? 'Prompt' : (e.author || state.account.screenName);
+      var ts = Number(e.ts) || Date.now();
+      var dateLabel = fmtDayDivider(ts);
+      var sender = dateLabel + ' · ' + fmtTime(ts);
       var content = (e.html !== undefined) ? e.html : escapeHtml(e.text || '');
       return '<div style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #ddd;">' +
-        '<div style="font-size:11px;color:#666;margin-bottom:4px;"><b>' + escapeHtml(sender) + '</b> &middot; ' + fmtDayDivider(e.ts) + ' ' + fmtTime(e.ts) + '</div>' +
+        '<div style="font-size:11px;color:#666;margin-bottom:4px;"><b>' + escapeHtml(sender) + '</b></div>' +
         '<div style="font-size:14px;line-height:1.5;">' + content + '</div>' +
       '</div>';
     }).join('');
@@ -10200,7 +10330,8 @@ try {
         lastDay = divider;
       }
       var isPrompt = entry.kind === 'prompt';
-      var sender = isPrompt ? 'Prompt' : escapeHtml(entry.author || state.account.screenName);
+      var ts = Number(entry.ts) || Date.now();
+      var sender = escapeHtml(fmtDayDivider(ts));
       var content = (entry.html !== undefined) ? entry.html : escapeHtml(entry.text || '');
       var statusTag = entry.statusLabel !== undefined
         ? ('<span class="status-tag">Status' + (entry.statusLabel ? ': ' + escapeHtml(entry.statusLabel) : '') + '</span><br>')
@@ -10208,7 +10339,7 @@ try {
       var txtStyle = entry.bg ? (' style="background:' + escapeHtml(entry.bg) + '; padding:4px 6px; border-radius:4px;"') : '';
       html += '<div class="im-entry' + (isPrompt ? ' prompt-entry' : '') + '" data-entry-id="' + entry.id + '">' +
                 '<span class="who' + (isPrompt ? ' prompt-who' : '') + '">' + sender + '</span> ' +
-                '<span class="ts">(' + fmtTime(entry.ts) + '):</span> ' +
+                '<span class="ts">(' + fmtTime(ts) + '):</span> ' +
                 '<span class="entry-actions">' +
                   '<span class="entry-action" data-action="edit">' + iconSVG('pencil') + '</span>' +
                   '<span class="entry-action" data-action="delete">' + iconSVG('trash') + '</span>' +
@@ -11089,21 +11220,21 @@ try {
     }
     function showAdd(){
       var online=!!getSupabaseSession();
-      main.innerHTML='<div class="dtd-heading">Add E-Buddy</div><div class="dtd-compose">'+(online?'':'<label><span>Nickname</span><input class="dtd-contact-new-name" placeholder="Optional nickname"></label>')+'<label><span>DtD username</span><span class="dtd-address-input"><input class="dtd-contact-new-handle" maxlength="20" placeholder="e-buddy" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="dtd-address-suffix">@desktopdiary.local</span></span></label><div class="dtd-compose-actions"><button class="btn dtd-contact-cancel">Cancel</button><button class="btn dtd-contact-save">'+(online?'Send Request':'Save E-Buddy')+'</button></div><div class="signon-error dtd-contact-error"></div></div>';
+      main.innerHTML='<div class="dtd-heading">Add E-Buddy</div><div class="dtd-compose"><label><span>Nickname</span><input class="dtd-contact-new-name" placeholder="Optional nickname"></label><label><span>DtD username</span><span class="dtd-address-input"><input class="dtd-contact-new-handle" maxlength="20" placeholder="e-buddy" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="dtd-address-suffix">@desktopdiary.local</span></span></label><div class="dtd-compose-actions"><button class="btn dtd-contact-cancel">Cancel</button><button class="btn dtd-contact-save">'+(online?'Send Request':'Save E-Buddy')+'</button></div><div class="signon-error dtd-contact-error"></div></div>';
       var handle=main.querySelector('.dtd-contact-new-handle'),nickname=main.querySelector('.dtd-contact-new-name'),saveButton=main.querySelector('.dtd-contact-save'),error=main.querySelector('.dtd-contact-error');
       handle.oninput=function(){handle.value=handle.value.toLowerCase().replace(/[^a-z0-9._-]/g,'');};
       main.querySelector('.dtd-contact-cancel').onclick=render;
       saveButton.onclick=function(){
         var normalized=dtdContactHandle(handle.value);
         if(!/^[a-z0-9][a-z0-9._-]{1,18}[a-z0-9]$/.test(normalized)||normalized.indexOf('..')!==-1){error.textContent='Use a valid 3–20 character DtD username.';return;}
-        if(!online){saveDtdContact(normalized,nickname?nickname.value:'');render();return;}
+        if(!online){saveDtdContact(normalized,nickname.value);render();return;}
         error.textContent='Checking account…';saveButton.disabled=true;
         supabaseRpc('get_dtd_public_profile',{requested_handle:normalized}).then(function(profile){
           if(!profile||!profile.handle)throw new Error('No DesktopDiary account uses that username.');
           var friendStatus=profile.friend_status||'none';
           if(friendStatus==='self')throw new Error('That is your own DesktopDiary account.');
           if(friendStatus==='friends'){
-            upsertDtdContact(profile.handle,profile.display_name||'');
+            saveDtdContact(profile.handle,nickname.value||profile.display_name||'');
             return syncDtdFriendsFromServer().then(function(){render();});
           }
           if(friendStatus==='pending_outgoing')throw new Error('An E-Buddy request has already been sent to this account.');
@@ -11308,12 +11439,7 @@ try {
         var sourceList=state.mail&&state.mail[folder]||[];
         var list=folder==='inbox'?sortDtdIncomingMail(sourceList,function(m){return !m.read;},function(m){return m.ts;}):sourceList.slice().sort(function(a,b){return b.ts-a.ts;});
         var heading=folder==='inbox'?'Inbox':(folder==='sent'?'Sent':'Scheduled');
-        var rows = list.map(function(m){
-          var party = folder==='inbox'?(mailPenPalNickname(m.from)||m.from):m.to;
-          var partyHtml = mailLetterType(m)?mailDisplayPartyHtml(m,party):(folder==='inbox'?mailAgedPartyHtml(party,m.ts):escapeHtml(party));
-          return '<div class="dtd-row'+(!m.read&&folder==='inbox'?' unread':'')+'" data-mail-id="'+escapeHtml(m.id)+'"><span>'+partyHtml+'</span><span class="dtd-subject">'+escapeHtml(m.subject||'(no subject)')+'</span><time>'+escapeHtml(fmtDateShort(folder==='scheduled'?m.deliverAt:m.ts))+'</time><button class="dtd-row-delete" type="button" title="Delete message" aria-label="Delete message">🗑</button></div>';
-        }).join('');
-        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+list.filter(function(m){return !m.read;}).length+' unread)':'')+'</div><div class="dtd-list">'+(list.length?rows:'<div class="dtd-empty">No messages here.</div>')+'</div>';
+        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+list.filter(function(m){return !m.read;}).length+' unread)':'')+'</div><div class="dtd-list">'+(list.length?list.map(function(m){var party=folder==='inbox'?(mailPenPalNickname(m.from)||m.from):m.to,partyHtml=mailLetterType(m)?mailDisplayPartyHtml(m,party):(folder==='inbox'?mailAgedPartyHtml(party,m.ts):escapeHtml(party));return '<div class="dtd-row'+(!m.read&&folder==='inbox'?' unread':'')+'" data-mail-id="'+escapeHtml(m.id)+'"><span>'+partyHtml+'</span><span class="dtd-subject">'+escapeHtml(m.subject||'(no subject)')+'</span><time>'+escapeHtml(fmtDateShort(folder==='scheduled'?m.deliverAt:m.ts))+'</time><button class="dtd-row-delete" type="button" title="Delete message" aria-label="Delete message">🗑</button></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
         main.querySelectorAll('[data-mail-id]').forEach(function(row){
           var rowId=row.dataset.mailId;
           row.onclick=function(){openMessage(rowId);};
@@ -11335,14 +11461,14 @@ try {
         var footerActions=folder==='scheduled'?'':'<button class="btn dtd-save-diary">Save to Diary</button>';
         if(!hideActions)footerActions+=(footerActions?' ':'')+'<button class="btn dtd-save-contact">Save E-Buddy</button> <button class="btn dtd-reply">Reply</button>';
         footerActions+=(footerActions?' ':'')+'<button class="btn dtd-delete-mail">Delete</button>';
-        main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(msg.subject||'(no subject)')+'</b><br>From: '+escapeHtml(metaFrom)+'<br>To: '+metaToHtml+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(folder==='scheduled'?msg.deliverAt:msg.ts))+'</div>'+disclaimer+'<div class="dtd-message">'+escapeHtml(msg.body||'')+'</div>'+(hideActions?'':'<div class="dtd-inline-reply" style="display:none"><input type="text" class="dtd-inline-reply-subject" placeholder="Subject" value="'+escapeHtml(msg.subject||'')+'"><textarea class="dtd-inline-reply-body" placeholder="Write a fresh letter back…"></textarea><div class="dtd-inline-reply-actions"><span class="dtd-inline-reply-note">The previous letter will not be included.</span><span><button class="btn dtd-reply-cancel">Cancel</button> <button class="btn dtd-reply-send">Send Reply</button></span></div><div class="signon-error dtd-reply-error"></div></div>')+'<div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button>'+(footerActions?'<span>'+footerActions+'</span>':'')+'</div>';
+        main.innerHTML='<div class="dtd-meta"><b>'+escapeHtml(msg.subject||'(no subject)')+'</b><br>From: '+escapeHtml(metaFrom)+'<br>To: '+metaToHtml+'<br>'+(folder==='scheduled'?'Delivery: ':'')+escapeHtml(scrapbookDate(folder==='scheduled'?msg.deliverAt:msg.ts))+'</div>'+disclaimer+'<div class="dtd-message">'+escapeHtml(msg.body||'')+'</div>'+(hideActions?'':'<div class="dtd-inline-reply" style="display:none"><textarea class="dtd-inline-reply-body" placeholder="Write a fresh letter back…"></textarea><div class="dtd-inline-reply-actions"><span class="dtd-inline-reply-note">The previous letter will not be included.</span><span><button class="btn dtd-reply-cancel">Cancel</button> <button class="btn dtd-reply-send">Send Reply</button></span></div><div class="signon-error dtd-reply-error"></div></div>')+'<div style="padding:7px;border-top:1px solid #ccc;display:flex;justify-content:space-between"><button class="btn dtd-back">Back</button>'+(footerActions?'<span>'+footerActions+'</span>':'')+'</div>';
         main.querySelector('.dtd-back').onclick=renderList;
         if(main.querySelector('.dtd-save-diary'))main.querySelector('.dtd-save-diary').onclick=function(){saveDtdMailToDiary('local:'+msg.id,msg.subject,metaFrom,metaTo,msg.body,msg.ts);};
         if(main.querySelector('.dtd-save-contact'))main.querySelector('.dtd-save-contact').onclick=function(){var contact=saveDtdContact(folder==='inbox'?msg.from:msg.to,'');openInfoWindow(contact?'Saved to E-Buddies.':'That DtD address is not valid.');};
         if(main.querySelector('.dtd-delete-mail'))main.querySelector('.dtd-delete-mail').onclick=function(){deleteLocalMailById(msg.id);};
         if(main.querySelector('.dtd-reply'))main.querySelector('.dtd-reply').onclick=function(){var box=main.querySelector('.dtd-inline-reply');box.style.display='grid';main.querySelector('.dtd-reply').style.display='none';beginPigeonComposing();box.querySelector('textarea').focus();};
         if(main.querySelector('.dtd-reply-cancel'))main.querySelector('.dtd-reply-cancel').onclick=function(){main.querySelector('.dtd-inline-reply').style.display='none';main.querySelector('.dtd-reply').style.display='';endPigeonComposing(false);};
-        if(main.querySelector('.dtd-reply-send'))main.querySelector('.dtd-reply-send').onclick=function(){var body=main.querySelector('.dtd-inline-reply-body').value,text=body.trim(),recipient=folder==='inbox'?msg.from:msg.to,subjectField=main.querySelector('.dtd-inline-reply-subject'),subject=subjectField?subjectField.value.trim():(msg.subject||'');if(!text){main.querySelector('.dtd-reply-error').textContent='Write your reply first.';return;}var reply={id:uid(),from:localAddress(),to:recipient,subject:subject,body:body,ts:Date.now(),read:true};state.mail.sent.push(reply);if(recipient.toLowerCase()===localAddress()||recipient.toLowerCase()==='self')state.mail.inbox.push({id:uid(),from:reply.from,to:reply.to,subject:reply.subject,body:reply.body,ts:reply.ts,read:false});saveState();trackDtdUsage('letter_sent');endPigeonComposing(true);openInfoWindow('Your reply is sealed and will be delivered at the next 8:00am.');renderList();};
+        if(main.querySelector('.dtd-reply-send'))main.querySelector('.dtd-reply-send').onclick=function(){var body=main.querySelector('.dtd-inline-reply-body').value,text=body.trim(),recipient=folder==='inbox'?msg.from:msg.to;if(!text){main.querySelector('.dtd-reply-error').textContent='Write your reply first.';return;}var reply={id:uid(),from:localAddress(),to:recipient,subject:msg.subject||'',body:body,ts:Date.now(),read:true};state.mail.sent.push(reply);if(recipient.toLowerCase()===localAddress()||recipient.toLowerCase()==='self')state.mail.inbox.push({id:uid(),from:reply.from,to:reply.to,subject:reply.subject,body:reply.body,ts:reply.ts,read:false});saveState();trackDtdUsage('letter_sent');endPigeonComposing(true);openInfoWindow('Your reply is sealed and will be delivered at the next 8:00am.');renderList();};
       }
       function showCompose(to,subject){
         if(!getSupabaseSession()){
@@ -11500,7 +11626,7 @@ try {
         refreshMailPigeonFromCache();
         if(folder==='inbox')currentRows=sortDtdIncomingMail(currentRows,function(m){return !m.read_at;},function(m){return new Date(m.created_at||0).getTime();});
         var heading=folder==='inbox'?'Inbox':'Sent',unread=folder==='inbox'?currentRows.filter(function(m){return !m.read_at;}).length:0;
-        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+unread+' unread)':'')+' <span style="float:right;font-weight:normal;font-size:9px">'+escapeHtml(address(profile.handle))+'</span></div><div class="dtd-list">'+(currentRows.length?currentRows.map(function(m){var who=folder==='inbox'?m.from_handle:m.to_handle,isDated=folder==='sent'&&m.deliver_on>String(m.created_at).slice(0,10),date=isDated?m.deliver_on:m.created_at,displayedDate=folder==='inbox'?(m.deliver_on||m.created_at):date,priv=decodeOnlinePrivateLetter(m,profile.handle),profileHandle=priv?profile.handle:who,whoLabel=priv?priv.displayRecipient:(mailPenPalNickname(who)||address(who)),writtenAt=m.created_at?new Date(m.created_at).getTime():0,whoHtml=priv&&priv.type==='future-self'?futureSelfLabelHtml(whoLabel,writtenAt):(priv?escapeHtml(whoLabel):(folder==='inbox'?mailAgedPartyHtml(whoLabel,writtenAt):escapeHtml(whoLabel))),subjectLabel=priv?priv.subject:m.message_subject;return '<div class="dtd-row'+(folder==='inbox'&&!m.read_at?' unread':'')+'" data-mail-id="'+escapeHtml(m.message_id)+'"><span class="dtd-mail-party" data-profile-handle="'+escapeHtml(profileHandle)+'"><button class="dtd-row-party-name" title="View profile">'+whoHtml+'</button></span><span class="dtd-subject">'+escapeHtml(subjectLabel||'(no subject)')+'</span><time>'+(isDated?'Delivers ':'')+escapeHtml(fmtDateShort(new Date(displayedDate).getTime()))+'</time><button class="dtd-row-delete" type="button" title="Delete message" aria-label="Delete message">🗑</button></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
+        main.innerHTML='<div class="dtd-heading">'+heading+(folder==='inbox'?' ('+unread+' unread)':'')+' <span style="float:right;font-weight:normal;font-size:9px">'+escapeHtml(address(profile.handle))+'</span></div><div class="dtd-list">'+(currentRows.length?currentRows.map(function(m){var who=folder==='inbox'?m.from_handle:m.to_handle,isDated=folder==='sent'&&m.deliver_on>String(m.created_at).slice(0,10),date=isDated?m.deliver_on:m.created_at,displayedDate=folder==='inbox'?(m.deliver_on||m.created_at):date,priv=decodeOnlinePrivateLetter(m,profile.handle),profileHandle=priv?profile.handle:who,whoLabel=priv?priv.displayRecipient:(mailPenPalNickname(who)||address(who)),writtenAt=m.created_at?new Date(m.created_at).getTime():0,whoHtml=priv&&priv.type==='future-self'?futureSelfLabelHtml(whoLabel,writtenAt):(priv?escapeHtml(whoLabel):(folder==='inbox'?mailAgedPartyHtml(whoLabel,writtenAt):escapeHtml(whoLabel))),subjectLabel=priv?priv.subject:m.message_subject;return '<div class="dtd-row'+(folder==='inbox'&&!m.read_at?' unread':'')+'" data-mail-id="'+escapeHtml(m.message_id)+'"><span class="dtd-mail-party" data-profile-handle="'+escapeHtml(profileHandle)+'"><button class="dtd-row-party-name" title="View profile">'+whoHtml+'</button></span><span class="dtd-subject">'+escapeHtml(subjectLabel||'(no subject)')+'</span><time>'+(isDated?'Delivers ':'')+escapeHtml(fmtDateShort(new Date(displayedDate).getTime()))+'</time><button class=\"dtd-row-delete\" type=\"button\" title=\"Delete message\" aria-label=\"Delete message\">🗑</button></div>';}).join(''):'<div class="dtd-empty">No messages here.</div>')+'</div>';
         main.querySelectorAll('[data-mail-id]').forEach(function(row){
           var rowId=row.dataset.mailId;
           row.onclick=function(){openMessage(rowId);};
@@ -11610,6 +11736,7 @@ try {
       loadProfile().then(function(found){profile=found;if(profile)mountMailbox();else showAddressSetup();}).catch(function(err){showError(err.message);});
     }});
   }
+
   // === END scripts/features/post-mail-online.js ===
 
   // === BEGIN scripts/features/arinet.js ===
@@ -11793,74 +11920,6 @@ try {
     });
   }
 
-  function dtdAnonymousTipToken(){
-    var key='dtd-anonymous-tip-client-v1',token='';
-    try{token=localStorage.getItem(key)||'';}catch(e){}
-    if(/^[A-Za-z0-9_-]{24,100}$/.test(token))return token;
-    if(window.crypto&&typeof window.crypto.randomUUID==='function')token=window.crypto.randomUUID();
-    else{
-      var alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
-      for(var i=0;i<40;i++)token+=alphabet.charAt(Math.floor(Math.random()*alphabet.length));
-    }
-    try{localStorage.setItem(key,token);}catch(e){}
-    return token;
-  }
-
-
-  function openSuggestionBoxWindow(){
-    var existing=openWindows.find(function(w){return w.type==='suggestion-box';});
-    if(existing){focusWindow(existing.id);return;}
-    var body=
-      '<div class="win-body suggestion-win">' +
-        '<div class="suggestion-intro">Send an anonymous idea, bug note, or request to DesktopDiary. Your email, screen name, account ID, and diary contents are not included.</div>' +
-        '<div class="suggestion-field"><label for="suggestion-topic">Topic (optional)</label><input id="suggestion-topic" maxlength="40" placeholder="e.g. UI polish, bug, feature idea"></div>' +
-        '<div class="suggestion-field"><label for="suggestion-text">Your anonymous tip</label><textarea id="suggestion-text" maxlength="1500" placeholder="Type your tip here…"></textarea></div>' +
-        '<div class="suggestion-honeypot" aria-hidden="true"><label for="suggestion-website">Website</label><input id="suggestion-website" type="text" tabindex="-1" autocomplete="off"></div>' +
-        '<div class="suggestion-actions">' +
-          '<div class="suggestion-status" aria-live="polite"></div>' +
-          '<div class="suggestion-buttons">' +
-            '<button class="btn suggestion-submit" type="button">Send Tip</button>' +
-            '<button class="btn" id="suggestion-close" type="button">Close</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    createWindow({title:'Suggestion Box',extraClass:'suggest-win',bodyHtml:body,type:'suggestion-box',onMount:function(el,id){
-      var topicInput=el.querySelector('#suggestion-topic');
-      var textInput=el.querySelector('#suggestion-text');
-      var websiteInput=el.querySelector('#suggestion-website');
-      var submitBtn=el.querySelector('.suggestion-submit');
-      var status=el.querySelector('.suggestion-status');
-      var closeBtn=el.querySelector('#suggestion-close');
-      function setStatus(message,color){
-        status.style.color=color||'#555';
-        status.textContent=message;
-      }
-      submitBtn.onclick=function(){
-        var topic=(topicInput.value||'').trim().slice(0,40) || 'General';
-        var text=(textInput.value||'').trim().slice(0,1500);
-        if(!text){setStatus('Please add a message before sending.','#b03');return;}
-        submitBtn.disabled=true;
-        setStatus('Sending…','#666');
-        supabasePublicRpc('submit_dtd_anonymous_tip',{
-          requested_topic:topic,
-          requested_message:text,
-          requested_device_class:dtdUsageDeviceClass(),
-          requested_client_token:dtdAnonymousTipToken(),
-          requested_website:websiteInput.value||''
-        }).then(function(){
-          topicInput.value='';
-          textInput.value='';
-          setStatus('Thanks — your anonymous tip was sent.','green');
-          submitBtn.disabled=false;
-        }).catch(function(err){
-          submitBtn.disabled=false;
-          setStatus('Unable to send right now. Please try again later.','#b03');
-        });
-      };
-      closeBtn.onclick=function(){closeWindow(id);};
-    }});
-  }
-
   function openAdminWindow(){
     var existing=openWindows.find(function(w){return w.type==='admin';});
     if(existing){focusWindow(existing.id);return;}
@@ -11916,7 +11975,6 @@ try {
             }).then(function(){suggestionsLoading=false;suggestionRefresh.disabled=false;});
           }
           suggestionRefresh.addEventListener('click',loadSuggestions);
-
 
           var usageLoaded=false,usageLoading=false,usageStatus=el.querySelector('.usage-status'),usageResults=el.querySelector('.usage-results'),periodSelect=el.querySelector('#usage-period'),refreshButton=el.querySelector('.usage-refresh'),cleanupButton=el.querySelector('.usage-cleanup'),updated=el.querySelector('.usage-updated');
           var usageLabels={diary_opened:'Diary opened',diary_entry_created:'Diary entry created',post_mail_opened:'Post Mail opened',letter_sent:'Letter sent',sudoku_started:'Sudoku started',sudoku_completed:'Sudoku completed',profile_editor_opened:'Profile editor opened',sticky_note_created:'Sticky note created',paint_opened:'Paint opened',arinet_opened:'AriNet opened',help_opened:'Help opened',koba_interacted:'Koba interaction'};
@@ -12390,6 +12448,206 @@ try {
 
   // === END scripts/features/profiles.js ===
 
+  // === BEGIN scripts/features/penpals.js ===
+  var dtdPenPalNotificationTimer=null,penPalNotificationCheckInFlight=false;
+  var dtdFriendSyncInFlight=null;
+  function penPalNotificationState(){return state.companion.penPalNotifications;}
+  function uniqueHandles(handles){return handles.filter(function(handle,index,list){return handle&&list.indexOf(handle)===index;});}
+  function syncDtdFriendsFromServer(){
+    if(!getSupabaseSession())return Promise.resolve(false);
+    if(dtdFriendSyncInFlight)return dtdFriendSyncInFlight;
+    var syncStorageKey=activeStorageKey;
+    dtdFriendSyncInFlight=supabaseRpc('list_dtd_friends',{}).then(function(rows){
+      if(activeStorageKey!==syncStorageKey||!getSupabaseSession())return false;
+      var existingByHandle={};
+      (state.mail.contacts||[]).forEach(function(contact){
+        var handle=dtdContactHandle(contact&&contact.handle);
+        if(handle&&!existingByHandle[handle])existingByHandle[handle]=contact;
+      });
+      var seen={},nextContacts=[];
+      (rows||[]).forEach(function(friend){
+        var handle=dtdContactHandle(friend&&friend.handle);
+        if(!handle||seen[handle])return;
+        seen[handle]=true;
+        var existing=existingByHandle[handle];
+        nextContacts.push({
+          id:existing&&existing.id?existing.id:uid(),
+          handle:handle,
+          name:existing&&existing.name?existing.name:String(friend.display_name||'').trim()
+        });
+      });
+      nextContacts.sort(function(a,b){return a.handle.localeCompare(b.handle);});
+      var current=(state.mail.contacts||[]).map(function(contact){return{id:contact.id,handle:dtdContactHandle(contact.handle),name:String(contact.name||'').trim()};}).sort(function(a,b){return a.handle.localeCompare(b.handle);});
+      if(JSON.stringify(current)===JSON.stringify(nextContacts))return false;
+      state.mail.contacts=nextContacts;
+      return saveState().then(function(){return true;});
+    }).catch(function(){return false;}).then(function(changed){dtdFriendSyncInFlight=null;return changed;});
+    return dtdFriendSyncInFlight;
+  }
+  function refreshKobaPendingAlerts(){
+    var alerts=penPalNotificationState().unreadAlerts,companion=document.getElementById('desktop-companion');
+    if(companion)companion.classList.toggle('has-pending-notification',alerts.length>0);
+    if(window.refreshKobaMemos)window.refreshKobaMemos();
+    if(window.showKobaNotification)alerts.forEach(function(alert){window.showKobaNotification(alert.message,alert.openRequests,alert.id);});
+  }
+  function addPenPalAlert(id,message,openRequests){
+    var alerts=penPalNotificationState().unreadAlerts;
+    if(!alerts.some(function(alert){return alert.id===id;}))alerts.push({id:id,message:message,openRequests:!!openRequests});
+    saveState();refreshKobaPendingAlerts();
+  }
+  function acknowledgePenPalAlert(id){
+    var notificationState=penPalNotificationState();
+    notificationState.unreadAlerts=notificationState.unreadAlerts.filter(function(alert){return alert.id!==id;});
+    saveState();refreshKobaPendingAlerts();
+  }
+  window.acknowledgePenPalAlert=acknowledgePenPalAlert;
+  window.restorePendingPenPalAlerts=refreshKobaPendingAlerts;
+  function rememberPendingPenPalRequest(handle){
+    handle=String(handle||'').trim().toLowerCase();if(!handle)return;
+    var notificationState=penPalNotificationState();
+    notificationState.pendingOutgoing=uniqueHandles(notificationState.pendingOutgoing.concat(handle));
+    saveState();
+  }
+  function checkPenPalNotifications(){
+    if(!document.body.classList.contains('signed-in')||!getSupabaseSession()||penPalNotificationCheckInFlight)return Promise.resolve();
+    refreshKobaPendingAlerts();
+    penPalNotificationCheckInFlight=true;
+    syncDtdFriendsFromServer();
+    return supabaseRpc('list_dtd_friend_requests',{}).then(function(rows){
+      rows=rows||[];
+      var notificationState=penPalNotificationState();
+      var incoming=rows.filter(function(row){return row.direction==='incoming';});
+      var currentIncoming=uniqueHandles(incoming.map(function(row){return String(row.handle||'');}));
+      var currentOutgoing=uniqueHandles(rows.filter(function(row){return row.direction==='outgoing';}).map(function(row){return String(row.handle||'');}));
+      var newIncoming=incoming.filter(function(row){return notificationState.knownIncoming.indexOf(String(row.handle||''))===-1;});
+      var previousOutgoing=notificationState.pendingOutgoing.slice();
+      var resolvedCandidates=previousOutgoing.filter(function(handle){return currentOutgoing.indexOf(handle)===-1;});
+      notificationState.knownIncoming=currentIncoming;
+      if(newIncoming.length){
+        newIncoming.forEach(function(request){var sender=request.display_name||request.handle;addPenPalAlert('incoming:'+request.handle,sender+' sent you a PenPal request! Click me to see it.',true);});
+      }
+      return Promise.all(resolvedCandidates.map(function(handle){
+        return supabaseRpc('get_dtd_public_profile',{requested_handle:handle}).then(function(profile){return{handle:handle,profile:profile};}).catch(function(){return{handle:handle,profile:null};});
+      })).then(function(results){
+        var nextPending=currentOutgoing.slice();
+        results.forEach(function(result){
+          var profile=result.profile,status=profile&&profile.friend_status;
+          if(status==='friends'){
+            upsertDtdContact(result.handle,profile.display_name||'');
+            addPenPalAlert('accepted:'+result.handle,(profile.display_name||result.handle)+' accepted your PenPal request! Click me to dismiss this message.',false);
+          }else if(!profile||status==='pending_outgoing')nextPending.push(result.handle);
+        });
+        notificationState.pendingOutgoing=uniqueHandles(nextPending);
+        return saveState();
+      });
+    }).catch(function(){}).then(function(){penPalNotificationCheckInFlight=false;});
+  }
+  function stopPenPalNotificationWatch(){clearInterval(dtdPenPalNotificationTimer);dtdPenPalNotificationTimer=null;penPalNotificationCheckInFlight=false;}
+  function startPenPalNotificationWatch(){stopPenPalNotificationWatch();refreshKobaPendingAlerts();checkPenPalNotifications();dtdPenPalNotificationTimer=setInterval(checkPenPalNotifications,60000);}
+
+  function openFriendRequestsWindow(){
+    var existing=openWindows.find(function(w){return w.type==='dtdfriendrequests';});if(existing){focusWindow(existing.id);return;}
+    createWindow({title:'E-Buddies',extraClass:'profile-win dtd-ebuddies-win',bodyHtml:'<div class="win-body vp-body"><div class="vp-empty">Loading E-Buddies…</div></div>',type:'dtdfriendrequests',onMount:function(el){
+      function requestRow(r){
+        var actions=r.direction==='incoming'
+          ?'<button class="btn dtd-fr-accept" data-handle="'+escapeHtml(r.handle)+'" data-name="'+escapeHtml(r.display_name||'')+'">Accept</button> <span class="forgot-link dtd-fr-decline" data-handle="'+escapeHtml(r.handle)+'">Decline</span>'
+          :'<span class="forgot-link dtd-fr-cancel" data-handle="'+escapeHtml(r.handle)+'">Cancel</span>';
+        return '<div class="dtd-row dtd-ebuddy-row" style="cursor:default"><span class="dtd-fr-name" data-handle="'+escapeHtml(r.handle)+'" style="cursor:pointer;text-decoration:underline">'+escapeHtml(r.display_name||r.handle)+'</span><span class="dtd-ebuddy-address">'+escapeHtml(r.handle)+'@desktopdiary.local</span><span class="dtd-ebuddy-actions">'+actions+'</span></div>';
+      }
+      function friendRow(friend){
+        var contact=(state.mail.contacts||[]).find(function(item){return dtdContactHandle(item&&item.handle)===dtdContactHandle(friend.handle);});
+        var displayName=(contact&&contact.name)||friend.display_name||friend.handle;
+        var initials=String(displayName||'?').slice(0,2).toUpperCase();
+        var avatar=friend.profile_picture?'<img src="'+escapeHtml(friend.profile_picture)+'" alt="">':escapeHtml(initials);
+        return '<div class="dtd-contact-row dtd-ebuddy-contact" data-ebuddy-handle="'+escapeHtml(friend.handle)+'">'+
+          '<button class="dtd-contact-avatar dtd-ebuddy-profile" title="View profile" data-handle="'+escapeHtml(friend.handle)+'">'+avatar+'</button>'+
+          '<button class="dtd-contact-name dtd-ebuddy-profile" title="View profile" data-handle="'+escapeHtml(friend.handle)+'">'+escapeHtml(displayName)+'<span class="dtd-contact-address">'+escapeHtml(friend.handle)+'@desktopdiary.local</span></button>'+
+          '<button class="btn dtd-contact-action dtd-ebuddy-write" data-handle="'+escapeHtml(friend.handle)+'">Write</button>'+
+          '<button class="btn dtd-contact-action dtd-ebuddy-profile" data-handle="'+escapeHtml(friend.handle)+'">View Profile</button>'+
+          '<button class="btn dtd-contact-action dtd-ebuddy-nickname" data-handle="'+escapeHtml(friend.handle)+'">Nickname</button>'+
+          '<button class="btn dtd-ebuddy-remove" data-handle="'+escapeHtml(friend.handle)+'" data-name="'+escapeHtml(displayName)+'" title="Remove E-Buddy">×</button>'+
+        '</div>';
+      }
+      function section(title,rows,emptyText){
+        return '<section class="dtd-ebuddy-section"><div class="dtd-ebuddy-heading">'+title+'</div>'+(rows.length?'<div class="dtd-list">'+rows.join('')+'</div>':'<div class="dtd-ebuddy-empty">'+emptyText+'</div>')+'</section>';
+      }
+      function load(){
+        if(!getSupabaseSession()){el.querySelector('.win-body').innerHTML='<div class="vp-empty">E-Buddies are only available with an online account.</div>';return;}
+        el.querySelector('.win-body').innerHTML='<div class="vp-empty">Loading E-Buddies…</div>';
+        Promise.all([supabaseRpc('list_dtd_friends',{}),supabaseRpc('list_dtd_friend_requests',{})]).then(function(results){
+          var friends=results[0]||[],requests=results[1]||[];
+          var incoming=requests.filter(function(row){return row.direction==='incoming';});
+          var outgoing=requests.filter(function(row){return row.direction==='outgoing';});
+          el.querySelector('.win-body').innerHTML='<div class="dtd-ebuddies-page">'+
+            section('E-Buddies',friends.map(friendRow),'No E-Buddies yet.')+
+            section('Incoming Requests',incoming.map(requestRow),'No incoming requests.')+
+            section('Outgoing Requests',outgoing.map(requestRow),'No outgoing requests.')+
+          '</div>';
+          el.querySelectorAll('.dtd-fr-name').forEach(function(s){s.onclick=function(){openDtdPublicProfileWindow(s.dataset.handle);};});
+          el.querySelectorAll('.dtd-ebuddy-profile').forEach(function(b){b.onclick=function(){openDtdPublicProfileWindow(b.dataset.handle);};});
+          el.querySelectorAll('.dtd-ebuddy-write').forEach(function(b){b.onclick=function(){openNewMessageWindow(b.dataset.handle);};});
+          el.querySelectorAll('.dtd-ebuddy-nickname').forEach(function(b){b.onclick=function(){
+            var handle=b.dataset.handle,contact=(state.mail.contacts||[]).find(function(item){return dtdContactHandle(item&&item.handle)===dtdContactHandle(handle);});
+            if(!contact)contact=upsertDtdContact(handle,'');
+            appTextPrompt('Nickname for '+handle+'@desktopdiary.local',contact&&contact.name||'',function(name){
+              if(name===null||!contact)return;
+              contact.name=name.trim().slice(0,50);saveState();load();
+            });
+          };});
+          el.querySelectorAll('.dtd-ebuddy-remove').forEach(function(b){b.onclick=function(){
+            appConfirm('Remove '+(b.dataset.name||b.dataset.handle)+' from E-Buddies?',function(ok){
+              if(!ok)return;
+              supabaseRpc('remove_dtd_friend',{other_handle:b.dataset.handle}).then(function(){removeDtdContact(b.dataset.handle);return load();}).catch(function(err){openInfoWindow(err.message);});
+            });
+          };});
+          el.querySelectorAll('.dtd-fr-accept').forEach(function(b){b.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:b.dataset.handle,accept:true}).then(function(){upsertDtdContact(b.dataset.handle,b.dataset.name||'');acknowledgePenPalAlert('incoming:'+b.dataset.handle);syncDtdFriendsFromServer();return load();}).catch(function(err){openInfoWindow(err.message);});};});
+          el.querySelectorAll('.dtd-fr-decline').forEach(function(s){s.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:s.dataset.handle,accept:false}).then(function(){acknowledgePenPalAlert('incoming:'+s.dataset.handle);return load();}).catch(function(err){openInfoWindow(err.message);});};});
+          el.querySelectorAll('.dtd-fr-cancel').forEach(function(s){s.onclick=function(){supabaseRpc('remove_dtd_friend',{other_handle:s.dataset.handle}).then(load).catch(function(err){openInfoWindow(err.message);});};});
+        }).catch(function(err){el.querySelector('.win-body').innerHTML='<div class="vp-empty">'+escapeHtml(err.message)+'</div>';});
+      }
+      load();
+    }});
+  }
+
+  function openDtdPublicProfileWindow(handle){
+    var existing=openWindows.find(function(w){return w.type==='dtdpublicprofile'&&w.dtdHandle===handle;});if(existing){focusWindow(existing.id);return;}
+    createWindow({title:handle+'\'s Profile',extraClass:'profile-win',bodyHtml:'<div class="win-body vp-body"><div class="vp-empty">Loading profile…</div></div>',type:'dtdpublicprofile',onMount:function(el){var rec=openWindows.find(function(w){return w.el===el;});if(rec)rec.dtdHandle=handle;var profileData=null;
+      function load(){
+        el.querySelector('.win-body').innerHTML='<div class="vp-empty">Loading profile…</div>';
+        supabaseRpc('get_dtd_public_profile',{requested_handle:handle}).then(function(p){if(!p)throw new Error('This profile is unavailable.');profileData=p;
+          var pic=p.profile_picture?'<img src="'+escapeHtml(p.profile_picture)+'" class="vp-pic">':'',header=sanitizeProfileHTML(p.profile_header||''),about=sanitizeProfileHTML(p.profile_about||''),statusRaw=String(p.profile_status||''),statusLabel='',statusMood='',statusMoodColor='#333333';
+          try{var parsedStatus=JSON.parse(statusRaw);statusLabel=parsedStatus.label||'';statusMood=parsedStatus.mood||'';if(/^#[0-9a-f]{6}$/i.test(parsedStatus.color||''))statusMoodColor=parsedStatus.color;}catch(e){statusLabel=statusRaw;}
+          var friendStatus=p.friend_status||'none',authorized=friendStatus==='friends'||friendStatus==='self';
+          if(friendStatus==='friends')upsertDtdContact(handle,p.display_name||'');
+          var entries=Array.isArray(p.entries)?p.entries:[];
+          var posts=authorized?(entries.length?entries.map(function(entry){return '<div class="blog-post"><div class="blog-post-header"><div><div class="blog-post-title">'+escapeHtml(entry.title||'Untitled')+'</div><div class="blog-post-date">'+fmtDayDivider(Number(entry.ts)||Date.now())+'</div></div></div><div class="blog-post-body">'+sanitizeHTML(entry.html||'')+'</div></div>';}).join(''):'<div class="vp-empty">No diary entries have been shared.</div>'):'';
+          var actionHtml='';
+          if(friendStatus==='none')actionHtml='<button class="btn" id="dtd-friend-add">Add PenPal</button>';
+          else if(friendStatus==='pending_outgoing')actionHtml='<span style="font-size:10px;color:#555">PenPal request sent</span> <span class="forgot-link" id="dtd-friend-cancel">Cancel</span>';
+          else if(friendStatus==='pending_incoming')actionHtml='<span style="font-size:10px;color:#555">Wants to be PenPals</span> <button class="btn" id="dtd-friend-accept">Accept</button> <span class="forgot-link" id="dtd-friend-decline">Decline</span>';
+          else if(friendStatus==='friends')actionHtml='<span style="font-size:10px;color:#18752c">&#10003; PenPals</span> <span class="forgot-link" id="dtd-friend-remove">Remove PenPal</span>';
+          var gateNote=(!authorized)?'<div class="vp-empty" style="font-size:10px">Add '+escapeHtml(p.display_name||p.handle)+' as a PenPal to see their profile and diary entries.</div>':'';
+          var guestBookLink=authorized&&friendStatus==='friends'?'<div style="padding:12px;text-align:center;border-top:1px solid #e0ddd5"><button class="btn" id="dtd-sign-guestbook">Sign My Guest Book!</button></div>':'';
+          el.querySelector('.win-body').outerHTML='<div class="win-body vp-body"><div class="vp-header">'+pic+'<div class="vp-name">'+escapeHtml(p.display_name||p.handle)+(statusMood?' <span class="vp-mood">is <span style="color:'+statusMoodColor+'">'+escapeHtml(statusMood)+'</span></span>':'')+'</div>'+(statusLabel?'<div class="vp-status"><b>Status:</b> '+escapeHtml(statusLabel)+'</div>':'')+'<div style="font-size:10px;color:#777">'+escapeHtml(p.handle)+'@desktopdiary.local</div>'+(actionHtml?'<div class="dtd-friend-actions" style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px">'+actionHtml+'</div>':'')+'<div class="signon-error dtd-friend-error" style="text-align:center"></div></div>'+gateNote+(header?'<div class="vp-section">'+header+'</div>':'')+(about?'<div class="vp-section">'+about+'</div>':'')+guestBookLink+(authorized?'<div class="blog-posts-list">'+posts+'</div>':'')+'</div>';
+          wire();
+        }).catch(function(err){el.querySelector('.win-body').innerHTML='<div class="vp-empty">'+escapeHtml(err.message)+'</div>';});
+      }
+      function wire(){
+        var errEl=el.querySelector('.dtd-friend-error');
+        function onErr(err){if(errEl)errEl.textContent=err.message;}
+        var addBtn=el.querySelector('#dtd-friend-add');if(addBtn)addBtn.onclick=function(){addBtn.disabled=true;supabaseRpc('send_dtd_friend_request',{recipient_handle:handle}).then(function(){rememberPendingPenPalRequest(handle);return load();}).catch(function(err){onErr(err);addBtn.disabled=false;});};
+        var cancelBtn=el.querySelector('#dtd-friend-cancel');if(cancelBtn)cancelBtn.onclick=function(){supabaseRpc('remove_dtd_friend',{other_handle:handle}).then(load).catch(onErr);};
+        var acceptBtn=el.querySelector('#dtd-friend-accept');if(acceptBtn)acceptBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:true}).then(function(){upsertDtdContact(handle,profileData&&profileData.display_name);acknowledgePenPalAlert('incoming:'+handle);syncDtdFriendsFromServer();return load();}).catch(onErr);};
+        var declineBtn=el.querySelector('#dtd-friend-decline');if(declineBtn)declineBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:false}).then(function(){acknowledgePenPalAlert('incoming:'+handle);return load();}).catch(onErr);};
+        var removeBtn=el.querySelector('#dtd-friend-remove');if(removeBtn)removeBtn.onclick=function(){appConfirm('Remove '+handle+' as a PenPal?',function(ok){if(!ok)return;supabaseRpc('remove_dtd_friend',{other_handle:handle}).then(function(){removeDtdContact(handle);return load();}).catch(onErr);});};
+        var guestBookBtn=el.querySelector('#dtd-sign-guestbook');if(guestBookBtn)guestBookBtn.onclick=function(){openGuestBookWindow(handle,(profileData&&profileData.display_name)||handle,true);};
+      }
+      load();
+    }});
+  }
+
+  // === END scripts/features/penpals.js ===
+
   // === BEGIN scripts/features/guest-book.js ===
   // ================= PROFILE GUEST BOOK =================
   var GUEST_BOOK_PAGE_CAPACITY=16;
@@ -12773,207 +13031,6 @@ try {
   }
 
   // === END scripts/features/guest-book.js ===
-
-  // === BEGIN scripts/features/penpals.js ===
-  var dtdPenPalNotificationTimer=null,penPalNotificationCheckInFlight=false;
-  var dtdFriendSyncInFlight=null;
-  function penPalNotificationState(){return state.companion.penPalNotifications;}
-  function uniqueHandles(handles){return handles.filter(function(handle,index,list){return handle&&list.indexOf(handle)===index;});}
-  function syncDtdFriendsFromServer(){
-    if(!getSupabaseSession())return Promise.resolve(false);
-    if(dtdFriendSyncInFlight)return dtdFriendSyncInFlight;
-    var syncOwner=supabaseSessionOwner();
-    if(!syncOwner)return Promise.resolve(false);
-    dtdFriendSyncInFlight=supabaseRpc('list_dtd_friends',{}).then(function(rows){
-      if(supabaseSessionOwner()!==syncOwner)return false;
-      var existingByHandle={};
-      (state.mail.contacts||[]).forEach(function(contact){
-        var handle=dtdContactHandle(contact&&contact.handle);
-        if(handle&&!existingByHandle[handle])existingByHandle[handle]=contact;
-      });
-      var seen={},nextContacts=[];
-      (rows||[]).forEach(function(friend){
-        var handle=dtdContactHandle(friend&&friend.handle);
-        if(!handle||seen[handle])return;
-        seen[handle]=true;
-        var existing=existingByHandle[handle];
-        nextContacts.push({
-          id:existing&&existing.id?existing.id:uid(),
-          handle:handle,
-          name:existing&&existing.name?existing.name:String(friend.display_name||'').trim()
-        });
-      });
-      nextContacts.sort(function(a,b){return a.handle.localeCompare(b.handle);});
-      var current=(state.mail.contacts||[]).map(function(contact){return{id:contact.id,handle:dtdContactHandle(contact.handle),name:String(contact.name||'').trim()};}).sort(function(a,b){return a.handle.localeCompare(b.handle);});
-      if(JSON.stringify(current)===JSON.stringify(nextContacts))return false;
-      state.mail.contacts=nextContacts;
-      return saveState().then(function(){return true;});
-    }).catch(function(){return false;}).then(function(changed){dtdFriendSyncInFlight=null;return changed;});
-    return dtdFriendSyncInFlight;
-  }
-  function refreshKobaPendingAlerts(){
-    var alerts=penPalNotificationState().unreadAlerts,companion=document.getElementById('desktop-companion');
-    if(companion)companion.classList.toggle('has-pending-notification',alerts.length>0);
-    if(window.refreshKobaMemos)window.refreshKobaMemos();
-    if(window.showKobaNotification)alerts.forEach(function(alert){window.showKobaNotification(alert.message,alert.openRequests,alert.id);});
-  }
-  function addPenPalAlert(id,message,openRequests){
-    var alerts=penPalNotificationState().unreadAlerts;
-    if(!alerts.some(function(alert){return alert.id===id;}))alerts.push({id:id,message:message,openRequests:!!openRequests});
-    saveState();refreshKobaPendingAlerts();
-  }
-  function acknowledgePenPalAlert(id){
-    var notificationState=penPalNotificationState();
-    notificationState.unreadAlerts=notificationState.unreadAlerts.filter(function(alert){return alert.id!==id;});
-    saveState();refreshKobaPendingAlerts();
-  }
-  window.acknowledgePenPalAlert=acknowledgePenPalAlert;
-  window.restorePendingPenPalAlerts=refreshKobaPendingAlerts;
-  function rememberPendingPenPalRequest(handle){
-    handle=String(handle||'').trim().toLowerCase();if(!handle)return;
-    var notificationState=penPalNotificationState();
-    notificationState.pendingOutgoing=uniqueHandles(notificationState.pendingOutgoing.concat(handle));
-    saveState();
-  }
-  function checkPenPalNotifications(){
-    if(!document.body.classList.contains('signed-in')||!getSupabaseSession()||penPalNotificationCheckInFlight)return Promise.resolve();
-    refreshKobaPendingAlerts();
-    penPalNotificationCheckInFlight=true;
-    syncDtdFriendsFromServer();
-    return supabaseRpc('list_dtd_friend_requests',{}).then(function(rows){
-      rows=rows||[];
-      var notificationState=penPalNotificationState();
-      var incoming=rows.filter(function(row){return row.direction==='incoming';});
-      var currentIncoming=uniqueHandles(incoming.map(function(row){return String(row.handle||'');}));
-      var currentOutgoing=uniqueHandles(rows.filter(function(row){return row.direction==='outgoing';}).map(function(row){return String(row.handle||'');}));
-      var newIncoming=incoming.filter(function(row){return notificationState.knownIncoming.indexOf(String(row.handle||''))===-1;});
-      var previousOutgoing=notificationState.pendingOutgoing.slice();
-      var resolvedCandidates=previousOutgoing.filter(function(handle){return currentOutgoing.indexOf(handle)===-1;});
-      notificationState.knownIncoming=currentIncoming;
-      if(newIncoming.length){
-        newIncoming.forEach(function(request){var sender=request.display_name||request.handle;addPenPalAlert('incoming:'+request.handle,sender+' sent you a PenPal request! Click me to see it.',true);});
-      }
-      return Promise.all(resolvedCandidates.map(function(handle){
-        return supabaseRpc('get_dtd_public_profile',{requested_handle:handle}).then(function(profile){return{handle:handle,profile:profile};}).catch(function(){return{handle:handle,profile:null};});
-      })).then(function(results){
-        var nextPending=currentOutgoing.slice();
-        results.forEach(function(result){
-          var profile=result.profile,status=profile&&profile.friend_status;
-          if(status==='friends'){
-            upsertDtdContact(result.handle,profile.display_name||'');
-            addPenPalAlert('accepted:'+result.handle,(profile.display_name||result.handle)+' accepted your PenPal request! Click me to dismiss this message.',false);
-          }else if(!profile||status==='pending_outgoing')nextPending.push(result.handle);
-        });
-        notificationState.pendingOutgoing=uniqueHandles(nextPending);
-        return saveState();
-      });
-    }).catch(function(){}).then(function(){penPalNotificationCheckInFlight=false;});
-  }
-  function stopPenPalNotificationWatch(){clearInterval(dtdPenPalNotificationTimer);dtdPenPalNotificationTimer=null;penPalNotificationCheckInFlight=false;}
-  function startPenPalNotificationWatch(){stopPenPalNotificationWatch();refreshKobaPendingAlerts();checkPenPalNotifications();dtdPenPalNotificationTimer=setInterval(checkPenPalNotifications,60000);}
-
-  function openFriendRequestsWindow(){
-    var existing=openWindows.find(function(w){return w.type==='dtdfriendrequests';});if(existing){focusWindow(existing.id);return;}
-    createWindow({title:'E-Buddies',extraClass:'profile-win dtd-ebuddies-win',bodyHtml:'<div class="win-body vp-body"><div class="vp-empty">Loading E-Buddies…</div></div>',type:'dtdfriendrequests',onMount:function(el){
-      function requestRow(r){
-        var actions=r.direction==='incoming'
-          ?'<button class="btn dtd-fr-accept" data-handle="'+escapeHtml(r.handle)+'" data-name="'+escapeHtml(r.display_name||'')+'">Accept</button> <span class="forgot-link dtd-fr-decline" data-handle="'+escapeHtml(r.handle)+'">Decline</span>'
-          :'<span class="forgot-link dtd-fr-cancel" data-handle="'+escapeHtml(r.handle)+'">Cancel</span>';
-        return '<div class="dtd-row dtd-ebuddy-row" style="cursor:default"><span class="dtd-fr-name" data-handle="'+escapeHtml(r.handle)+'" style="cursor:pointer;text-decoration:underline">'+escapeHtml(r.display_name||r.handle)+'</span><span class="dtd-ebuddy-address">'+escapeHtml(r.handle)+'@desktopdiary.local</span><span class="dtd-ebuddy-actions">'+actions+'</span></div>';
-      }
-      function friendRow(friend){
-        var contact=(state.mail.contacts||[]).find(function(item){return dtdContactHandle(item&&item.handle)===dtdContactHandle(friend.handle);});
-        var displayName=(contact&&contact.name)||friend.display_name||friend.handle;
-        var initials=String(displayName||'?').slice(0,2).toUpperCase();
-        var avatar=friend.profile_picture?'<img src="'+escapeHtml(friend.profile_picture)+'" alt="">':escapeHtml(initials);
-        return '<div class="dtd-contact-row dtd-ebuddy-contact" data-ebuddy-handle="'+escapeHtml(friend.handle)+'">'+
-          '<button class="dtd-contact-avatar dtd-ebuddy-profile" title="View profile" data-handle="'+escapeHtml(friend.handle)+'">'+avatar+'</button>'+
-          '<button class="dtd-contact-name dtd-ebuddy-profile" title="View profile" data-handle="'+escapeHtml(friend.handle)+'">'+escapeHtml(displayName)+'<span class="dtd-contact-address">'+escapeHtml(friend.handle)+'@desktopdiary.local</span></button>'+
-          '<button class="btn dtd-contact-action dtd-ebuddy-write" data-handle="'+escapeHtml(friend.handle)+'">Write</button>'+
-          '<button class="btn dtd-contact-action dtd-ebuddy-profile" data-handle="'+escapeHtml(friend.handle)+'">View Profile</button>'+
-          '<button class="btn dtd-contact-action dtd-ebuddy-nickname" data-handle="'+escapeHtml(friend.handle)+'">Nickname</button>'+
-          '<button class="btn dtd-ebuddy-remove" data-handle="'+escapeHtml(friend.handle)+'" data-name="'+escapeHtml(displayName)+'" title="Remove E-Buddy">×</button>'+
-        '</div>';
-      }
-      function section(title,rows,emptyText){
-        return '<section class="dtd-ebuddy-section"><div class="dtd-ebuddy-heading">'+title+'</div>'+(rows.length?'<div class="dtd-list">'+rows.join('')+'</div>':'<div class="dtd-ebuddy-empty">'+emptyText+'</div>')+'</section>';
-      }
-      function load(){
-        if(!getSupabaseSession()){el.querySelector('.win-body').innerHTML='<div class="vp-empty">E-Buddies are only available with an online account.</div>';return;}
-        el.querySelector('.win-body').innerHTML='<div class="vp-empty">Loading E-Buddies…</div>';
-        Promise.all([supabaseRpc('list_dtd_friends',{}),supabaseRpc('list_dtd_friend_requests',{})]).then(function(results){
-          var friends=results[0]||[],requests=results[1]||[];
-          var incoming=requests.filter(function(row){return row.direction==='incoming';});
-          var outgoing=requests.filter(function(row){return row.direction==='outgoing';});
-          el.querySelector('.win-body').innerHTML='<div class="dtd-ebuddies-page">'+
-            section('E-Buddies',friends.map(friendRow),'No E-Buddies yet.')+
-            section('Incoming Requests',incoming.map(requestRow),'No incoming requests.')+
-            section('Outgoing Requests',outgoing.map(requestRow),'No outgoing requests.')+
-          '</div>';
-          el.querySelectorAll('.dtd-fr-name').forEach(function(s){s.onclick=function(){openDtdPublicProfileWindow(s.dataset.handle);};});
-          el.querySelectorAll('.dtd-ebuddy-profile').forEach(function(b){b.onclick=function(){openDtdPublicProfileWindow(b.dataset.handle);};});
-          el.querySelectorAll('.dtd-ebuddy-write').forEach(function(b){b.onclick=function(){openNewMessageWindow(b.dataset.handle);};});
-          el.querySelectorAll('.dtd-ebuddy-nickname').forEach(function(b){b.onclick=function(){
-            var handle=b.dataset.handle,contact=(state.mail.contacts||[]).find(function(item){return dtdContactHandle(item&&item.handle)===dtdContactHandle(handle);});
-            if(!contact)contact=upsertDtdContact(handle,'');
-            appTextPrompt('Nickname for '+handle+'@desktopdiary.local',contact&&contact.name||'',function(name){
-              if(name===null||!contact)return;
-              contact.name=name.trim().slice(0,50);saveState();load();
-            });
-          };});
-          el.querySelectorAll('.dtd-ebuddy-remove').forEach(function(b){b.onclick=function(){
-            appConfirm('Remove '+(b.dataset.name||b.dataset.handle)+' from E-Buddies?',function(ok){
-              if(!ok)return;
-              supabaseRpc('remove_dtd_friend',{other_handle:b.dataset.handle}).then(function(){removeDtdContact(b.dataset.handle);return load();}).catch(function(err){openInfoWindow(err.message);});
-            });
-          };});
-          el.querySelectorAll('.dtd-fr-accept').forEach(function(b){b.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:b.dataset.handle,accept:true}).then(function(){upsertDtdContact(b.dataset.handle,b.dataset.name||'');acknowledgePenPalAlert('incoming:'+b.dataset.handle);syncDtdFriendsFromServer();return load();}).catch(function(err){openInfoWindow(err.message);});};});
-          el.querySelectorAll('.dtd-fr-decline').forEach(function(s){s.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:s.dataset.handle,accept:false}).then(function(){acknowledgePenPalAlert('incoming:'+s.dataset.handle);return load();}).catch(function(err){openInfoWindow(err.message);});};});
-          el.querySelectorAll('.dtd-fr-cancel').forEach(function(s){s.onclick=function(){supabaseRpc('remove_dtd_friend',{other_handle:s.dataset.handle}).then(load).catch(function(err){openInfoWindow(err.message);});};});
-        }).catch(function(err){el.querySelector('.win-body').innerHTML='<div class="vp-empty">'+escapeHtml(err.message)+'</div>';});
-      }
-      load();
-    }});
-  }
-
-  function openDtdPublicProfileWindow(handle){
-    var existing=openWindows.find(function(w){return w.type==='dtdpublicprofile'&&w.dtdHandle===handle;});if(existing){focusWindow(existing.id);return;}
-    createWindow({title:handle+'\'s Profile',extraClass:'profile-win',bodyHtml:'<div class="win-body vp-body"><div class="vp-empty">Loading profile…</div></div>',type:'dtdpublicprofile',onMount:function(el){var rec=openWindows.find(function(w){return w.el===el;});if(rec)rec.dtdHandle=handle;var profileData=null;
-      function load(){
-        el.querySelector('.win-body').innerHTML='<div class="vp-empty">Loading profile…</div>';
-        supabaseRpc('get_dtd_public_profile',{requested_handle:handle}).then(function(p){if(!p)throw new Error('This profile is unavailable.');profileData=p;
-          var pic=p.profile_picture?'<img src="'+escapeHtml(p.profile_picture)+'" class="vp-pic">':'',header=sanitizeProfileHTML(p.profile_header||''),about=sanitizeProfileHTML(p.profile_about||''),statusRaw=String(p.profile_status||''),statusLabel='',statusMood='',statusMoodColor='#333333';
-          try{var parsedStatus=JSON.parse(statusRaw);statusLabel=parsedStatus.label||'';statusMood=parsedStatus.mood||'';if(/^#[0-9a-f]{6}$/i.test(parsedStatus.color||''))statusMoodColor=parsedStatus.color;}catch(e){statusLabel=statusRaw;}
-          var friendStatus=p.friend_status||'none',authorized=friendStatus==='friends'||friendStatus==='self';
-          if(friendStatus==='friends')upsertDtdContact(handle,p.display_name||'');
-          var entries=Array.isArray(p.entries)?p.entries:[];
-          var posts=authorized?(entries.length?entries.map(function(entry){return '<div class="blog-post"><div class="blog-post-header"><div><div class="blog-post-title">'+escapeHtml(entry.title||'Untitled')+'</div><div class="blog-post-date">'+fmtDayDivider(Number(entry.ts)||Date.now())+'</div></div></div><div class="blog-post-body">'+sanitizeHTML(entry.html||'')+'</div></div>';}).join(''):'<div class="vp-empty">No diary entries have been shared.</div>'):'';
-          var actionHtml='';
-          if(friendStatus==='none')actionHtml='<button class="btn" id="dtd-friend-add">Add PenPal</button>';
-          else if(friendStatus==='pending_outgoing')actionHtml='<span style="font-size:10px;color:#555">PenPal request sent</span> <span class="forgot-link" id="dtd-friend-cancel">Cancel</span>';
-          else if(friendStatus==='pending_incoming')actionHtml='<span style="font-size:10px;color:#555">Wants to be E-Buddies</span> <button class="btn" id="dtd-friend-accept">Accept</button> <span class="forgot-link" id="dtd-friend-decline">Decline</span>';
-          else if(friendStatus==='friends')actionHtml='<span style="font-size:10px;color:#18752c">&#10003; E-Buddies</span> <span class="forgot-link" id="dtd-friend-remove">Remove E-Buddy</span>';
-          var gateNote=(!authorized)?'<div class="vp-empty" style="font-size:10px">Add '+escapeHtml(p.display_name||p.handle)+' as a PenPal to see their profile and diary entries.</div>':'';
-          var guestBookLink=authorized&&friendStatus==='friends'?'<div style="padding:12px;text-align:center;border-top:1px solid #e0ddd5"><button class="btn" id="dtd-sign-guestbook">Sign My Guest Book!</button></div>':'';
-          el.querySelector('.win-body').outerHTML='<div class="win-body vp-body"><div class="vp-header">'+pic+'<div class="vp-name">'+escapeHtml(p.display_name||p.handle)+(statusMood?' <span class="vp-mood">is <span style="color:'+statusMoodColor+'">'+escapeHtml(statusMood)+'</span></span>':'')+'</div>'+(statusLabel?'<div class="vp-status"><b>Status:</b> '+escapeHtml(statusLabel)+'</div>':'')+'<div style="font-size:10px;color:#777">'+escapeHtml(p.handle)+'@desktopdiary.local</div>'+(actionHtml?'<div class="dtd-friend-actions" style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px">'+actionHtml+'</div>':'')+'<div class="signon-error dtd-friend-error" style="text-align:center"></div></div>'+gateNote+(header?'<div class="vp-section">'+header+'</div>':'')+(about?'<div class="vp-section">'+about+'</div>':'')+guestBookLink+(authorized?'<div class="blog-posts-list">'+posts+'</div>':'')+'</div>';
-          wire();
-        }).catch(function(err){el.querySelector('.win-body').innerHTML='<div class="vp-empty">'+escapeHtml(err.message)+'</div>';});
-      }
-      function wire(){
-        var errEl=el.querySelector('.dtd-friend-error');
-        function onErr(err){if(errEl)errEl.textContent=err.message;}
-        var addBtn=el.querySelector('#dtd-friend-add');if(addBtn)addBtn.onclick=function(){addBtn.disabled=true;supabaseRpc('send_dtd_friend_request',{recipient_handle:handle}).then(function(){rememberPendingPenPalRequest(handle);return load();}).catch(function(err){onErr(err);addBtn.disabled=false;});};
-        var cancelBtn=el.querySelector('#dtd-friend-cancel');if(cancelBtn)cancelBtn.onclick=function(){supabaseRpc('remove_dtd_friend',{other_handle:handle}).then(load).catch(onErr);};
-        var acceptBtn=el.querySelector('#dtd-friend-accept');if(acceptBtn)acceptBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:true}).then(function(){upsertDtdContact(handle,profileData&&profileData.display_name);acknowledgePenPalAlert('incoming:'+handle);syncDtdFriendsFromServer();return load();}).catch(onErr);};
-        var declineBtn=el.querySelector('#dtd-friend-decline');if(declineBtn)declineBtn.onclick=function(){supabaseRpc('respond_dtd_friend_request',{requester_handle:handle,accept:false}).then(function(){acknowledgePenPalAlert('incoming:'+handle);return load();}).catch(onErr);};
-        var removeBtn=el.querySelector('#dtd-friend-remove');if(removeBtn)removeBtn.onclick=function(){appConfirm('Remove '+handle+' as a PenPal?',function(ok){if(!ok)return;supabaseRpc('remove_dtd_friend',{other_handle:handle}).then(function(){removeDtdContact(handle);return load();}).catch(onErr);});};
-        var guestBookBtn=el.querySelector('#dtd-sign-guestbook');if(guestBookBtn)guestBookBtn.onclick=function(){openGuestBookWindow(handle,(profileData&&profileData.display_name)||handle,true);};
-      }
-      load();
-    }});
-  }
-
-  // === END scripts/features/penpals.js ===
 
   // === BEGIN scripts/features/profile-diary.js ===
   function openDiaryEntriesWindow(){
@@ -13406,6 +13463,7 @@ try {
       saveState();
     }
   }
+
   // === END scripts/features/notebook.js ===
 
   // === BEGIN scripts/features/diary.js ===
@@ -13904,6 +13962,7 @@ try {
   _ed.textContent = 'Top-level error: ' + (e && e.message ? e.message : String(e)) + (e && e.stack ? '\n' + e.stack.split('\n').slice(0,4).join('\n') : '');
   document.body.appendChild(_ed);
 }
+
 </script>
 </body>
 </html>
