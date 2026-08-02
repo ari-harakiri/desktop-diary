@@ -45,6 +45,39 @@ def main() -> int:
             print(" -", entry)
         return 1
 
+    canonical_path = ROOT / "desktop-diary.html"
+    stylesheet_path = ROOT / "styles" / "desktop-diary.css"
+    canonical = canonical_path.read_text(encoding="utf-8")
+    stylesheet = stylesheet_path.read_text(encoding="utf-8")
+    daily_memo_checks = (
+        ("function openDailyMemoFromDesktopIcon(e)", bundle_text),
+        ("window.open('daily-memo/index.html','_blank','noopener')", bundle_text),
+        ('src="daily-memo/assets/printer-yellow-beige.png"', canonical),
+        ("body:not(.signed-in) #typewriter-desktop-icon", stylesheet),
+    )
+    missing_daily_memo = [snippet for snippet, text in daily_memo_checks if snippet not in text]
+    if missing_daily_memo:
+        print("FAIL: Daily Memo regression detected:")
+        for entry in missing_daily_memo:
+            print(" -", entry)
+        return 1
+
+    daily_memo_files = (
+        "daily-memo/index.html",
+        "daily-memo/styles.css",
+        "daily-memo/script.js",
+        "daily-memo/assets/printer.png",
+        "daily-memo/assets/printer-yellow-beige.png",
+        "daily-memo/assets/button.png",
+        "daily-memo/assets/heart.png",
+    )
+    missing_daily_memo_files = [path for path in daily_memo_files if not (ROOT / path).is_file()]
+    if missing_daily_memo_files:
+        print("FAIL: Daily Memo printer files are missing:")
+        for entry in missing_daily_memo_files:
+            print(" -", entry)
+        return 1
+
     print("verify ok")
     return 0
 

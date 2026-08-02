@@ -1200,6 +1200,22 @@ try {
   mailboxIcon.addEventListener('click',function(e){e.stopPropagation();clearTimeout(mailboxClickTimer);if(e.detail>1)return;mailboxClickTimer=setTimeout(function(){mailboxClickTimer=null;if(mailboxIcon.dataset.pigeonSceneLocked!=='true')mailboxIcon.classList.add('pigeon-click-perched');},300);});
   mailboxIcon.addEventListener('dblclick',function(e){e.preventDefault();e.stopPropagation();clearTimeout(mailboxClickTimer);mailboxClickTimer=null;mailboxIcon.classList.remove('pigeon-click-perched');openDtdPostWindow();});
   mailboxIcon.addEventListener('keydown',function(e){if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();e.stopPropagation();clearTimeout(mailboxClickTimer);mailboxClickTimer=null;mailboxIcon.classList.remove('pigeon-click-perched');openDtdPostWindow();});
+  var typewriterIcon=document.getElementById('typewriter-desktop-icon');
+  var dailyMemoOpenedAt=0;
+  function openDailyMemoFromDesktopIcon(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    var now=Date.now();
+    if(now-dailyMemoOpenedAt<600)return;
+    dailyMemoOpenedAt=now;
+    window.open('daily-memo/index.html','_blank','noopener');
+  }
+  if(typewriterIcon){
+    typewriterIcon.addEventListener('click',openDailyMemoFromDesktopIcon);
+    typewriterIcon.addEventListener('keydown',function(e){
+      if(e.key!=='Enter'&&e.key!==' ')return;
+      openDailyMemoFromDesktopIcon(e);
+    });
+  }
   (function(){
     var suggestionIcon=document.getElementById('suggestion-desktop-icon');
     if(suggestionIcon){

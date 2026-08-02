@@ -42,9 +42,17 @@
   body:not(.signed-in) #dtd-mailbox-icon { display:none; }
   /* The mailbox follows the same stacking rules as every other desktop icon. */
   #dtd-mailbox-icon { top:400px; left:100px; }
+  #typewriter-desktop-icon { top:290px; left:100px; }
   #dtd-mailbox-icon.mail-window-open { z-index:auto !important; }
   #dtd-mailbox-icon.mail-window-open .dtd-pigeon { z-index:100000 !important; }
   #dtd-mailbox-icon .dtd-mailbox-art { display:block; width:62px; height:62px; object-fit:contain; filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55)); }
+  #typewriter-desktop-icon .typewriter-desktop-icon-art {
+    display:block;
+    width:62px;
+    height:62px;
+    object-fit:contain;
+    filter:drop-shadow(1px 2px 2px rgba(0,0,0,.55));
+  }
   #dtd-mailbox-icon .dtd-pigeon { position:absolute; top:-58px; right:-12px; width:68px; height:68px; display:none; padding:0; border-radius:0; pointer-events:none; transform-origin:50% 100%; background:url('../companions/sprites/pigeon/pigeon-perched.png') no-repeat center / contain; image-rendering:pixelated; }
   #dtd-mailbox-icon:active .dtd-pigeon { background-color:transparent; }
   /* The 68px flight/compose sheet also lands on the mailbox-body baseline. */
@@ -121,6 +129,7 @@
   box-sizing:border-box;
 }
 /* Lightweight previews for the standalone pet habitats. */
+body:not(.signed-in) #typewriter-desktop-icon,
 body:not(.signed-in) #ant-farm-desktop-icon,
 body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
 #ant-farm-desktop-icon { top:71vh; left:auto; right:144px; bottom:auto; }

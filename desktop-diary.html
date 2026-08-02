@@ -3893,7 +3893,7 @@ function forceLoaderInteractionRecovery(){
   </div>
 
   <div id="typewriter-desktop-icon" class="desktop-icon" role="button" tabindex="0" title="Open Daily Memo planner">
-    <img class="typewriter-desktop-icon-art" src="assets/embedded/typewriter-printer.png" alt="">
+    <img class="typewriter-desktop-icon-art" src="daily-memo/assets/printer-yellow-beige.png" alt="">
     <span>Daily Memo</span>
   </div>
 
@@ -5327,6 +5327,22 @@ try {
     if(e.key!=='Enter'&&e.key!==' ')return;
     openMailboxFromDesktopIcon(e);
   });
+  var typewriterIcon=document.getElementById('typewriter-desktop-icon');
+  var dailyMemoOpenedAt=0;
+  function openDailyMemoFromDesktopIcon(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    var now=Date.now();
+    if(now-dailyMemoOpenedAt<600)return;
+    dailyMemoOpenedAt=now;
+    window.open('daily-memo/index.html','_blank','noopener');
+  }
+  if(typewriterIcon){
+    typewriterIcon.addEventListener('click',openDailyMemoFromDesktopIcon);
+    typewriterIcon.addEventListener('keydown',function(e){
+      if(e.key!=='Enter'&&e.key!==' ')return;
+      openDailyMemoFromDesktopIcon(e);
+    });
+  }
   (function(){
     var tbNotepad=document.getElementById('tb-notebook-taskbar');
     var suggestionIcon=document.getElementById('suggestion-desktop-icon');
