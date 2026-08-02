@@ -937,6 +937,7 @@ var runtime={
   box-sizing:border-box;
 }
 /* Lightweight previews for the standalone pet habitats. */
+body:not(.signed-in) #typewriter-desktop-icon,
 body:not(.signed-in) #ant-farm-desktop-icon,
 body:not(.signed-in) #fish-tank-desktop-icon { display:none; }
 #ant-farm-desktop-icon { top:71vh; left:auto; right:144px; bottom:auto; }
@@ -8796,6 +8797,14 @@ try {
     var kobaIsRoaming=false;
     var kobaBallThoughtTimer=null;
     var kobaBallThoughtEndTimer=null;
+    var kobaThoughtElement=document.getElementById('koba-ball-thought');
+    var kobaThoughtAssets=[
+      {name:'ball',url:'companions/sprites/koba/koba-thinks-ball.png'},
+      {name:'food',url:'companions/sprites/koba/koba-thinks-food.png'},
+      {name:'white-bone',url:'companions/sprites/koba/koba-thinks-white-bone.png'},
+      {name:'brown-biscuit',url:'companions/sprites/koba/koba-thinks-brown-biscuit.png'}
+    ];
+    var kobaLastThoughtIndex=-1;
     var kobaExclusiveMotion='';
 
     function kobaHasActiveMotion(){
@@ -9358,6 +9367,17 @@ try {
       clearTimeout(kobaBallThoughtEndTimer);kobaBallThoughtEndTimer=null;
       desktopCompanion.classList.remove('koba-thinking-ball');
     }
+    function chooseKobaThought(){
+      if(!kobaThoughtElement||!kobaThoughtAssets.length)return;
+      var nextIndex=Math.floor(Math.random()*kobaThoughtAssets.length);
+      if(kobaThoughtAssets.length>1&&nextIndex===kobaLastThoughtIndex){
+        nextIndex=(nextIndex+1+Math.floor(Math.random()*(kobaThoughtAssets.length-1)))%kobaThoughtAssets.length;
+      }
+      kobaLastThoughtIndex=nextIndex;
+      var thought=kobaThoughtAssets[nextIndex];
+      kobaThoughtElement.style.backgroundImage='url("'+thought.url+'")';
+      kobaThoughtElement.dataset.thought=thought.name;
+    }
     function canKobaThinkAboutBall(){
       return !kobaExclusiveMotion&&document.body.classList.contains('signed-in')&&playBallController.state==='Idle'&&playBallController.active&&!kobaIsRoaming&&!kobaNotificationActive&&searchBox.style.display!=='block'&&!desktopCompanion.classList.contains('actions-open')&&!desktopCompanion.classList.contains('interacting')&&!desktopCompanion.classList.contains('waking')&&!desktopCompanion.classList.contains('digging')&&!desktopCompanion.classList.contains('burying')&&!desktopCompanion.classList.contains('barking')&&!desktopCompanion.classList.contains('play-ball-fetching');
     }
@@ -9366,6 +9386,7 @@ try {
       kobaBallThoughtTimer=setTimeout(function(){
         if(!canKobaThinkAboutBall()){scheduleKobaBallThought(12000+Math.random()*12000);return;}
         hideKobaBallThought();
+        chooseKobaThought();
         void desktopCompanion.offsetWidth;
         desktopCompanion.classList.add('koba-thinking-ball');
         kobaBallThoughtEndTimer=setTimeout(function(){
@@ -11782,6 +11803,8 @@ try {
           '<button class="arinet-bookmark" id="an-dock-home">🏠 Home</button>' +
           '<button class="arinet-bookmark" id="an-dock-arinet">🌐 AriNet</button>' +
           '<button class="arinet-bookmark" id="an-dock-mail">✉ Mail</button>' +
+          '<button class="arinet-bookmark arinet-add-favorite" id="an-add-favorite" title="Bookmark the current page">★ Add bookmark</button>' +
+          '<span class="arinet-favorite-strip" id="an-favorite-strip"></span>' +
         '</div>' +
         '<div class="arinet-status" id="an-status">Ready</div>' +
       '</div>';
@@ -11793,6 +11816,18 @@ try {
       var status = el.querySelector('#an-status');
       var backBtn = el.querySelector('#an-back');
       var fwdBtn = el.querySelector('#an-fwd');
+      var favoriteStrip = el.querySelector('#an-favorite-strip');
+      var favoriteStorageKey = 'dtd-arinet-favorites-v1';
+      var favorites = [];
+
+      try{
+        var storedFavorites = JSON.parse(localStorage.getItem(favoriteStorageKey) || '[]');
+        if(Array.isArray(storedFavorites)){
+          favorites = storedFavorites.filter(function(item){
+            return item && typeof item.name === 'string' && typeof item.url === 'string' && /^https?:\/\//i.test(item.url);
+          }).slice(0, 24);
+        }
+      }catch(e){}
 
       // simple linear history: {label, url|null} — null url means the home view
       var history = [{ label: 'Home', url: null }];
@@ -11836,6 +11871,46 @@ try {
         renderCurrent();
       }
 
+      function saveFavorites(){
+        try{ localStorage.setItem(favoriteStorageKey, JSON.stringify(favorites)); }catch(e){}
+      }
+
+      function renderFavorites(){
+        favoriteStrip.innerHTML = '';
+        favorites.forEach(function(favorite, index){
+          var item = document.createElement('span');
+          var open = document.createElement('button');
+          var remove = document.createElement('button');
+          item.className = 'arinet-bookmark arinet-favorite';
+          open.className = 'arinet-favorite-open';
+          open.type = 'button';
+          open.textContent = favorite.name;
+          open.title = favorite.url;
+          open.addEventListener('click', function(){ navigateTo(favorite.url, favorite.name); });
+          remove.className = 'arinet-favorite-remove';
+          remove.type = 'button';
+          remove.textContent = '×';
+          remove.title = 'Remove ' + favorite.name;
+          remove.setAttribute('aria-label', 'Remove ' + favorite.name + ' bookmark');
+          remove.addEventListener('click', function(e){
+            e.stopPropagation();
+            favorites.splice(index, 1);
+            saveFavorites();
+            renderFavorites();
+            status.textContent = 'Bookmark removed';
+          });
+          item.appendChild(open);
+          item.appendChild(remove);
+          favoriteStrip.appendChild(item);
+        });
+      }
+
+      function currentFavoriteName(entry){
+        if(entry.label && entry.label !== entry.url) return entry.label;
+        try{ return new URL(entry.url).hostname.replace(/^www\./i, '') || entry.url; }
+        catch(e){ return entry.url; }
+      }
+
       function goHome(){
         history = history.slice(0, historyIndex + 1);
         history.push({ label: 'Home', url: null });
@@ -11870,6 +11945,18 @@ try {
         if(s) navigateTo(s.url, s.name);
         else if(typeof openDtdPostWindow === 'function') openDtdPostWindow();
       });
+      el.querySelector('#an-add-favorite').addEventListener('click', function(){
+        var entry = history[historyIndex];
+        if(!entry || !entry.url){ status.textContent = 'Open a website before adding a bookmark'; return; }
+        if(favorites.some(function(favorite){ return favorite.url === entry.url; })){
+          status.textContent = 'This page is already bookmarked';
+          return;
+        }
+        favorites.push({ name: currentFavoriteName(entry), url: entry.url });
+        saveFavorites();
+        renderFavorites();
+        status.textContent = 'Bookmark added';
+      });
 
       backBtn.addEventListener('click', function(){
         if(historyIndex > 0){ historyIndex--; renderCurrent(); }
@@ -11887,6 +11974,7 @@ try {
         t.addEventListener('click', function(){ openBookmark(parseInt(t.getAttribute('data-idx'), 10)); });
       });
 
+      renderFavorites();
       renderCurrent();
     }});
   }
